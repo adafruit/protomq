@@ -6,12 +6,17 @@ import { BrokerToDevice, DeviceToBroker } from "../protobufs.js"
 
 
 const requestToResponseMap = {
-  checkinRequest: {
-    checkinResponse: {
-      response: 'RESPONSE_OK',
-      totalGpioPins: 20,
-      totalAnalogPins: 4,
-      referenceVoltage: 2.5
+  checkin: {
+    match: d2bField => d2bField.request,
+    response: {
+      checkin: {
+        response: {
+          response: 1, // R_OK
+          totalGpioPins: 20,
+          totalAnalogPins: 4,
+          referenceVoltage: 2.5
+        }
+      }
     }
   }
 }
@@ -30,14 +35,22 @@ export const
   addDefaultPBResponses = broker => {
     console.log("PBResponse Listener: Register")
     broker.subscribe(
-      '+/ws-d2b/+/',
+      '+/ws-d2b/+',
       (packet, callback) => {
         const d2bRequest = DeviceToBroker.decode(packet.payload)
 
-        // find the key in the re/res map
-        const responsePayload = find(requestToResponseMap, (response, requestKey) =>
-          d2bRequest[requestKey]
-        )
+        // find the key in the req/res map
+        let responsePayload = null
+        for (const [fieldName, mapping] of Object.entries(requestToResponseMap)) {
+          if (d2bRequest[fieldName] && mapping.match(d2bRequest[fieldName])) {
+            responsePayload = mapping.response
+            break
+          }
+        }
+        // Use custom checkin response if configured
+        if (d2bRequest.checkin && broker._customCheckinResponse) {
+          responsePayload = broker._customCheckinResponse
+        }
 
         if(responsePayload) {
           console.log(`Auto-Responding to:\n  ${JSON.stringify(d2bRequest, null, 2)}\nwith:\n  ${JSON.stringify(responsePayload, null, 2)}`)

@@ -3,6 +3,7 @@ import { Router } from 'express'
 import enableDisconnect from './disconnect.js'
 import enableDeliveries from './deliveries.js'
 import enableEcho from './echo.js'
+import enableAutoresponse from './autoresponse.js'
 
 
 export default broker => {
@@ -27,6 +28,7 @@ export default broker => {
   enableDisconnect(router, broker)
   enableDeliveries(router, broker)
   enableEcho(router, broker)
+  enableAutoresponse(router, broker)
 
   // rough draft of possible API:
   //

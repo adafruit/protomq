@@ -7,5 +7,5 @@ const protobufRoot = protobuf.Root.fromJSON(protobufJSON)
 export default protobufRoot
 
 export const
-  BrokerToDevice = protobufRoot.lookupType("signal.BrokerToDevice"),
-  DeviceToBroker = protobufRoot.lookupType("signal.DeviceToBroker")
+  BrokerToDevice = protobufRoot.lookupType("ws.signal.BrokerToDevice"),
+  DeviceToBroker = protobufRoot.lookupType("ws.signal.DeviceToBroker")

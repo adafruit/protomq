@@ -1,0 +1,3238 @@
+{
+  "name": "GRAYSCALE MagTag 2.9\" MARQUEE Display Demo (output.bmp)",
+  "description": "Tests MARQUEE chunking of output.bmp.",
+  "protoVersion": "v2",
+  "steps": [
+    {
+      "name": "checkin-response",
+      "description": "Respond to device checkin with OK and board capabilities",
+      "trigger": "checkin.request",
+      "response": {
+        "checkin": {
+          "response": {
+            "response": "R_OK",
+            "totalGpioPins": 20,
+            "totalAnalogPins": 4,
+            "referenceVoltage": 2.5,
+            "componentAdds": {},
+            "sleepEnabled": false
+          }
+        }
+      }
+    },
+    {
+      "name": "add-display",
+      "description": "Configure the 2.9\" E-Ink EPD display (296x128, SPI)",
+      "after": "checkin-response",
+      "waitFor": "checkin.complete",
+      "delay": 15000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "add": {
+            "type": "DISPLAY_CLASS_EPD",
+            "driver": "SSD1680",
+            "panel": "adafruit-magtag",
+            "name": "epd0",
+            "interfaceType": {
+              "spiEpd": {
+                "pinBusy": "D5",
+                "spi": {
+                  "bus": 0,
+                  "pinMosi": "D35",
+                  "pinSck": "D36",
+                  "pinCs": "D8"
+                },
+                "pinDc": "D7",
+                "pinRst": "D6"
+              }
+            },
+            "configEpd": {
+              "mode": 1,
+              "properties": {
+                "width": 296,
+                "height": 128,
+                "textSize": 3,
+                "statusBar": true
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-1",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 15000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "1",
+              "chunkTotal": 138,
+              "chunkData": "Qk024QAAAAAAADYAAAAoAAAAoAAAAHgAAAABABgAAAAAAADhAAAAAAAAAAAAAAAAAAAAAAAA7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-2",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "2",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+xa2lwa2lwa2lwra+xa2lwra+xra+xra+xra+xa2lwa2lwa2lwa2lwra+x"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-3",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "3",
+              "chunkTotal": 138,
+              "chunkData": "a2lwra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-4",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "4",
+              "chunkTotal": 138,
+              "chunkData": "7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xa2lwra+xa2lwa2lwra+xa2lwa2lwra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-5",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "5",
+              "chunkTotal": 138,
+              "chunkData": "7/Tyra+x7/Tyra+xra+xra+xra+xra+xra+xa2lwra+xra+xra+xra+xra+xra+xra+xra+x7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xa2lwra+xa2lwa2lwra+xa2lwa2lwra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+x"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-6",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "6",
+              "chunkTotal": 138,
+              "chunkData": "ra+xra+xra+xa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwra+xra+xra+xra+xra+xra+xa2lwra+xa2lwa2lwra+xa2lwa2lwra+xa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xra+xra+xra+xra+xra+xa2lwra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-7",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "7",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+xa2lwra+xa2lwa2lwra+xa2lwa2lwra+xa2lwra+xa2lwra+xa2lwa2lwra+xa2lwra+xa2lwra+xra+xa2lwa2lwa2lwra+xra+xa2lwa2lwra+xa2lwra+xa2lwra+xa2lwra+xa2lwra+xra+xa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwa2lwra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-8",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "8",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+xa2lwa2lwra+xra+xa2lwra+xa2lwra+xra+xra+xa2lwra+xa2lwra+xa2lwra+xa2lwra+xa2lwa2lwa2lwra+xa2lwa2lwra+xa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwa2lwra+xra+xa2lwra+xa2lwa2lwra+xa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwra+xra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-9",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "9",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwra+xra+xra+xa2lwa2lwra+xra+xa2lwra+xra+xra+xra+xra+xra+xra+xra+xra+xa2lwra+xra+xra+xra+xa2lwa2lwra+xra+xa2lwra+xa2lwa2lwra+xa2lwra+xa2lwa2lwra+xa2lwra+xra+xa2lwa2lwra+xa2lwa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwra+xra+xra+xra+xa2lwra+xa2lwa2lwa2lwra+xa2lwa2lwra+xra+x7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-10",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "10",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+xra+xra+xra+xa2lwa2lwa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xra+xa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwra+xa2lwa2lwa2lwra+xa2lwra+xra+xa2lwa2lwra+xra+xra+xa2lwra+xa2lwra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-11",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "11",
+              "chunkTotal": 138,
+              "chunkData": "a2lwra+xa2lwra+xa2lwa2lwra+xa2lwa2lwra+xa2lwa2lwra+xa2lwra+xa2lwra+xa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwa2lwra+xa2lwa2lwra+xa2lwra+xa2lwa2lwa2lwra+xa2lwa2lwra+xa2lwra+xra+xra+xra+x"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-12",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "12",
+              "chunkTotal": 138,
+              "chunkData": "ra+xra+xra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwa2lwra+xa2lwa2lwra+xa2lwa2lwra+xa2lwra+xa2lwra+xra+xa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+x"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-13",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "13",
+              "chunkTotal": 138,
+              "chunkData": "a2lwra+xra+xa2lwra+xa2lwra+xa2lwa2lwra+xa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwra+xa2lwra+xa2lwra+xa2lwra+xa2lwa2lwra+xra+xa2lwra+xa2lwra+xra+xa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-14",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "14",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xa2lwa2lwa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwa2lwra+xa2lwa2lwra+xa2lwa2lwra+xa2lwa2lwa2lwra+xa2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-15",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "15",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xra+xa2lwra+xa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwa2lwra+xa2lwa2lwra+xa2lwra+xa2lwa2lwa2lwra+xa2lwra+xra+xra+xra+xa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-16",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "16",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwra+xa2lwra+xa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-17",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "17",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwra+xa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xra+xra+xra+xra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-18",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "18",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-19",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "19",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-20",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "20",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwa2lwra+xa2lwra+xa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-21",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "21",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwra+xa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-22",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "22",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwa2lwra+xa2lwa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-23",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "23",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwa2lwra+xa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwa2lwra+xa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-24",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "24",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xa2lwa2lwa2lwa2lwra+xa2lwa2lwra+xa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwra+xa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-25",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "25",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xa2lwa2lwa2lwra+xa2lwra+xra+xa2lwra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwra+xa2lwa2lwra+xa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-26",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "26",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwa2lwra+xa2lwra+xa2lwa2lwra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-27",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "27",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwa2lwra+xa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-28",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "28",
+              "chunkTotal": 138,
+              "chunkData": "ra+xra+xa2lwa2lwra+xa2lwra+xa2lwra+xa2lwra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwra+xa2lwra+xa2lwra+xa2lwra+xa2lwra+xa2lwa2lwra+xa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-29",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "29",
+              "chunkTotal": 138,
+              "chunkData": "ra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwa2lwra+xra+xa2lwa2lwa2lwra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xa2lwra+xa2lwra+xa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-30",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "30",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwra+xa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwa2lwa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-31",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "31",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwa2lwra+xra+xa2lwra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwra+xa2lwra+xa2lwra+xa2lwra+xa2lwa2lwa2lwra+xa2lwra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-32",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "32",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xra+xa2lwa2lwra+xra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwra+xa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-33",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "33",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwra+xa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-34",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "34",
+              "chunkTotal": 138,
+              "chunkData": "ra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-35",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "35",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwa2lwa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-36",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "36",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwra+xa2lwra+xa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xra+xa2lwa2lwa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-37",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "37",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-38",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "38",
+              "chunkTotal": 138,
+              "chunkData": "7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwa2lwra+xa2lwa2lwra+xra+xa2lwa2lwa2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-39",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "39",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwa2lwra+xa2lwa2lwa2lwra+xa2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-40",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "40",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+xa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwra+xa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xra+xra+xra+xa2lwra+xra+xa2lwra+xa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-41",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "41",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwra+xa2lwra+xa2lwra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwra+xra+xra+xra+xa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-42",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "42",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwra+xa2lwa2lwra+xa2lwa2lwra+xra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-43",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "43",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwra+xa2lwra+xa2lwra+xra+xra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-44",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "44",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwra+xa2lwra+xra+xra+xa2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-45",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "45",
+              "chunkTotal": 138,
+              "chunkData": "ra+xa2lwa2lwra+xra+xa2lwra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwra+xa2lwa2lwa2lwra+xa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-46",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "46",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwra+xra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwra+xa2lwra+xa2lwra+xa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-47",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "47",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwra+xa2lwa2lwra+xa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-48",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "48",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwra+xa2lwra+xa2lwra+xa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-49",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "49",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwKSQva2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwra+xa2lwra+xa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-50",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "50",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-51",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "51",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-52",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "52",
+              "chunkTotal": 138,
+              "chunkData": "a2lwra+x7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xra+xra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-53",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "53",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwa2lwa2lwra+xa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-54",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "54",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-55",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "55",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwa2lwra+xa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-56",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "56",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwa2lwra+xa2lwra+xa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-57",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "57",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwra+xa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-58",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "58",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xKSQva2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+x"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-59",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "59",
+              "chunkTotal": 138,
+              "chunkData": "a2lwra+xa2lwa2lwra+xa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-60",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "60",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwra+xa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-61",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "61",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwa2lwra+xa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-62",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "62",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwa2lwra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-63",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "63",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xra+xra+xa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-64",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "64",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-65",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "65",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-66",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "66",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-67",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "67",
+              "chunkTotal": 138,
+              "chunkData": "ra+xa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-68",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "68",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-69",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "69",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-70",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "70",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-71",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "71",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-72",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "72",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwKSQva2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-73",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "73",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Tyra+xKSQvKSQvKSQvKSQva2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-74",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "74",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-75",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "75",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwa2lw7/Ty7/Ty7/TyKSQvKSQva2lwKSQvKSQvKSQvra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-76",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "76",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Tyra+xKSQvKSQvKSQvKSQva2lwKSQvra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-77",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "77",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwKSQva2lwKSQva2lwKSQvKSQv7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-78",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "78",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwKSQvKSQvKSQvKSQvKSQvKSQva2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-79",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "79",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwra+xa2lwra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwKSQva2lwKSQva2lwKSQvra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-80",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "80",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwa2lwra+xra+x7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwKSQvKSQvKSQva2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-81",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "81",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xra+xa2lw7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwKSQvKSQvra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-82",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "82",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwra+x7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-83",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "83",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+x"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-84",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "84",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Tya2lwKSQva2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-85",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "85",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/TyKSQvKSQvKSQva2lwa2lwa2lwKSQva2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-86",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "86",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Tya2lwKSQva2lwKSQvKSQva2lwKSQvra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-87",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "87",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Tyra+xKSQvKSQvKSQvKSQvKSQvKSQv7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-88",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "88",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Tyra+xKSQvKSQva2lwKSQvKSQvra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-89",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "89",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwKSQvKSQvKSQva2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-90",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "90",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-91",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "91",
+              "chunkTotal": 138,
+              "chunkData": "7/Tyra+xra+xra+xa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-92",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "92",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-93",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "93",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-94",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "94",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-95",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "95",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Tyra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-96",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "96",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwra+x7/Ty7/Ty7/Tyra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-97",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "97",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-98",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "98",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xra+x"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-99",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "99",
+              "chunkTotal": 138,
+              "chunkData": "ra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-100",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "100",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwa2lwra+xra+xra+xra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-101",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "101",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-102",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "102",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwa2lwra+xra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xra+xa2lwa2lwra+xra+x7/Tyra+xa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-103",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "103",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwa2lwa2lwra+xra+xra+xra+xa2lwa2lwa2lwra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-104",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "104",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwKSQva2lwra+xra+xra+xa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-105",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "105",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-106",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "106",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-107",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "107",
+              "chunkTotal": 138,
+              "chunkData": "a2lwra+xa2lwra+xa2lwra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwra+xra+xra+x"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-108",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "108",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwra+xa2lwra+xa2lwa2lwa2lwra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-109",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "109",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwra+xa2lwra+xa2lwra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-110",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "110",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+x7/Tyra+xa2lwa2lwra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwa2lwra+xa2lwa2lwa2lwa2lwra+xa2lwra+xa2lwra+xa2lwa2lwra+xra+xra+xa2lwKSQvKSQvKSQvKSQva2lwKSQvKSQvra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-111",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "111",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xa2lwra+xa2lwra+xa2lwra+xra+xa2lwra+xra+xa2lwa2lwKSQvKSQvKSQvKSQvKSQvKSQvKSQvKSQv7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-112",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "112",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwa2lwa2lwra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwKSQva2lwKSQvKSQva2lwra+xra+xa2lwra+xa2lwra+xra+xa2lwra+xa2lwra+xra+xra+xa2lwa2lwKSQva2lwa2lwa2lwa2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-113",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "113",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwa2lwra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwKSQvKSQva2lwa2lwa2lwKSQvKSQvKSQva2lwKSQva2lwra+xra+xra+xa2lwra+xa2lwra+xra+xa2lwa2lwra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-114",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "114",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwra+xra+xra+xa2lwa2lwa2lwa2lwa2lwKSQvKSQvKSQvKSQvra+x7/Ty7/Tyra+xa2lwKSQvKSQva2lwKSQvKSQvra+xra+xra+x"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-115",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "115",
+              "chunkTotal": 138,
+              "chunkData": "a2lwra+xra+xa2lwra+xra+xa2lwra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwra+xra+xa2lwa2lw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-116",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "116",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwa2lwa2lwa2lwa2lwKSQva2lw7/Ty7/Tyra+xra+xa2lwa2lwKSQvKSQva2lwra+x7/Tyra+xa2lwra+xa2lwra+xra+xra+xra+xa2lwra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-117",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "117",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwKSQv7/Ty7/Ty7/Tyra+x7/Ty7/Tya2lwa2lwra+xra+x7/Tyra+xa2lwra+xra+xra+xa2lwra+xra+xa2lwra+xra+xa2lwra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-118",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "118",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwKSQvra+x7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+xra+x7/Ty7/Tya2lwa2lwra+xa2lwra+xra+xra+xra+xa2lwra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-119",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "119",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lw7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwra+xra+xra+xra+xra+xra+xra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-120",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "120",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+xra+xa2lwra+xa2lwa2lwa2lwa2lwra+xa2lwa2lwKSQvra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwra+xra+xra+xra+xra+xra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-121",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "121",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xa2lwKSQva2lw7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwra+xa2lwra+xra+xra+x7/Ty7/Tya2lwra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-122",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "122",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+xra+xa2lwa2lwra+xa2lwra+xa2lwra+xa2lwa2lwra+xa2lwKSQva2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+x"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-123",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "123",
+              "chunkTotal": 138,
+              "chunkData": "ra+xra+xra+xra+x7/Tyra+xra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+xra+xra+x"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-124",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "124",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwa2lwa2lwra+xa2lwra+xa2lwra+xa2lwra+xa2lwa2lwra+xa2lwra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xa2lwra+xra+xra+xa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-125",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "125",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+xra+xra+xra+xa2lwa2lwra+xa2lwa2lwra+xa2lwra+xa2lwa2lwra+xa2lwra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xa2lwra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-126",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "126",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwra+xra+xra+xa2lwa2lwra+xa2lwra+xa2lwra+xa2lwa2lwra+xa2lwra+xa2lwra+xa2lwra+xa2lwra+xra+xra+x7/Ty7/Ty7/Ty7/Tyra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-127",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "127",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwra+xra+xra+xa2lwa2lwra+xa2lwra+xa2lwra+xa2lwa2lwra+xa2lwa2lwra+xa2lwra+xra+xa2lwra+x7/Ty7/Ty7/Ty7/Tyra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-128",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "128",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwra+xra+xra+xra+xa2lwa2lwra+xa2lwra+xa2lwa2lwra+xa2lwra+xra+xa2lwra+xa2lwra+xra+xra+x7/Ty7/Ty7/Tyra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-129",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "129",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwra+xra+xra+xra+xa2lwra+xa2lwra+xa2lwra+xa2lwa2lwa2lwa2lwra+xa2lwra+xra+xra+xra+x7/Tyra+xra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-130",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "130",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwra+xra+xra+xra+xa2lwra+xa2lwa2lwa2lwra+xra+xra+xra+xra+xra+xra+xra+xra+x7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-131",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "131",
+              "chunkTotal": 138,
+              "chunkData": "ra+xra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-132",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "132",
+              "chunkTotal": 138,
+              "chunkData": "a2lwa2lwra+xra+xra+xra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-133",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "133",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tya2lwa2lwa2lwra+xra+xra+xra+xra+xra+xa2lwra+xa2lwra+xa2lwra+xra+xra+xra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-134",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "134",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwa2lwa2lwra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-135",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "135",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xa2lwra+xra+xa2lwra+xa2lwra+xra+xra+xra+xra+xra+xra+xra+xra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-136",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "136",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+x7/Tyra+xra+xa2lwa2lwa2lwa2lwa2lwa2lwa2lwa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-137",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "137",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Tyra+xra+xra+xra+xra+x7/Tyra+xra+x7/Tyra+xra+xa2lwra+x7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-138",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 80708614,
+              "checksum": 2459567286,
+              "totalSize": 57654,
+              "chunkId": "138",
+              "chunkTotal": 138,
+              "chunkData": "7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty7/Ty"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

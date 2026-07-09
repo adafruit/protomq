@@ -1,0 +1,363 @@
+{
+  "name": "420b - MagTag 2.9\" MARQUEE Display Demo (magtag_marquee2_1bpp.bmp)",
+  "description": "420 bytes - MARQUEE chunking of magtag_marquee2_1bpp.bmp.",
+  "protoVersion": "v2",
+  "steps": [
+    {
+      "name": "checkin-response",
+      "description": "Respond to device checkin with OK and board capabilities",
+      "trigger": "checkin.request",
+      "response": {
+        "checkin": {
+          "response": {
+            "response": "R_OK",
+            "totalGpioPins": 20,
+            "totalAnalogPins": 4,
+            "referenceVoltage": 2.5,
+            "componentAdds": {},
+            "sleepEnabled": false
+          }
+        }
+      }
+    },
+    {
+      "name": "add-display",
+      "description": "Configure the 2.9\" E-Ink EPD display (296x128, SPI)",
+      "after": "checkin-response",
+      "waitFor": "checkin.complete",
+      "delay": 500,
+      "topic": "display",
+      "send": {
+        "display": {
+          "add": {
+            "type": "DISPLAY_CLASS_EPD",
+            "driver": "SSD1680",
+            "panel": "adafruit-magtag",
+            "name": "epd0",
+            "interfaceType": {
+              "spiEpd": {
+                "pinBusy": "D5",
+                "spi": {
+                  "bus": 0,
+                  "pinMosi": "D35",
+                  "pinSck": "D36",
+                  "pinCs": "D8"
+                },
+                "pinDc": "D7",
+                "pinRst": "D6"
+              }
+            },
+            "configEpd": {
+              "mode": "EPD_MODE_MONO",
+              "properties": {
+                "width": 296,
+                "height": 128,
+                "textSize": 3,
+                "statusBar": true
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-1",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 15,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 536846807,
+              "checksum": 2828543603,
+              "totalSize": 5182,
+              "chunkId": "1",
+              "chunkTotal": 13,
+              "chunkData": "Qk0+FAAAAAAAAD4AAAAoAAAAKAEAAIAAAAABAAEAAAAAAAAUAADEDgAAxA4AAAIAAAACAAAAAAAAAP///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf///////////////////////9////////////////////////gAAAH////////////////////////f///////////////////////4AAAB////////////////////////3///////////////////////+AAAAf///////////////////////9////////////////////////gAAAH//////////////////////wcvP//////////////////////4AAAB//////////////////////8zTz//////////////////////+AAAAf//////////////////////Mkc///////////////////////gAAAH//////////////////////zJHP//////////////////////4A"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-2",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 536846807,
+              "checksum": 2828543603,
+              "totalSize": 5182,
+              "chunkId": "2",
+              "chunkTotal": 13,
+              "chunkData": "AAB//////////////////////8ORz//////////////////////+AAAAf//////////////////////Mkc///////////////////////gAAAH//////////////////////zJHP//////////////////////4AAAB//////////////////////8zTz//////////////////////+AAAAf//////////////////////BywP//////////////////////gAAAH////////////////////////f///////////////////////4AAAB////////////////////////3///////////////////////+AAAAf///////////////////////9////////////////////////gAAAH////////////////////////f///////////////////////4AAAB////////wAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAP///////+AAAAf///////wAAAAAAAAAAAAAAA"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-3",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 15,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 536846807,
+              "checksum": 2828543603,
+              "totalSize": 5182,
+              "chunkId": "3",
+              "chunkTotal": 13,
+              "chunkData": "CAAAAAAAAAAAAAAAA////////gAAAH///////4AAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAH///////4AAAB///////8AAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAA///////+AAAAf//////+BwAAAOAAADgAAAcACADgAAAcAAAHAAAA4H///////gAAAH///////h/AAAP4AAD+AAAfwAgD+AAAfwAAH8AAA/h///////4AAAB///////wfwDgD+AcA/gDgH8AUA/gHAH8A4B/AHAP4P//////+AAAAf//////8P+B8B/wPgf8B8D/gNgf8D4D/gfA/4D4H/D///////gAAAH///////D/gfAf8D4H/AfA/4DYH/A+A/4HwP+A+B/w///////4AAAB///////w/4HwH/A+B/wHwP+A2B/wPgP+B8D/gPgf8P//////+AAAAf//////8H8A4A/gHAP4A4B/AFAP4BwB/AOAfwBwD+D///////gAAAH///////B/AAAP4AAD+AAAfwAgD+AAAfwAAH8AAA/g///////4A"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-4",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 15,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 536846807,
+              "checksum": 2828543603,
+              "totalSize": 5182,
+              "chunkId": "4",
+              "chunkTotal": 13,
+              "chunkData": "AAB///////wHAAAA4AAAOAAABwAIAOAAABwAAAcAAADgP//////+AAAAf//////8AAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAD///////gAAAH///////AAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAA///////4AAAB///////wAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAP//////+AAAAf//////8AAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAD///////gAAAH///////AAAf/////////////f////////////+AAA///////4AAAB///////wAAP/////////////3/////////////wAAP//////+AAAAf//////8BwH/////////////9/////////////+A4D///////gAAAH///////A+B//////////////f/////////////gfA///////4AAAB///////wPgf/////////////3/////////////4HwP//////+AAAAf//////8D4H/////////////"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-5",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 15,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 536846807,
+              "checksum": 2828543603,
+              "totalSize": 5182,
+              "chunkId": "5",
+              "chunkTotal": 13,
+              "chunkData": "9/////////////+B8D///////gAAAH///////AcB//////////////f/////////////gOA///////4AAAB///////wAAf/////////////3/////////////4AAP//////+AAAAf//////8AAH/////////////9+P///////////+AAD///////gAAAH///////AAB//////////////fD////////////gAA///////4AAAB///////wAAf/////////////3h////////////4AAP//////+AAAAf//////8AAH////+H+GH8MPB8A/8B+AHgB////+AAD///////gAAAH///////AcB/////h/hw+HDw/gH8AHgB4Af////gOA///////4AAAB///////wfwf////4f4cPhw4Ppw/Dh4f+H/////4P4P//////+AAAAf//////8H8H////+HOHAAcOHy+Hh8OH/h/////+D+D///////gAAAH///////D/h/////hhh4APDB4/w4fDh/4f/////h/w///////4A"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-6",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 15,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 536846807,
+              "checksum": 2828543603,
+              "totalSize": 5182,
+              "chunkId": "6",
+              "chunkTotal": 13,
+              "chunkData": "AAB///////w/4f////4YYeHDww+P8OHw4f+H/////4f8P//////+AAAAf//////8P+H////+ECHhw8Afj/Dh8OH/h/////+H/D///////gAAAH///////B/B/////hMh8cfAH4/w4fDgD4A/////g/g///////4AAAB///////wfwf////4TIfCHw4+P8OHw4A+AP////4P4P//////+AAAAf//////8BwH////+AwHwh8OHj/Dh8OH/h/////+A4D///////gAAAH///////AAB/////geB+I/Dh4/w4fDh/4f/////gAA///////4AAAB///////wAAf////4HgfgPw4fL4eHw4f+H/////4AAP//////+AAAAf//////8AAH////+B4H4D8OH6cPh8OH/h/////+AAD///////gAAAH+BAn+f/AAB/////g/B/B/AD/gH4fDgB4Af////gAA/OAcMzn4AAAB/nz5/n/wAAf////4PwfwfwB/wD+Hw4AeAH////4AAPzOeTM5+AAAAf58+f5/8BwH/////////////"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-7",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 15,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 536846807,
+              "checksum": 2828543603,
+              "totalSize": 5182,
+              "chunkId": "7",
+              "chunkTotal": 13,
+              "chunkData": "9/////////////+A4D8znMzOfgAAAH+fPn+f/A+B//////////////f/////////////gfA/J5yMzn4AAAAAYPnwYAPwfgAAAAAAAAAAAAAIAAAAAAAAAAAAAH4PwPBjA/GAAAAAf58+f5/8D4H/////////////9/////////////+B8D8znPzOfgAAAH+fPn+f/AcB//////////////f/////////////gOA/M5z8zn4AAAB/nz5/n/wAAf/////////////3/////////////4AAPzOebM5+AAAAf58CBgf8AAH/////////////9/////////////+AAD8GBxzIHgAAAH///////AAB//D+GAPw/hw/4ej8B+H4f/4fgP//gAA///////4AAAB///////wAAf/4fDgA+Hw8P+Hp8AHh+H/+HwB//4AAP//////+AAAAf//////8AAH/+Hw4eHh8PD/hyfDh4fh//h4cP/+AAD///////gAAAH///////AAB//gAOHw4ADw/4cvh8OH4f/4cPh//gAA///////4A"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-8",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 15,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 536846807,
+              "checksum": 2828543603,
+              "totalSize": 5182,
+              "chunkId": "8",
+              "chunkTotal": 13,
+              "chunkData": "AAB///////wHAf/8AHh8HAB8P+GL4fDh+H/+GH8P/4DgP//////+AAAAf//////8H8H//Dh4fhw4fD/hj+Hw4fh//hh/D/+D+D///////gAAAH///////B/B//w4eH4cOHw/4Afh8OH4f/4Yfw//g/g///////4AAAB///////w/4f/+OPh+Hjj8AOAH4fDh+H/+GH8P/4f8P//////+AAAAf//////8P+H//hD4fh4Q/ADhz+Hw4fh//hh/D/+H/D///////gAAAH///////D/h//4Q+H4eEPw/4cvh8OH4f/4Yfw//h/w///////4AAAB///////wfwf//Efh8HxH8P+HL4fDh+H/+GH8P/4P4P//////+AAAAf//////8H8H//wH4fD8B/D/hy+Hw4fh//hw+H/+D+D///////gAAAH///////AcB//8B+Hh/Afw/4cvh8OH4f/4eHD//gOA///////4AAAB///////wAAf//g/gA/4P8AOAP4fDhAAP+HwB//4AAP//////+AAAAf//////8AAH//4P4A/+D/ADg"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-9",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 15,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 536846807,
+              "checksum": 2828543603,
+              "totalSize": 5182,
+              "chunkId": "9",
+              "chunkTotal": 13,
+              "chunkData": "B+Hw4QAD/h+A//+AAD///////gAAAH///////AAB//////////////f/////////////gAA///////4AAAB///////wAAf/////////////3/////////////4AAP//////+AAAAf//////8AAH/////////////9/////////////+AAD///////gAAAH///////AAB//////////////f/////////////gAA///////4AAAB///////wHAf/////////////3/////////////4DgP//////+AAAAf//////8D4H/////////////9/////////////+B8D///////gAAAH///////A+B//////////////f/////////////gfA///////4AAAB///////wPgf/////////////3/////////////4HwP//////+AAAAf//////8BwD/////////////9/////////////8A4D///////gAAAH///////AAAf/////////////f////////////+AAA///////4A"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-10",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 15,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 536846807,
+              "checksum": 2828543603,
+              "totalSize": 5182,
+              "chunkId": "10",
+              "chunkTotal": 13,
+              "chunkData": "AAB///////wAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAP//////+AAAAf//////8AAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAD///////gAAAH///////AAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAA///////4AAAB///////wAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAP//////+AAAAf//////8BwAAAOAAADgAAAcACADgAAAcAAAHAAAA4D///////gAAAH///////B/AAAP4AAD+AAAfwAgD+AAAfwAAH8AAA/g///////4AAAB///////wfwDgD+AcA/gDgH8AUA/gHAH8A4B/AHAP4P//////+AAAAf//////8P+B8B/wPgf8B8D/gNgf8D4D/gfA/4D4H/D///////gAAAH///////D/gfAf8D4H/AfA/4DYH/A+A/4HwP+A+B/w///////4AAAB///////w/4HwH/A+B/wHwP+A2B/wPgP+B8D/gPgf8P//////+AAAAf//////8H8A4A/gHAP4A4B/A"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-11",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 15,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 536846807,
+              "checksum": 2828543603,
+              "totalSize": 5182,
+              "chunkId": "11",
+              "chunkTotal": 13,
+              "chunkData": "FAP4BwB/AOAfwBwD+D///////gAAAH///////h/AAAP4AAD+AAAfwAgD+AAAfwAAH8AAA/h///////4AAAB///////4HAAAA4AAAOAAABwAIAOAAABwAAAcAAADgf//////+AAAAf///////AAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAP///////gAAAH///////4AAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAH///////4AAAB////////AAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAD///////+AAAAf///////8AAAAAAAAAAAAAAACAAAAAAAAAAAAAAAD////////gAAAH////////////////////////f///////////////////////4AAAB////////////////////////3///////////////////////+AAAAf///////////////////////9////////////////////////gAAAH////////////////////////f///////////////////////4A"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-12",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 15,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 536846807,
+              "checksum": 2828543603,
+              "totalSize": 5182,
+              "chunkId": "12",
+              "chunkTotal": 13,
+              "chunkData": "AAB///////////////////////PLP//////////////////////+AAAAf//////////////////////z0z///////////////////////gAAAH//////////////////////85E///////////////////////4AAAB///////////////////////ORP//////////////////////+AAAAf//////////////////////zkQf//////////////////////gAAAH//////////////////////85Ez//////////////////////4AAAB///////////////////////ORM//////////////////////+AAAAf//////////////////////z0zP//////////////////////gAAAH//////////////////////wMsH//////////////////////4AAAB////////////////////////3///////////////////////+AAAAf///////////////////////"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-13",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 15,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 536846807,
+              "checksum": 2828543603,
+              "totalSize": 5182,
+              "chunkId": "13",
+              "chunkTotal": 13,
+              "chunkData": "9////////////////////////gAAAH////////////////////////f///////////////////////4AAAB////////////////////////3///////////////////////+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+{
+  "name": "Edge Case - MagTag 2.9\" MARQUEE Display Demo (magtag_marquee2_1bpp.bmp)",
+  "description": "Tests sending OoO bitmap chunks.",
+  "protoVersion": "v2",
+  "steps": [
+    {
+      "name": "checkin-response",
+      "description": "Respond to device checkin with OK and board capabilities",
+      "trigger": "checkin.request",
+      "response": {
+        "checkin": {
+          "response": {
+            "response": "R_OK",
+            "totalGpioPins": 20,
+            "totalAnalogPins": 4,
+            "referenceVoltage": 2.5,
+            "componentAdds": {},
+            "sleepEnabled": false
+          }
+        }
+      }
+    },
+    {
+      "name": "add-display",
+      "description": "Configure the 2.9\" E-Ink EPD display (296x128, SPI)",
+      "after": "checkin-response",
+      "waitFor": "checkin.complete",
+      "delay": 500,
+      "topic": "display",
+      "send": {
+        "display": {
+          "add": {
+            "type": "DISPLAY_CLASS_EPD",
+            "driver": "SSD1680",
+            "panel": "adafruit-magtag",
+            "name": "epd0",
+            "interfaceType": {
+              "spiEpd": {
+                "pinBusy": "D5",
+                "spi": {
+                  "bus": 0,
+                  "pinMosi": "D35",
+                  "pinSck": "D36",
+                  "pinCs": "D8"
+                },
+                "pinDc": "D7",
+                "pinRst": "D6"
+              }
+            },
+            "configEpd": {
+              "mode": "EPD_MODE_MONO",
+              "properties": {
+                "width": 296,
+                "height": 128,
+                "textSize": 3,
+                "statusBar": true
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-2",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 1024117925,
+              "checksum": 2828543603,
+              "totalSize": 5182,
+              "chunkId": "2",
+              "chunkTotal": 3,
+              "chunkData": "6cPw4eH/h/////+D+D///////gAAAH///////B/B/////hzhwAHDh8vh4fDh/4f/////g/g///////4AAAB///////w/4f////4YYeADwweP8OHw4f+H/////4f8P//////+AAAAf//////8P+H////+GGHhw8MPj/Dh8OH/h/////+H/D///////gAAAH///////D/h/////hAh4cPAH4/w4fDh/4f/////h/w///////4AAAB///////wfwf////4TIfHHwB+P8OHw4A+AP////4P4P//////+AAAAf//////8H8H////+EyHwh8OPj/Dh8OAPgD////+D+D///////gAAAH///////AcB/////gMB8IfDh4/w4fDh/4f/////gOA///////4AAAB///////wAAf////4HgfiPw4eP8OHw4f+H/////4AAP//////+AAAAf//////8AAH////+B4H4D8OHy+Hh8OH/h/////+AAD///////gAAAH///////AAB/////geB+A/Dh+nD4fDh/4f/////gAA///////4AAAB/gQJ/n/wAAf////4PwfwfwA/4B+Hw4AeAH////4AAPzgHDM5+AAAAf58+f5/8AAH////+D8H8H8Af8A/h8OAHgB////+AAD8znkzOfgAAAH+fPn+f/AcB//////////////f/////////////gOA/M5zMzn4AAAB/nz5/n/wPgf/////////////3/////////////4HwPyecjM5+AAAAAGD58GAD8H4AAAAAAAAAAAAACAAAAAAAAAAAAAB+D8DwYwPxgAAAAH+fPn+f/A+B//////////////f/////////////gfA/M5z8zn4AAAB/nz5/n/wHAf/////////////3/////////////4DgPzOc/M5+AAAAf58+f5/8AAH/////////////9/////////////+AAD8znmzOfgAAAH+fAgYH/AAB//////////////f/////////////gAA/BgccyB4AAAB///////wAAf/w/hgD8P4cP+Ho/Afh+H/+H4D//4AAP//////+AAAAf//////8AAH/+Hw4APh8PD/h6fAB4fh//h8Af/+AAD///////gAAAH///////AAB//h8OHh4fDw/4cnw4eH4f/4eHD//gAA///////4AAAB///////wAAf/4ADh8OAA8P+HL4fDh+H/+HD4f/4AAP//////+AAAAf//////8BwH//AB4fBwAfD/hi+Hw4fh//hh/D/+A4D///////gAAAH///////B/B//w4eH4cOHw/4Y/h8OH4f/4Yfw//g/g///////4AAAB///////wfwf/8OHh+HDh8P+AH4fDh+H/+GH8P/4P4P//////+AAAAf//////8P+H//jj4fh44/ADgB+Hw4fh//hh/D/+H/D///////gAAAH///////D/h//4Q+H4eEPwA4c/h8OH4f/4Yfw//h/w///////4AAAB///////w/4f/+EPh+HhD8P+HL4fDh+H/+GH8P/4f8P//////+AAAAf//////8H8H//xH4fB8R/D/hy+Hw4fh//hh/D/+D+D///////gAAAH///////B/B//8B+Hw/Afw/4cvh8OH4f/4cPh//g/g///////4AAAB///////wHAf//Afh4fwH8P+HL4fDh+H/+Hhw//4DgP//////+AAAAf//////8AAH//4P4AP+D/ADgD+Hw4QAD/h8Af/+AAD///////gAAAH///////AAB//+D+AP/g/wA4Afh8OEAA/4fgP//gAA///////4AAAB///////wAAf/////////////3/////////////4AAP//////+AAAAf//////8AAH/////////////9/////////////+AAD///////gAAAH///////AAB//////////////f/////////////gAA///////4AAAB///////wAAf/////////////3/////////////4AAP//////+AAAAf//////8BwH/////////////9/////////////+A4D///////gAAAH///////A+B//////////////f/////////////gfA///////4AAAB///////wPgf/////////////3/////////////4HwP//////+AAAAf//////8D4H/////////////9/////////////+B8D///////gAAAH///////AcA//////////////f/////////////AOA///////4AAAB///////wAAH/////////////3/////////////gAAP//////+AAAAf//////8AAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAD///////gAAAH///////AAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAA///////4AAAB///////wAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAP//////+AAAAf//////8AAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAD///////gAAAH///////AcAAADgAAA4AAAHAAgA4AAAHAAABwAAAOA///////4AAAB///////wfwAAD+AAA/gAAH8A="
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-1",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 1024117925,
+              "checksum": 2828543603,
+              "totalSize": 5182,
+              "chunkId": "1",
+              "chunkTotal": 3,
+              "chunkData": "Qk0+FAAAAAAAAD4AAAAoAAAAKAEAAIAAAAABAAEAAAAAAAAUAADEDgAAxA4AAAIAAAACAAAAAAAAAP///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf///////////////////////9////////////////////////gAAAH////////////////////////f///////////////////////4AAAB////////////////////////3///////////////////////+AAAAf///////////////////////9////////////////////////gAAAH//////////////////////wcvP//////////////////////4AAAB//////////////////////8zTz//////////////////////+AAAAf//////////////////////Mkc///////////////////////gAAAH//////////////////////zJHP//////////////////////4AAAB//////////////////////8ORz//////////////////////+AAAAf//////////////////////Mkc///////////////////////gAAAH//////////////////////zJHP//////////////////////4AAAB//////////////////////8zTz//////////////////////+AAAAf//////////////////////BywP//////////////////////gAAAH////////////////////////f///////////////////////4AAAB////////////////////////3///////////////////////+AAAAf///////////////////////9////////////////////////gAAAH////////////////////////f///////////////////////4AAAB////////wAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAP///////+AAAAf///////wAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAA////////gAAAH///////4AAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAH///////4AAAB///////8AAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAA///////+AAAAf//////+BwAAAOAAADgAAAcACADgAAAcAAAHAAAA4H///////gAAAH///////h/AAAP4AAD+AAAfwAgD+AAAfwAAH8AAA/h///////4AAAB///////wfwDgD+AcA/gDgH8AUA/gHAH8A4B/AHAP4P//////+AAAAf//////8P+B8B/wPgf8B8D/gNgf8D4D/gfA/4D4H/D///////gAAAH///////D/gfAf8D4H/AfA/4DYH/A+A/4HwP+A+B/w///////4AAAB///////w/4HwH/A+B/wHwP+A2B/wPgP+B8D/gPgf8P//////+AAAAf//////8H8A4A/gHAP4A4B/AFAP4BwB/AOAfwBwD+D///////gAAAH///////B/AAAP4AAD+AAAfwAgD+AAAfwAAH8AAA/g///////4AAAB///////wHAAAA4AAAOAAABwAIAOAAABwAAAcAAADgP//////+AAAAf//////8AAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAD///////gAAAH///////AAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAA///////4AAAB///////wAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAP//////+AAAAf//////8AAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAD///////gAAAH///////AAAf/////////////f////////////+AAA///////4AAAB///////wAAP/////////////3/////////////wAAP//////+AAAAf//////8BwH/////////////9/////////////+A4D///////gAAAH///////A+B//////////////f/////////////gfA///////4AAAB///////wPgf/////////////3/////////////4HwP//////+AAAAf//////8D4H/////////////9/////////////+B8D///////gAAAH///////AcB//////////////f/////////////gOA///////4AAAB///////wAAf/////////////3/////////////4AAP//////+AAAAf//////8AAH/////////////9+P///////////+AAD///////gAAAH///////AAB//////////////fD////////////gAA///////4AAAB///////wAAf/////////////3h////////////4AAP//////+AAAAf//////8AAH////+H+GH8MPB8A/8B+AHgB////+AAD///////gAAAH///////AcB/////h/hw+HDw/gH8AHgB4Af////gOA///////4AAAB///////wfwf////4f4cPhw4M="
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-canvas-3",
+      "description": "Write a canvas chunk to the E-Ink display",
+      "after": "add-display",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "epd0",
+            "message": "",
+            "image": {
+              "id": 1024117925,
+              "checksum": 2828543603,
+              "totalSize": 5182,
+              "chunkId": "3",
+              "chunkTotal": 3,
+              "chunkData": "CAP4AAB/AAAfwAAD+D///////gAAAH///////B/AOAP4BwD+AOAfwBQD+AcAfwDgH8AcA/g///////4AAAB///////w/4HwH/A+B/wHwP+A2B/wPgP+B8D/gPgf8P//////+AAAAf//////8P+B8B/wPgf8B8D/gNgf8D4D/gfA/4D4H/D///////gAAAH///////D/gfAf8D4H/AfA/4DYH/A+A/4HwP+A+B/w///////4AAAB///////wfwDgD+AcA/gDgH8AUA/gHAH8A4B/AHAP4P//////+AAAAf//////+H8AAA/gAAP4AAB/ACAP4AAB/AAAfwAAD+H///////gAAAH///////gcAAADgAAA4AAAHAAgA4AAAHAAABwAAAOB///////4AAAB///////8AAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAA///////+AAAAf///////gAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAf///////gAAAH///////8AAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAP///////4AAAB////////wAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAP///////+AAAAf///////////////////////9////////////////////////gAAAH////////////////////////f///////////////////////4AAAB////////////////////////3///////////////////////+AAAAf///////////////////////9////////////////////////gAAAH//////////////////////88s///////////////////////4AAAB///////////////////////PTP//////////////////////+AAAAf//////////////////////zkT///////////////////////gAAAH//////////////////////85E///////////////////////4AAAB///////////////////////ORB//////////////////////+AAAAf//////////////////////zkTP//////////////////////gAAAH//////////////////////85Ez//////////////////////4AAAB///////////////////////PTM//////////////////////+AAAAf//////////////////////Aywf//////////////////////gAAAH////////////////////////f///////////////////////4AAAB////////////////////////3///////////////////////+AAAAf///////////////////////9////////////////////////gAAAH////////////////////////f///////////////////////4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -299,7 +299,7 @@ def display_remove(name):
     return {"display": {"remove": {"name": name}}}
 
 
-def canvas_write(name, *, image_id, checksum, chunk_id, chunk_total, total_size,
+def canvas_write(name, *, checksum, chunk_id, chunk_total, size,
                  chunk_data):
     """A single Canvas chunk write (marquee image fragment).
 
@@ -316,9 +316,8 @@ def canvas_write(name, *, image_id, checksum, chunk_id, chunk_total, total_size,
                 "name": name,
                 "message": "",
                 "image": {
-                    "id": image_id,
                     "checksum": checksum,
-                    "totalSize": total_size,
+                    "size": size,
                     "chunkId": str(chunk_id),
                     "chunkTotal": chunk_total,
                     "chunkData": chunk_data,

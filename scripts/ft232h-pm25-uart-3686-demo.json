@@ -1,0 +1,63 @@
+{
+  "name": "FT232H PM2.5 UART 3686 Demo",
+  "description": "Tests the Adafruit PM2.5 Air Quality Sensor + breadboard adapter kit (PID 3686, PMS5003) read over UART by an FTDI FT232H breakout, wired through a Jumperless V5 crossbar. Responds to checkin, then adds the pm25 UART driver. FT232H hardware UART is fixed: TX=AD0 (D0), RX=AD1 (D1); the serial port opens as the pyftdi URL 'ftdi://ftdi:232h/1'. Sensor wiring (rows 53-58 = vcc,gnd,set,rxd,txd,rst): VCC->FT232H 5V, GND->FT232H GND, SET->3V (active), RXD->FT232H D0 (TX), TXD->FT232H D1 (RX), RST->3V (out of reset).",
+  "protoVersion": "v2",
+  "steps": [
+    {
+      "name": "checkin-response",
+      "description": "Respond to device checkin with OK and board capabilities",
+      "trigger": "checkin.request",
+      "response": {
+        "checkin": {
+          "response": {
+            "response": "R_OK",
+            "totalGpioPins": 12,
+            "totalAnalogPins": 0,
+            "referenceVoltage": 3.3,
+            "componentAdds": {},
+            "sleepEnabled": false
+          }
+        }
+      }
+    },
+    {
+      "name": "add-pm25",
+      "description": "Add the PM2.5 (PMS5003) UART driver on the FT232H hardware UART",
+      "after": "checkin-response",
+      "waitFor": "checkin.complete",
+      "delay": 500,
+      "topic": "uart",
+      "send": {
+        "uart": {
+          "add": {
+            "name": "pm25",
+            "descriptor": {
+              "pinRx": "D1",
+              "pinTx": "D0"
+            },
+            "cfgSerial": {
+              "name": "ftdi://ftdi:232h/1",
+              "baudRate": 9600,
+              "format": "PF_8N1",
+              "timeout": 1.0
+            },
+            "cfgDevice": {
+              "pm25aqi": {
+                "isPm1006": false,
+                "period": 3,
+                "types": [
+                  "T_PM10_STD",
+                  "T_PM25_STD",
+                  "T_PM100_STD",
+                  "T_PM10_ENV",
+                  "T_PM25_ENV",
+                  "T_PM100_ENV"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

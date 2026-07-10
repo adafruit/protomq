@@ -131,6 +131,108 @@ fallback handlers respond to common messages:
 - **V2 checkin**: Automatically responds with `R_OK` and default board capabilities
 - **V1 checkin**: Responds with `RESPONSE_OK` (V1 flat message format)
 
+## HTTP control API
+
+Everything the web UI does is also a plain HTTP API on the frontend port
+(`5173` by default), so tests and scripts can drive the broker without a
+browser. All routes live under `/api`, take/return JSON, and require no auth.
+This is how you inject a message to a device, stand up an auto-responder, or
+run a playback script from code or CI.
+
+### Device message topics
+
+The broker relays V2 traffic on two per-device topics:
+
+- `<io_user>/ws-b2d/<device_uid>` — **broker → device** (a `ws.signal.BrokerToDevice`)
+- `<io_user>/ws-d2b/<device_uid>` — **device → broker** (a `ws.signal.DeviceToBroker`)
+
+The message *shape* (oneof members and field numbers) comes from the `.proto`
+bundle you import (see [Proto Import](#proto-import)) — treat that as the single
+source of truth and don't hard-code field numbers here, they move as the protos
+evolve. There are two ways to supply a payload:
+
+- **Pre-encoded bytes** (`/echo`) — you encode the protobuf yourself and send the
+  raw bytes as a **latin1** string; the broker does `Buffer.from(payload, 'latin1')`.
+  Language-agnostic; you own the wire format.
+- **A plain object** (`/autoresponse`, script steps) — you pass a JS object that
+  matches the current proto shape and the broker encodes it via `fromObject`, so
+  you never touch field numbers.
+
+### Echo — publish a message now
+
+`POST /api/echo` — publish one protobuf to one topic immediately.
+
+```jsonc
+// body
+{ "topic": "myuser/ws-b2d/abc123", "payload": "<protobuf bytes as a latin1 string>" }
+// -> { "status": "OK" }
+```
+
+Because `payload` is binary, `/echo` is easiest from a language that can produce
+the bytes (e.g. Python `payload.decode("latin1")`). Worked examples:
+[`examples/aio-canvas-bridge/`](examples/aio-canvas-bridge) (chunked-image bridge)
+and the WipperSnapper-Python `ProtoMQClient` (`src/ProtoMQ/`), which wraps
+`/echo` + the autoresponse calls below.
+
+### Autoresponders — reply automatically to a message
+
+Register a rule that watches decoded D2B traffic and fires a canned B2D reply.
+`trigger` is a dot-path on the decoded message (e.g. `checkin.request`);
+`response` is a B2D-shaped object (validated at registration).
+
+| method + path | body | effect |
+|---|---|---|
+| `POST /api/autoresponse` | `{ name?, trigger, match?, response }` | register; → `{status,count}` |
+| `GET /api/autoresponse` | — | list registered responders |
+| `DELETE /api/autoresponse/:name` | — | remove one by name |
+| `DELETE /api/autoresponse` | — | clear all (do this in test setup/teardown) |
+
+There are also built-in fallback responders (see [Autoresponders](#autoresponders));
+toggle the checkin fallback with `POST /api/scripts/fallback-checkin` `{ enabled }`.
+
+### Playback scripts
+
+Drive the loaded [playback scripts](#playback-scripts) over HTTP:
+
+| method + path | body | effect |
+|---|---|---|
+| `GET /api/scripts` | — | list scripts + steps + `active`/`completedSteps`, and `fallbackCheckinEnabled` |
+| `POST /api/scripts/:name/activate` | `{ disabledSteps?, autoReset? }` | activate by filename (404 if unknown) |
+| `POST /api/scripts/deactivate` | — | deactivate the active script |
+| `POST /api/scripts/:name/reset` | `{ disabledSteps?, autoReset? }` | reset the active script's run state |
+| `POST /api/scripts/:name/steps/:stepName/send` | `{ devicePrefix? }` | publish one step's message now (auto-finds the device `ws-b2d` topic if `devicePrefix` omitted) |
+| `POST /api/scripts/fallback-checkin` | `{ enabled }` | toggle the built-in checkin auto-responder |
+
+You can also start the broker with a script already active:
+`npm start -- --active-script=<name>`.
+
+### Delivery capture & client control
+
+| method + path | body | effect |
+|---|---|---|
+| `POST /api/track_deliveries` | `{ client }` | start capturing all traffic to/from a client id |
+| `POST /api/dump_deliveries` | `{ client }` | return **and clear** the captured `{ inbox, outbox }` |
+| `POST /api/disconnect` | `{ client }` | force-disconnect a client by id |
+
+### Quick examples
+
+```bash
+# activate a demo playback script
+curl -sX POST localhost:5173/api/scripts/magtag-demo/activate
+
+# auto-reply to every checkin with a canned B2D object
+curl -s localhost:5173/api/autoresponse -H 'content-type: application/json' \
+  -d '{"trigger":"checkin.request","response":{ /* a BrokerToDevice object */ }}'
+```
+
+```python
+# publish a pre-encoded protobuf to a device via /echo (payload as latin1)
+import httpx
+httpx.post("http://localhost:5173/api/echo",
+           json={"topic": "myuser/ws-b2d/abc123",
+                 "payload": encoded_b2d_bytes.decode("latin1")})
+```
+
 ## Authentication
 
 The broker accepts any credentials except specifically invalid test values

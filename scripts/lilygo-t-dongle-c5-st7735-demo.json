@@ -1,0 +1,100 @@
+{
+  "name": "LilyGO T-Dongle C5 ST7735 Display Demo",
+  "description": "Tests the ST7735 0.96\" 160x80 SPI TFT on the LilyGO T-Dongle C5 (ESP32-C5). Responds to checkin, configures the display with a proto-carried digital backlight (GPIO0), then writes test messages. Uses the migrate-api-v2 display proto shape (interfaceType.spiTft.spi + pinDc/pinRst, backlight.backlightDigital).",
+  "protoVersion": "v2",
+  "steps": [
+    {
+      "name": "checkin-response",
+      "description": "Respond to device checkin with OK and board capabilities",
+      "trigger": "checkin.request",
+      "response": {
+        "checkin": {
+          "response": {
+            "response": "R_OK",
+            "totalGpioPins": 30,
+            "totalAnalogPins": 6,
+            "referenceVoltage": 3.3,
+            "componentAdds": {},
+            "sleepEnabled": false
+          }
+        }
+      }
+    },
+    {
+      "name": "add-display",
+      "description": "Configure the ST7735 TFT (160x80, SPI bus 0) with a digital backlight on GPIO0",
+      "after": "checkin-response",
+      "waitFor": "checkin.complete",
+      "delay": 500,
+      "topic": "display",
+      "send": {
+        "display": {
+          "add": {
+            "name": "tft0",
+            "type": "DISPLAY_CLASS_TFT",
+            "driver": "ST7735",
+            "panel": "lilygo-t-dongle-c5",
+            "interfaceType": {
+              "spiTft": {
+                "spi": {
+                  "bus": 0,
+                  "pinMosi": "D2",
+                  "pinSck": "D6",
+                  "pinMiso": "D7",
+                  "pinCs": "D10"
+                },
+                "pinDc": "D3",
+                "pinRst": "D1"
+              }
+            },
+            "configDisplay": {
+              "width": 160,
+              "height": 80,
+              "rotation": 1,
+              "textSize": 1
+            },
+            "backlight": {
+              "backlightDigital": {
+                "pinName": "D0"
+              }
+            },
+            "write": {
+              "name": "tft0",
+              "message": "Hello from ProtoMQ!"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-hello",
+      "description": "Write a test message to the display",
+      "after": "add-display",
+      "delay": 3000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "tft0",
+            "message": "T-Dongle C5\\nST7735 160x80\\nDisplay test OK"
+          }
+        }
+      }
+    },
+    {
+      "name": "write-update",
+      "description": "Write an updated message after a pause",
+      "after": "write-hello",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "tft0",
+            "message": "Temp: 23.5C\\nHumidity: 45%\\nAll systems OK"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "name": "LilyGO T-Dongle C5 I2C Scan (pinout verify)",
+  "description": "Verifies the LilyGO T-Dongle C5 I2C port pinout by probing the bus on the JST/UART pins (SDA=GPIO11 / SCL=GPIO12). With an HTU31D attached, the device's Probed response should report found address 0x40 (64) (or 0x41/65 if ADDR is tied high). An empty addresses list means 'scan all'. Uses the migrate-api-v2 (api-v2-pins-as-strings) i2c proto shape.",
+  "protoVersion": "v2",
+  "steps": [
+    {
+      "name": "checkin-response",
+      "description": "Respond to device checkin with OK and board capabilities",
+      "trigger": "checkin.request",
+      "response": {
+        "checkin": {
+          "response": {
+            "response": "R_OK",
+            "totalGpioPins": 30,
+            "totalAnalogPins": 6,
+            "referenceVoltage": 3.3,
+            "componentAdds": {},
+            "sleepEnabled": false
+          }
+        }
+      }
+    },
+    {
+      "name": "i2c-scan",
+      "description": "Probe the I2C bus on SDA=D11 / SCL=D12 (scan all addresses). Expect the HTU31D at 0x40 in the device's Probed reply.",
+      "after": "checkin-response",
+      "waitFor": "checkin.complete",
+      "delay": 500,
+      "topic": "i2c",
+      "send": {
+        "i2c": {
+          "probe": {
+            "addressSpaces": [
+              {
+                "pinScl": "D12",
+                "pinSda": "D11"
+              }
+            ],
+            "addresses": []
+          }
+        }
+      }
+    }
+  ]
+}

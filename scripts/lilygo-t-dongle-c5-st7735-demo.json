@@ -50,12 +50,13 @@
             "configDisplay": {
               "width": 160,
               "height": 80,
-              "rotation": 1,
+              "rotation": 3,
               "textSize": 1
             },
             "backlight": {
               "backlightDigital": {
-                "pinName": "D0"
+                "pinName": "D0",
+                "isInverted": true
               }
             },
             "write": {

@@ -147,7 +147,13 @@
       // recurse into nested messages
       if(field.fieldType === 'message' && value && typeof value === 'object') {
         const nextPath = fieldLabel
-        violations.push(...validateNanopbLimits(value, fieldsByPath, nextPath))
+        if(Array.isArray(value)) {
+          value.forEach((item, i) => {
+            violations.push(...validateNanopbLimits(item, fieldsByPath, `${nextPath}[${i}]`))
+          })
+        } else {
+          violations.push(...validateNanopbLimits(value, fieldsByPath, nextPath))
+        }
       }
     }
 

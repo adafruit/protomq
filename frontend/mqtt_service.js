@@ -5,7 +5,10 @@ import { useMQTTStore } from './stores/mqtt'
 import { useSubscriptionStore } from './stores/subscriptions'
 
 const
-  mqttUrl = `ws://${window.location.hostname}:8888`,
+  // match the page's scheme: https pages must use wss or browsers block the
+  // mixed-content ws:// connection
+  wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws',
+  mqttUrl = `${wsScheme}://${window.location.hostname}:8888`,
   options = {
     clientId: `web-${Math.round(Math.random()*10000000000)}`,
     connectTimeout: 60 * 1000,

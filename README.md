@@ -233,6 +233,40 @@ httpx.post("http://localhost:5173/api/echo",
                  "payload": encoded_b2d_bytes.decode("latin1")})
 ```
 
+## V1 vs V2 Topics
+
+ProtoMQ speaks two generations of the WipperSnapper protocol, distinguished by
+their MQTT topic shape:
+
+- **V2**: `<io_user>/ws-b2d/<device_uid>` (broker → device) and
+  `<io_user>/ws-d2b/<device_uid>` (device → broker), carrying a
+  `ws.signal.BrokerToDevice` / `ws.signal.DeviceToBroker` envelope (see
+  [Device message topics](#device-message-topics)).
+- **V1**: `<io_user>/wprsnpr/...` topics (checkin at `.../wprsnpr/info/status`,
+  then per-device `.../wprsnpr/<uid>/info/status/...` and
+  `.../wprsnpr/<uid>/signals/{device,broker}[/<subtopic>]`), carrying flat
+  per-message protobufs instead of an envelope.
+
+Where each version is used in the app:
+
+- **Subscription filters** — `frontend/stores/subscriptions.js`
+  (`SUBSCRIPTION_MODES`) defines the MQTT topic patterns for `v1`
+  (`+/wprsnpr/#`), `v2` (`+/ws-b2d/+`, `+/ws-d2b/+`), and `both`.
+- **Frontend decoding** — `frontend/util.js` maps a topic to its protobuf
+  message name: `TOPIC_MESSAGE_MAP` handles V2 (`ws-b2d`/`ws-d2b`), and
+  `resolveV1TopicName` (with its `V1_SIGNAL_SUBTOPICS` table) handles V1
+  `wprsnpr` topics.
+- **Backend decoding** — `protobufs.js` mirrors the same logic on the server
+  side: `resolveV1Topic` (with its own `V1_SIGNAL_SUBTOPICS` table) resolves
+  V1 `wprsnpr` topics, and `decodeByTopic` picks the protocol version from the
+  topic shape (`ws-b2d`/`ws-d2b` → V2, `wprsnpr` → V1) before decoding.
+
+If V1 or V2 subtopics/topic structure ever change, update all three of these
+in lockstep: `frontend/stores/subscriptions.js`, `frontend/util.js`, and
+`protobufs.js` (the frontend and backend `V1_SIGNAL_SUBTOPICS` tables are
+intentionally kept as separate, manually-synced copies since the frontend
+can't import the backend module directly).
+
 ## Authentication
 
 The broker accepts any credentials except specifically invalid test values

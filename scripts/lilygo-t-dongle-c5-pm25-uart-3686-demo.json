@@ -1,0 +1,62 @@
+{
+  "name": "LilyGO T-Dongle C5 PM2.5 UART 3686 Demo",
+  "description": "Tests the Adafruit PM2.5 Air Quality Sensor + breadboard adapter kit (PID 3686, PMS5003) read over UART by a LilyGO T-Dongle C5 (ESP32-C5). The device's UART0 pins on the exposed JST/pad port are TX=GPIO11 (D11), RX=GPIO12 (D12) — the same pads the i2c-scan script repurposes for I2C. Responds to checkin, then adds the pm25 UART driver on HardwareSerial. Sensor wiring (3686 adapter rows vcc,gnd,set,rxd,txd,rst): VCC->5V, GND->GND, SET->3V3 (active), RXD->T-Dongle D11 (MCU TX), TXD->T-Dongle D12 (MCU RX), RST->3V3 (out of reset). Uses the migrate-api-v2 (api-v2-pins-as-strings) uart proto shape.",
+  "protoVersion": "v2",
+  "steps": [
+    {
+      "name": "checkin-response",
+      "description": "Respond to device checkin with OK and board capabilities",
+      "trigger": "checkin.request",
+      "response": {
+        "checkin": {
+          "response": {
+            "response": "R_OK",
+            "totalGpioPins": 30,
+            "totalAnalogPins": 6,
+            "referenceVoltage": 3.3,
+            "componentAdds": {},
+            "sleepEnabled": false
+          }
+        }
+      }
+    },
+    {
+      "name": "add-pm25",
+      "description": "Add the PM2.5 (PMS5003) UART driver on UART0 pads (RX=D12 / TX=D11). Expect periodic Event messages carrying the six PM SI readings.",
+      "after": "checkin-response",
+      "waitFor": "checkin.complete",
+      "delay": 500,
+      "topic": "uart",
+      "send": {
+        "uart": {
+          "add": {
+            "name": "pm25",
+            "descriptor": {
+              "pinRx": "D12",
+              "pinTx": "D11"
+            },
+            "cfgSerial": {
+              "baudRate": 9600,
+              "format": "PF_8N1",
+              "timeout": 1000.0
+            },
+            "cfgDevice": {
+              "pm25aqi": {
+                "isPm1006": false,
+                "period": 3,
+                "types": [
+                  "T_PM10_STD",
+                  "T_PM25_STD",
+                  "T_PM100_STD",
+                  "T_PM10_ENV",
+                  "T_PM25_ENV",
+                  "T_PM100_ENV"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

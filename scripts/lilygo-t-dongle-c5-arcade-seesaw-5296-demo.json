@@ -1,0 +1,119 @@
+{
+  "name": "LilyGO T-Dongle C5 + LED Arcade Button 1x4 (seesaw 5296)",
+  "description": "Tests the WipperSnapper expander (Adafruit Seesaw) + digitalio path on a LilyGO T-Dongle C5, using an Adafruit LED Arcade Button 1x4 STEMMA QT breakout (PID 5296, ATtiny817 seesaw, default I2C addr 0x3A) on the T-Dongle's StemmaQT/UART pads (SCL=D12 / SDA=D11 — same pads the i2c-scan and pm25-uart scripts use). Position 1 has an arcade LED button wired: seesaw pin 12 = LED (digital OUTPUT), seesaw pin 18 = switch (digital INPUT_PULL_UP). Flow: checkin -> add seesaw expander -> add LED pin (EXP_0x3a_12) with an initial ON write -> add button pin (EXP_0x3a_18, event mode, active-low inverted). Expander pins are named EXP_0x<addr>_<pin>. Manually toggle the LED with the led-off / led-on steps (POST /api/scripts/<name>/steps/<step>/send). Uses the migrate-api-v2 (api-v2-pins-as-strings) expander/digitalio/i2c proto shapes.",
+  "protoVersion": "v2",
+  "steps": [
+    {
+      "name": "checkin-response",
+      "description": "Respond to device checkin with OK and board capabilities",
+      "trigger": "checkin.request",
+      "response": {
+        "checkin": {
+          "response": {
+            "response": "R_OK",
+            "totalGpioPins": 30,
+            "totalAnalogPins": 6,
+            "referenceVoltage": 3.3,
+            "componentAdds": {},
+            "sleepEnabled": false
+          }
+        }
+      }
+    },
+    {
+      "name": "add-expander",
+      "description": "Add the Adafruit Seesaw expander (Arcade QT) at 0x3A on SCL=D12 / SDA=D11.",
+      "after": "checkin-response",
+      "waitFor": "checkin.complete",
+      "delay": 500,
+      "topic": "expander",
+      "send": {
+        "expander": {
+          "add": {
+            "cfgI2c": {
+              "descriptor": {
+                "addressSpace": {
+                  "pinScl": "D12",
+                  "pinSda": "D11"
+                },
+                "address": 58
+              },
+              "name": "seesaw"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "add-led",
+      "description": "Add the arcade LED on seesaw pin 12 as a digital OUTPUT and turn it ON.",
+      "after": "add-expander",
+      "delay": 500,
+      "topic": "digitalio",
+      "send": {
+        "digitalio": {
+          "add": {
+            "pinName": "EXP_0x3a_12",
+            "gpioDirection": "D_OUTPUT",
+            "sampleMode": "SM_EVENT",
+            "period": 0,
+            "write": {
+              "pinName": "EXP_0x3a_12",
+              "value": {
+                "boolValue": true
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "add-button",
+      "description": "Add the arcade switch on seesaw pin 18 as INPUT_PULL_UP, event mode, active-low (inverted so pressed = true).",
+      "after": "add-led",
+      "delay": 500,
+      "topic": "digitalio",
+      "send": {
+        "digitalio": {
+          "add": {
+            "pinName": "EXP_0x3a_18",
+            "gpioDirection": "D_INPUT_PULL_UP",
+            "sampleMode": "SM_EVENT",
+            "period": 0,
+            "isInverted": true
+          }
+        }
+      }
+    },
+    {
+      "name": "led-off",
+      "description": "Manual step: turn the arcade LED OFF (POST .../steps/led-off/send).",
+      "topic": "digitalio",
+      "send": {
+        "digitalio": {
+          "write": {
+            "pinName": "EXP_0x3a_12",
+            "value": {
+              "boolValue": false
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "led-on",
+      "description": "Manual step: turn the arcade LED ON (POST .../steps/led-on/send).",
+      "topic": "digitalio",
+      "send": {
+        "digitalio": {
+          "write": {
+            "pinName": "EXP_0x3a_12",
+            "value": {
+              "boolValue": true
+            }
+          }
+        }
+      }
+    }
+  ]
+}

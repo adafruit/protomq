@@ -120,7 +120,7 @@ export default (router, broker) => {
 
     try {
       const encoded = BrokerToDevice.encode(BrokerToDevice.fromObject(payload)).finish()
-      broker.publish({ topic, payload: encoded })
+      broker.publish({ topic, payload: encoded, qos: 1 })
       console.log(`[Scripts API] Sent step "${stepName}" on ${topic}`)
       res.json({ status: 'OK', topic, step: stepName })
     } catch (e) {

@@ -12,8 +12,22 @@ import { installScriptRunner, matchesTrigger } from './script_runner.js'
 // Fallback V2 checkin handler (used when no script matches)
 // ============================================================================
 
-const handleV2CheckinFallback = (d2bRequest) => {
+const handleV2CheckinFallback = (d2bRequest, topic) => {
   if (!d2bRequest.checkin?.request) return null
+
+  // Coming out of deep sleep: when the marquee editor deep-sleeps a device it
+  // registers a "wake response" keyed by the device's ws-d2b identity (see
+  // setWakeCheckinResponse / POST /api/wake-checkin). We replay it on EVERY
+  // checkin so the device keeps cycling — each wake re-adds its display and is
+  // sent back to sleep. The registration PERSISTS (it is not consumed) until the
+  // editor overwrites it with fresh config (the next /sleep/config) or clears it
+  // (DELETE /api/wake-checkin). A cold boot with no registration falls through to
+  // the plain response below.
+  const key = wakeKeyFromTopic(topic)
+  if (key && _wakeCheckinResponses.has(key)) {
+    return _wakeCheckinResponses.get(key)
+  }
+
   return {
     checkin: {
       response: {
@@ -26,6 +40,16 @@ const handleV2CheckinFallback = (d2bRequest) => {
       }
     }
   }
+}
+
+// Parse a V2 device-to-broker topic ({user}/ws-d2b/{device}) into the
+// "{user}/{device}" key used to look up a registered wake response. Returns
+// null for anything that isn't a ws-d2b topic.
+const wakeKeyFromTopic = (topic) => {
+  if (typeof topic !== 'string') return null
+  const parts = topic.split('/ws-d2b/')
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return null
+  return `${parts[0]}/${parts[1]}`
 }
 
 
@@ -108,6 +132,15 @@ let _fallbackCheckinEnabled = true
 //   - arrays → match by index
 let _autoresponders = []
 
+// Wake-checkin responses registered by the marquee editor when it deep-sleeps a
+// device. Keyed by "{user}/{device}" (the ws-d2b topic identity both the editor
+// and broker share). Each entry is a full B2D { checkin: { response: {…} } }.
+// PERSISTENT, not one-shot: handleV2CheckinFallback replays the stored response
+// on every checkin until it is overwritten or removed, so a device that wakes
+// repeatedly keeps getting the same one. Per-wake decisions therefore have to be
+// made by re-registering mid-sleep (see setWakeCheckinResponse callers).
+let _wakeCheckinResponses = new Map()
+
 export const getScriptState = () => _scriptState
 
 export const getFallbackCheckinEnabled = () => _fallbackCheckinEnabled
@@ -121,6 +154,11 @@ export const removeAutoresponderByName = (name) => {
   _autoresponders = _autoresponders.filter(a => a.name !== name)
   return before - _autoresponders.length
 }
+
+export const setWakeCheckinResponse = (key, response) => { _wakeCheckinResponses.set(key, response); return _wakeCheckinResponses.size }
+export const getWakeCheckinResponses = () => [..._wakeCheckinResponses.entries()].map(([key, response]) => ({ key, response }))
+export const removeWakeCheckinResponse = (key) => _wakeCheckinResponses.delete(key)
+export const clearWakeCheckinResponses = () => { const n = _wakeCheckinResponses.size; _wakeCheckinResponses.clear(); return n }
 
 const matchesPattern = (actual, pattern) => {
   if (pattern === '*' || pattern === undefined) return true
@@ -178,6 +216,14 @@ export const
     const { scripts, activeExecutor, activeScriptName: resolvedActiveScriptName } = await installScriptRunner(broker, activeScriptName)
     _scriptState = { scripts, activeExecutor, activeScriptName: resolvedActiveScriptName, broker }
 
+    // Publish a response OUTSIDE the current delivery handler. Publishing
+    // synchronously from inside a subscribe() handler is a re-entrant publish
+    // during the broker's fan-out of the triggering packet, which clobbers that
+    // packet's still-pending delivery to other subscribers (e.g. the web UI
+    // never receives the checkin request that triggered the response). Deferring
+    // to the next tick lets the original packet finish fanning out first.
+    const respondDeferred = (topic, payload) => setImmediate(() => broker.publish({ topic, payload, qos: 1 }))
+
     // V2 topic pattern
     console.log("PBResponse Listener: Register (V2 topics: +/ws-d2b/+)")
     broker.subscribe(
@@ -208,24 +254,22 @@ export const
         if (autoresponder) {
           console.log(`[Autoresponder${autoresponder.name ? ` "${autoresponder.name}"` : ''}] trigger=${autoresponder.trigger}\n  raw: ${rawHex}\n  decoded: ${decodedJson}\n  response: ${JSON.stringify(autoresponder.response)}`)
           const b2dResponse = BrokerToDevice.encode(BrokerToDevice.fromObject(autoresponder.response)).finish()
-          broker.publish({
-            topic: packet.topic.replace('d2b', 'b2d'),
-            payload: b2dResponse
-          })
+          respondDeferred(packet.topic.replace('d2b', 'b2d'), b2dResponse)
           callback()
           return
         }
 
         // Fallback: V2 nested checkin matching (when no script handles it)
         if (_fallbackCheckinEnabled) {
-        const v2Response = handleV2CheckinFallback(d2bRequest)
+        // A registered wake response means this checkin is a device coming out of
+        // deep sleep. Checked before the call only because the registration may
+        // be replaced during it — the fallback does NOT consume the entry.
+        const isWake = !!d2bRequest.checkin?.request && _wakeCheckinResponses.has(wakeKeyFromTopic(packet.topic))
+        const v2Response = handleV2CheckinFallback(d2bRequest, packet.topic)
         if (v2Response) {
-          console.log(`[Fallback V2] Auto-Responding to checkin:\n  raw: ${rawHex}\n  decoded: ${decodedJson}`)
+          console.log(`[Fallback V2] Auto-Responding to checkin${isWake ? ' (wake-from-deep-sleep)' : ''}:\n  raw: ${rawHex}\n  decoded: ${decodedJson}`)
           const b2dResponse = BrokerToDevice.encode(BrokerToDevice.fromObject(v2Response)).finish()
-          broker.publish({
-            topic: packet.topic.replace('d2b', 'b2d'),
-            payload: b2dResponse
-          })
+          respondDeferred(packet.topic.replace('d2b', 'b2d'), b2dResponse)
           callback()
           return
         }
@@ -239,10 +283,7 @@ export const
         if (v1ResponsePayload) {
           console.log(`[Fallback V1] Auto-Responding to:\n  raw: ${rawHex}\n  decoded: ${decodedJson}`)
           const b2dResponse = BrokerToDevice.encode(BrokerToDevice.fromObject(v1ResponsePayload)).finish()
-          broker.publish({
-            topic: packet.topic.replace('d2b', 'b2d'),
-            payload: b2dResponse
-          })
+          respondDeferred(packet.topic.replace('d2b', 'b2d'), b2dResponse)
         } else {
           console.log(`Not Auto-Responding to:\n  raw: ${rawHex}\n  decoded: ${decodedJson}`)
         }
@@ -299,7 +340,7 @@ export const
           const responseTopic = `${user}/wprsnpr/${uid}/info/status/broker`
           const payload = V1_CheckinResponse.encode(V1_CheckinResponse.fromObject(v1CheckinResponsePayload)).finish()
           console.log(`[Fallback V1] Auto-Responding to checkin → ${responseTopic}\n  response: ${JSON.stringify(v1CheckinResponsePayload)}`)
-          broker.publish({ topic: responseTopic, payload })
+          respondDeferred(responseTopic, payload)
 
           // Follow with the hardware (pin) configuration so the device clears its
           // `while(!pinCfgCompleted)` poll. Empty pinConfigs = "no components",
@@ -307,7 +348,7 @@ export const
           const signalTopic = `${user}/wprsnpr/${uid}/signals/broker`
           const signalPayload = V1_CreateSignalRequest.encode(V1_CreateSignalRequest.fromObject(v1EmptyPinConfigsPayload)).finish()
           console.log(`[Fallback V1] Sending empty pin config → ${signalTopic}\n  payload: ${JSON.stringify(v1EmptyPinConfigsPayload)} (${Buffer.from(signalPayload).toString('hex') || '∅'})`)
-          broker.publish({ topic: signalTopic, payload: signalPayload })
+          respondDeferred(signalTopic, signalPayload)
         }
 
         callback()
@@ -339,7 +380,8 @@ export const
           console.log("publishing echo!", topic)
           broker.publish({
             topic,
-            payload: b2dResponse
+            payload: b2dResponse,
+            qos: 1
           })
         }
 

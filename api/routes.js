@@ -5,6 +5,7 @@ import enableDeliveries from './deliveries.js'
 import enableEcho from './echo.js'
 import enableScripts from './scripts.js'
 import enableAutoresponse from './autoresponse.js'
+import enableWakeCheckin from './wake-checkin.js'
 
 
 export default broker => {
@@ -31,6 +32,7 @@ export default broker => {
   enableEcho(router, broker)
   enableScripts(router, broker)
   enableAutoresponse(router, broker)
+  enableWakeCheckin(router, broker)
 
   // rough draft of possible API:
   //

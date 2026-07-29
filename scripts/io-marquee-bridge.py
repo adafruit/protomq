@@ -27,25 +27,57 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHUNK = 420  # bytes of chunk_data per image fragment
 DISPLAY_NAME = "epd0"
 DID_ADD = False  # whether we've sent the add-display message yet
-# The MagTag 2.9" EPD add descriptor, copied from create-marquee-demo-magtag.py.
-MAGTAG_ADD = {
-    "type": "DISPLAY_CLASS_EPD",
-    "driver": "SSD1680",
-    "panel": "adafruit-magtag",
-    "name": DISPLAY_NAME,
-    "interfaceType": {
-        "spiEpd": {
-            "pinBusy": "D5",
-            "spi": {"bus": 0, "pinMosi": "D35", "pinSck": "D36", "pinCs": "D8"},
-            "pinDc": "D7",
-            "pinRst": "D6",
-        }
-    },
-    "configEpd": {
-        "mode": "EPD_MODE_MONO",
-        "properties": {"width": 296, "height": 128, "textSize": 3, "statusBar": True},
-    },
+DISPLAY_ADD = None  # the Add descriptor built from CLI args in main()
+# Fixed MagTag 2.9" SPI/EPD pin wiring (not configurable via CLI), copied from
+# create-marquee-demo-magtag.py.
+MAGTAG_INTERFACE = {
+    "spiEpd": {
+        "pinBusy": "D5",
+        "spi": {"bus": 0, "pinMosi": "D35", "pinSck": "D36", "pinCs": "D8"},
+        "pinDc": "D7",
+        "pinRst": "D6",
+    }
 }
+
+
+def build_display_add(*, panel="adafruit-magtag", driver="SSD1680",
+                      mode="EPD_MODE_MONO", width=296, height=128,
+                      name=DISPLAY_NAME):
+    """Build a display.Add descriptor (MagTag shape) from EPD config args.
+
+    Defaults match the original hardcoded MagTag 2.9" descriptor, so calling
+    with no overrides reproduces the previous behavior.
+    """
+    return {
+        "type": "DISPLAY_CLASS_EPD",
+        "driver": driver,
+        "panel": panel,
+        "name": name,
+        "interfaceType": MAGTAG_INTERFACE,
+        "configEpd": {
+            "mode": mode,
+            "properties": {
+                "width": width,
+                "height": height,
+                "textSize": 3,
+                "statusBar": True,
+            },
+        },
+    }
+
+
+def send_display_add(mq, add, *, verbose=True):
+    """Package an Add descriptor and send it once per session (guarded by DID_ADD)."""
+    global DID_ADD
+    if DID_ADD:
+        return
+    mq.send_proto(display_add(add))
+    if verbose:
+        cfg = add.get("configEpd", {}).get("properties", {})
+        print(f"[send_proto] add-display '{add['name']}' "
+              f"({cfg.get('width')}x{cfg.get('height')} {add['driver']} EPD)",
+              file=sys.stderr)
+    DID_ADD = True
 
 
 def on_connect(mqttc, obj, flags, reason_code, properties):
@@ -92,11 +124,7 @@ def send_bmp(mq, data, *, chunk=CHUNK, image_id=None, delay=0.0,
         _log(f"[autoresponse] cleared {removed}, registered checkin (count={res.get('count')})")
 
     # Send the Add message only once per session, not for every image
-    global DID_ADD
-    if not DID_ADD:
-        mq.send_proto(display_add(MAGTAG_ADD))
-        _log(f"[send_proto] add-display '{DISPLAY_NAME}' (296x128 SSD1680 EPD)")
-        DID_ADD = True
+    send_display_add(mq, DISPLAY_ADD, verbose=verbose)
 
     # firmware expects 1-based chunk_id field
     for cid, piece in enumerate(pieces, start=1):
@@ -122,7 +150,21 @@ def main():
     ap.add_argument("--io-key", default="io_key", help="Adafruit IO Key")
     ap.add_argument("--base-url", default="http://localhost:5173")
     ap.add_argument("--uid", default="magtag")
+    # EPD panel configuration options used by display_add to construct the Add message.
+    ap.add_argument("--epd-panel", default="adafruit-magtag", help="EPD panel type (default: adafruit-magtag)")
+    ap.add_argument("--epd-driver", default="SSD1680", help="EPD panel's driver (default: SSD1680)")
+    ap.add_argument("--epd-mode", default="EPD_MODE_MONO", help="EPD mode (default: EPD_MODE_MONO)")
+    ap.add_argument("--epd-width", type=int, default=296, help="EPD width in pixels (default: 296)")
+    ap.add_argument("--epd-height", type=int, default=128, help="EPD height in pixels (default: 128)")
+
     args = ap.parse_args()
+
+    # Build the Add descriptor once from the EPD config args.
+    global DISPLAY_ADD
+    DISPLAY_ADD = build_display_add(
+        panel=args.epd_panel, driver=args.epd_driver, mode=args.epd_mode,
+        width=args.epd_width, height=args.epd_height,
+    )
 
     # Configure ProtoMQ API client
     mq = ProtoMQClient(args.base_url, user=args.io_username, device=args.uid)

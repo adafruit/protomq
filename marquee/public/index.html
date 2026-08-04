@@ -985,12 +985,13 @@ function suspendDitherPreview() {
   previewEl.style.display = 'none';
 }
 
-// Called when a gesture ends: re-dither the new layout. Debounced so a flurry of
-// nudges or drags collapses into one backend round-trip.
-function scheduleDitherRefresh() {
+// Re-dither the current layout/settings. Debounced so a flurry of nudges, drags,
+// or slider ticks collapses into one backend round-trip. Pass a longer delay for
+// continuous inputs (a range slider fires on every pixel of travel).
+function scheduleDitherRefresh(delay = 200) {
   if (!ditherPreviewOn) return;
   clearTimeout(ditherRefreshTimer);
-  ditherRefreshTimer = setTimeout(showDitherPreview, 200);
+  ditherRefreshTimer = setTimeout(showDitherPreview, delay);
 }
 
 function syncDitherPreviewBtn() {
@@ -1568,8 +1569,12 @@ function setResolution(w, h) {
   display.width = w; display.height = h;
   document.getElementById('resW').value = w;
   document.getElementById('resH').value = h;
+  // Drop the old overlay before re-fitting: it's a bitmap of the previous
+  // dimensions and would get stretched to the new aspect ratio.
+  suspendDitherPreview();
   fitZoom();
   refreshProps();
+  scheduleDitherRefresh();
 }
 
 const customRes = document.getElementById('customRes');
@@ -1587,21 +1592,30 @@ document.getElementById('preset').addEventListener('change', (e) => {
 
 document.getElementById('rotSel').addEventListener('change', (e) => {
   display.rotation = +e.target.value;
+  suspendDitherPreview();  // rotation swaps w/h — the old bitmap no longer fits
   fitZoom();
   refreshProps();
+  scheduleDitherRefresh();
 });
 
+// Every control below feeds the render pipeline, so a live dither preview goes
+// stale the moment one changes. Re-run it in place rather than making the user
+// toggle the button twice. The overlay keeps showing the previous dither until
+// the new one lands — no flash to the undithered stage, since the geometry
+// isn't what changed.
 document.getElementById('dtype').addEventListener('change', (e) => {
   display.type = e.target.value;
   remapColorsToPalette();
   updateDims();
   refreshProps();
+  scheduleDitherRefresh();
 });
 
 document.getElementById('diffusion').addEventListener('input', (e) => {
   display.diffusion = +e.target.value;
   document.getElementById('diffusionLabel').textContent = e.target.value + '%';
   updateDims();
+  scheduleDitherRefresh(350);  // slider fires continuously — wait for it to settle
 });
 
 // Dither method: Floyd–Steinberg (diffusion slider), Ordered (Bayer map), or None.
@@ -1620,10 +1634,12 @@ document.getElementById('dmode').addEventListener('change', (e) => {
   display.dither = e.target.value;
   syncDitherControls();
   updateDims();
+  scheduleDitherRefresh();
 });
 document.getElementById('orderedMap').addEventListener('change', (e) => {
   display.orderedMap = +e.target.value;
   updateDims();
+  scheduleDitherRefresh();
 });
 syncDitherControls();
 

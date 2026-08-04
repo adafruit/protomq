@@ -6,31 +6,31 @@
     "rotation": 0,
     "type": "tricolor",
     "dither": "FloydSteinberg",
-    "diffusion": 79,
+    "diffusion": 82,
     "orderedMap": 8
   },
   "elements": [
     {
       "etype": "linechart",
-      "x": 112,
-      "y": 32,
+      "x": 8,
+      "y": 24,
       "ink": "#2F2429",
       "title": "Temperature",
       "w": 120,
       "h": 60,
       "data": [
+        66,
+        63,
+        65,
+        62,
+        66,
+        69,
+        72,
+        76,
         73,
         70,
-        70,
-        67,
-        67,
-        71,
-        71,
-        72,
-        74,
-        75,
-        76,
-        77
+        66,
+        69
       ]
     }
   ]

@@ -927,31 +927,39 @@ Object.assign(previewEl.style, {
 document.getElementById('stage-holder').appendChild(previewEl);
 
 // Dithered preview overlay, driven by the "Preview Dither" button. It renders
-// through the BACKEND (real ImageMagick) when reachable, falling back to the JS
-// dither if the server is down — either way via the authoritative 1:1 capture,
-// so what you see is what ships. The overlay stays put until you click again
-// (manual refresh); editing underneath doesn't clear or re-run it.
+// through the BACKEND (real ImageMagick) via the authoritative 1:1 capture, so
+// what you see is what ships. The overlay is a flat bitmap sitting on top of the
+// stage, so it can't follow live edits: while you drag or transform we hide it
+// (revealing the real objects underneath) and re-render once the gesture ends.
 let ditherPreviewOn = false;
+let ditherRenderSeq = 0;        // newest render wins; stale responses are dropped
+let ditherRefreshTimer = null;
 
 async function showDitherPreview() {
-  const { w, h } = logicalDims();
-  previewEl.width = w;
-  previewEl.height = h;
-  const ctx = previewEl.getContext('2d');
+  const seq = ++ditherRenderSeq;
+  let im;
   try {
     const r = await backendRender();
-    const im = new Image();
+    im = new Image();
     await new Promise((resolve, reject) => {
       im.onload = resolve; im.onerror = reject;
       im.src = 'data:image/png;base64,' + r.png;
     });
-    ctx.clearRect(0, 0, w, h);
-    ctx.drawImage(im, 0, 0, w, h);
   } catch {
     markBackendOffline();
     toast('Backend unreachable — cannot render dither preview');
+    hideDitherPreview();  // don't leave the button claiming a preview is up
     return;
   }
+  // A newer edit or render started while we were waiting — that one owns the
+  // overlay now, so don't paint this stale bitmap over it.
+  if (seq !== ditherRenderSeq) return;
+  const { w, h } = logicalDims();
+  previewEl.width = w;
+  previewEl.height = h;
+  const ctx = previewEl.getContext('2d');
+  ctx.clearRect(0, 0, w, h);
+  ctx.drawImage(im, 0, 0, w, h);
   // Scale the overlay to sit exactly over the stage at the current zoom.
   previewEl.style.width = (w * zoom) + 'px';
   previewEl.style.height = (h * zoom) + 'px';
@@ -961,9 +969,28 @@ async function showDitherPreview() {
 }
 
 function hideDitherPreview() {
+  clearTimeout(ditherRefreshTimer);
+  ditherRenderSeq++;             // cancel any render still in flight
   previewEl.style.display = 'none';
   ditherPreviewOn = false;
   syncDitherPreviewBtn();
+}
+
+// Called when a gesture starts: uncover the live stage so the user can actually
+// see what they're moving. Preview stays "on" — it just isn't showing.
+function suspendDitherPreview() {
+  if (!ditherPreviewOn) return;
+  clearTimeout(ditherRefreshTimer);
+  ditherRenderSeq++;             // drop any in-flight render of the old layout
+  previewEl.style.display = 'none';
+}
+
+// Called when a gesture ends: re-dither the new layout. Debounced so a flurry of
+// nudges or drags collapses into one backend round-trip.
+function scheduleDitherRefresh() {
+  if (!ditherPreviewOn) return;
+  clearTimeout(ditherRefreshTimer);
+  ditherRefreshTimer = setTimeout(showDitherPreview, 200);
 }
 
 function syncDitherPreviewBtn() {
@@ -1192,14 +1219,18 @@ function loadImageFile(file) {
 }
 
 function wireNode(node) {
+  // A live dither overlay would hide the drag entirely (it's a static bitmap
+  // painted over the stage), so drop it for the gesture and re-run it after.
+  node.on('dragstart', suspendDitherPreview);
   node.on('dragmove', () => {
     node.position({ x: snap(node.x()), y: snap(node.y()) }); // live snap while dragging
   });
   node.on('dragend', () => {
     node.position({ x: snap(node.x()), y: snap(node.y()) });
     refreshProps();
+    scheduleDitherRefresh();
   });
-  node.on('transformstart', () => { activeAnchor = tr.getActiveAnchor(); });
+  node.on('transformstart', () => { activeAnchor = tr.getActiveAnchor(); suspendDitherPreview(); });
   node.on('transformend', () => {
     // bake scale into geometry so exports stay pixel-true
     if (node.getAttr('etype') === 'divider') {
@@ -1225,6 +1256,7 @@ function wireNode(node) {
     node.scale({ x: 1, y: 1 });
     node.position({ x: snap(node.x()), y: snap(node.y()) });
     refreshProps();
+    scheduleDitherRefresh();
   });
   node.on('click tap', (e) => { e.cancelBubble = true; select(node); });
   if (node.getAttr('etype') === 'label') {
@@ -1455,11 +1487,13 @@ function duplicateSelected() {
   });
   // Drop the listeners clone() copied (they close over the original node), but
   // only the ones wireNode() adds — leave Konva's internal .konva handlers intact.
-  clone.off('dragmove dragend transformstart transformend click tap dblclick dbltap');
+  clone.off('dragstart dragmove dragend transformstart transformend click tap dblclick dbltap');
   wireNode(clone);  // bind fresh handlers to the clone
   layer.add(clone);
   select(clone);
   layer.draw();
+  suspendDitherPreview();
+  scheduleDitherRefresh();
   toast('Duplicated element');
 }
 
@@ -1491,10 +1525,16 @@ document.addEventListener('keydown', (e) => {
     selected.move({ x: moves[e.key][0], y: moves[e.key][1] });
     selected.position({ x: Math.round(selected.x()), y: Math.round(selected.y()) });
     refreshProps();
+    // Uncover the stage so held arrows read as movement, then re-dither once
+    // the key-repeat stops (the refresh is debounced).
+    suspendDitherPreview();
+    scheduleDitherRefresh();
   } else if (e.key === 'Delete' || e.key === 'Backspace') {
     e.preventDefault();
     selected.destroy();
     select(null);
+    suspendDitherPreview();
+    scheduleDitherRefresh();
   }
 });
 
@@ -1817,12 +1857,16 @@ document.getElementById('canvasExportBtn').addEventListener('click', () => {
 // Capture the composited canvas at 1:1 with grid hidden and nothing selected.
 // Returns an undithered canvas — the exact pixels to feed the dither step.
 function captureClean() {
+  // Deselect so the transformer handles stay out of the bitmap, then put the
+  // selection back — a dither refresh shouldn't cost you your active element.
+  const prevSelected = selected;
   select(null);
   const prevZoom = zoom;
   applyZoom(1);
   gridLayer.visible(false);
   const canvas = stage.toCanvas({ pixelRatio: 1 });
   applyZoom(prevZoom);       // restores zoom and redraws grid per its setting
+  if (prevSelected) select(prevSelected);
   return canvas;
 }
 

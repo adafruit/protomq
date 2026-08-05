@@ -556,6 +556,14 @@ function pmApi(path, body) {
   }).then(r => r.json()).catch(() => ({}));
 }
 
+// The broker's teardown routes (wake responses, autoresponders) are DELETEs that
+// read their key from the request body, so they need the same JSON envelope.
+function pmApiDelete(path, body) {
+  return fetch(`${PROTOMQ_URL}${path}`, {
+    method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}),
+  }).then(r => r.json()).catch(() => ({}));
+}
+
 // Candidate MQTT client ids to watch, derived from the topic's user/device.
 // WipperSnapper devices connect as "io-wipper-<device>" (matches ProtoMQ's own
 // client.id.startsWith('io-wipper-') check), so that is the primary candidate;
@@ -799,7 +807,17 @@ app.get('/sleep/status', (req, res) => {
 // status object for the caller's reply. Never throws — sleep must succeed even if
 // the broker registration fails.
 async function registerWakeResponse({ mode, secs, user, device, display }) {
-  if (mode !== 'S_DEEP') return { registered: false, reason: 'not deep sleep' };
+  // Only deep sleep needs a stored response — but a non-deep mode is NOT a no-op.
+  // Any response left over from an earlier deep-sleep cycle would keep
+  // re-provisioning the device and sending it back to deep sleep on every
+  // checkin, ignoring the mode the editor now has. Switching away from deep sleep
+  // therefore has to REMOVE the registration, not just decline to write one.
+  if (mode !== 'S_DEEP') {
+    const del = await pmApiDelete('/api/wake-checkin', { user, device });
+    const removed = del && del.status === 'OK' ? del.removed : null;
+    if (removed) console.log(`[wake-checkin] removed stored response for "${user}/${device}" (mode is ${mode})`);
+    return { registered: false, reason: 'not deep sleep', cleared: removed };
+  }
 
   let displayAdd;
   if (display) {
@@ -955,6 +973,114 @@ app.post('/sleep/wake-response', async (req, res) => {
   res.json({ ok: true, wakeCheckin, watching: sleepWatch.clients });
 });
 
+// ---- /reset ----------------------------------------------------------------
+
+/**
+ * POST /reset
+ * Tear down every piece of state an editing session leaves behind, on this server
+ * AND on the broker, so the next action starts from a known-empty world:
+ *
+ *   1. the device-event watch — its poll timer plus the broker delivery mailboxes
+ *      ("listeners") it holds open for the device's client ids
+ *   2. the event log itself, with a watchId bump so the editor's cursor resyncs
+ *      instead of replaying a previous cycle's goodnight/checkin
+ *   3. the broker's persistent wake response for {user}/{device} — the thing that
+ *      re-provisions a waking device and sends it back to sleep, i.e. what keeps
+ *      the goodnight/wake loop alive after the editor stops driving it
+ *   4. the broker's registered protobuf autoresponders (the "PBResponse
+ *      listeners"), so nothing left over from a play-script keeps answering the
+ *      device. The default checkin fallback is separate and stays enabled.
+ *   5. canvas.json — emptied of elements, keeping the display block so the panel
+ *      geometry the editor is configured for survives the reset
+ *
+ * Every step is best-effort and reported individually: a broker that is down must
+ * not stop us from clearing what we own locally. Nothing here is fatal, so the
+ * response is always 200 with a per-step breakdown.
+ *
+ * body: { user, device, clearCanvas? }
+ * returns: { ok, watch, wakeCheckin, autoresponders, canvas }
+ */
+app.post('/reset', async (req, res) => {
+  const {
+    user = 'test_user', device = 'magtag',
+    clearCanvas = true,
+  } = req.body || {};
+
+  const out = { watch: {}, wakeCheckin: {}, autoresponders: {}, canvas: {} };
+
+  // 1 + 2. Stop polling and hand back every mailbox that could still be open.
+  // stopSleepWatch only releases what the CURRENT watch holds, and a watch that
+  // already self-expired left its ids tracked on the broker — so untrack the full
+  // candidate set for the target device too. untrack_deliveries answers ERROR for
+  // an unknown client, which is the expected no-op here, not a failure.
+  try {
+    const held = sleepWatch.clients.slice();
+    await stopSleepWatch();
+    const candidates = watchCandidateIds(user, device, req.body && req.body.client);
+    const released = [...new Set([...held, ...candidates])];
+    await releaseMailboxes(released);
+    sleepWatch.clients = [];
+    sleepWatch.user = null;
+    sleepWatch.device = null;
+    sleepWatch.writeCompleteAt = null;
+    sleepWatch.matchedWriteClient = null;
+    sleepWatch.goodnightAt = null;
+    sleepWatch.matchedClient = null;
+    sleepWatch.checkinAt = null;
+    sleepWatch.matchedCheckinClient = null;
+    sleepWatch.startedAt = null;
+    sleepWatch.packetsSeen = 0;
+    sleepWatch.watchUntil = null;
+    sleepWatch.lastError = null;
+    sleepWatch.log = [];
+    // seq stays monotonic (a cursor must never be ambiguous); watchId changing is
+    // the documented signal for the editor to drop its cursor and resync.
+    sleepWatch.watchId++;
+    out.watch = { stopped: true, released, watchId: sleepWatch.watchId, seq: sleepWatch.seq };
+  } catch (e) {
+    out.watch = { stopped: false, error: String(e.message || e) };
+  }
+
+  // 3. Drop the wake response the broker replays on every checkin.
+  const wake = await pmApiDelete('/api/wake-checkin', { user, device });
+  out.wakeCheckin = wake && wake.status === 'OK'
+    ? { cleared: true, removed: wake.removed }
+    : { cleared: false, error: (wake && wake.message) || 'broker unreachable' };
+
+  // 4. Drop every registered autoresponder.
+  const auto = await pmApiDelete('/api/autoresponse', {});
+  out.autoresponders = auto && auto.status === 'OK'
+    ? { cleared: true, removed: auto.removed }
+    : { cleared: false, error: (auto && auto.message) || 'broker unreachable' };
+
+  // 5. Empty the persisted layout, preserving the display descriptor.
+  if (clearCanvas) {
+    try {
+      let doc = { version: 1 };
+      try {
+        const prev = JSON.parse(await fs.readFile(CANVAS_FILE, 'utf8'));
+        if (prev && typeof prev === 'object' && !Array.isArray(prev)) {
+          doc = { ...prev, version: prev.version || 1 };
+        }
+      } catch { /* missing or corrupt — start from a bare document */ }
+      doc.elements = [];
+      await fs.writeFile(CANVAS_FILE, JSON.stringify(doc, null, 2));
+      out.canvas = { cleared: true, file: path.basename(CANVAS_FILE) };
+    } catch (e) {
+      out.canvas = { cleared: false, error: String(e.message || e) };
+    }
+  } else {
+    out.canvas = { cleared: false, skipped: true };
+  }
+
+  console.log(`[reset] watch=${out.watch.stopped ? 'stopped' : 'FAILED'}`
+    + ` wake-checkin=${out.wakeCheckin.cleared ? `cleared(${out.wakeCheckin.removed})` : 'FAILED'}`
+    + ` autoresponders=${out.autoresponders.cleared ? `cleared(${out.autoresponders.removed})` : 'FAILED'}`
+    + ` canvas=${out.canvas.cleared ? 'cleared' : (out.canvas.skipped ? 'skipped' : 'FAILED')}`);
+
+  res.json({ ok: true, ...out });
+});
+
 // ---- health ----------------------------------------------------------------
 
 // ---- Canvas autosave ---------------------------------------------------------
@@ -1009,6 +1135,7 @@ app.listen(PORT, () => {
   console.log(`  POST /sleep/config  build sleep.SleepConfig -> ProtoMQ echo (${PROTOMQ_URL})`);
   console.log(`  GET  /sleep/status  poll for a device Goodnight (ProtoMQ delivery tracker)`);
   console.log(`  POST /sleep/wake-response  re-register the broker wake response (no sleep command)`);
+  console.log(`  POST /reset     clear the watch, broker wake response + autoresponders, and canvas.json`);
   console.log(`  GET  /canvas    read the persisted canvas.json layout`);
   console.log(`  POST /canvas    persist the canvas layout to canvas.json`);
   console.log(`  GET  /health    ImageMagick + palette check`);

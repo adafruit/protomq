@@ -426,6 +426,7 @@
     <button id="btnPublish" class="primary">Publish to IO feed</button>
     <button id="sendBmp" class="primary">Send BMP to Device</button>
     <button id="sendBmpSleep" class="primary">Send BMP and Sleep</button>
+    <button id="btnResetState" class="danger" title="Clear the canvas and tear down all editor + broker device state">Reset state</button>
   </div>
 </header>
 
@@ -2136,6 +2137,7 @@ document.getElementById('sendBmpSleep').addEventListener('click', async () => {
   const feed = document.getElementById('ioFeed').value.trim();
   if (!user || !key || !feed) { toast('Username, AIO key, and feed key are all required'); return; }
   const btn = document.getElementById('sendBmpSleep');
+  const epoch = stateEpoch;
   btn.disabled = true;
   btn.textContent = 'Sending…';
   try {
@@ -2183,7 +2185,10 @@ document.getElementById('sendBmpSleep').addEventListener('click', async () => {
     // ONLY after a confirmed write. Skip past any events already in the backend's
     // log first, so a previous run's goodnight can't drive this one.
     await resetSleepEvents();
-    const { acked, sendFailed, retryMins } = await writeCanvasUntilAck(b64, { btn, statusEl: sleepStatusEl });
+    const { acked, sendFailed, retryMins, aborted } = await writeCanvasUntilAck(b64, { btn, statusEl: sleepStatusEl });
+    // "Reset state" ran while we were retransmitting — the device state this flow
+    // was building on is gone, so stop here without sleeping or touching status.
+    if (aborted || epoch !== stateEpoch) return;
     if (sendFailed) return; // send itself failed — reported inside, don't sleep
     if (!acked) {
       toast(`⚠️ Device never confirmed the write after ${retryMins} min — not sleeping`);
@@ -2219,10 +2224,15 @@ document.getElementById('sendBmpSleep').addEventListener('click', async () => {
     if (sres.ok) {
       toast('Sleep sent; waiting for device Goodnight…');
       // Track the cycle so a mid-sleep edit can re-register the wake response
-      // before the device wakes.
+      // before the device wakes. registeredSig is what syncWakeResponse compares
+      // against, so it has to describe what the broker ACTUALLY took just now —
+      // mode and duration included, or the first timer edit would look like a
+      // no-op and never be sent.
+      const includedDisplay = !!(sdata.wakeCheckin && sdata.wakeCheckin.includedDisplay);
       sleepCycle = {
         user: pmUser, device: pmDevice, mode, durSeconds: dur,
-        registeredDisplay: !!(sdata.wakeCheckin && sdata.wakeCheckin.includedDisplay),
+        registeredDisplay: includedDisplay,
+        registeredSig: `${mode}|${dur}|${includedDisplay}`,
       };
       // On each checkin.complete, waitForSleepEvents resends the BMP only if the
       // design changed, then re-arms itself for the next cycle (sendBmpOnWake).
@@ -2446,11 +2456,21 @@ const SLEEP_CONFIG_FIELDS = ['sleepMode', 'sleepDuration'];
 const SLEEP_CONFIG_KEY = 'marquee.sleepConfig';
 const SLEEP_MODE_LABELS = { S_LIGHT: 'Light', S_DEEP: 'Deep' };
 
+// The live Sleep Configuration form. Everything that registers a sleep config
+// reads it from HERE rather than from values captured when a cycle started — a
+// snapshot is what made the timer look unchangeable, because the broker kept
+// being handed the duration from the moment "Send BMP and Sleep" was pressed.
+function currentSleepConfig() {
+  return {
+    mode: document.getElementById('sleepMode').value,
+    durSeconds: Math.max(0, parseInt(document.getElementById('sleepDuration').value, 10) || 0),
+  };
+}
+
 function updateSleepSummary() {
-  const mode = document.getElementById('sleepMode').value;
-  const secs = Math.max(0, parseInt(document.getElementById('sleepDuration').value, 10) || 0);
+  const { mode, durSeconds } = currentSleepConfig();
   document.getElementById('sleepSummary').textContent =
-    `${SLEEP_MODE_LABELS[mode] || mode} · ${secs}s timer`;
+    `${SLEEP_MODE_LABELS[mode] || mode} · ${durSeconds}s timer`;
 }
 
 function saveSleepConfig() {
@@ -2471,7 +2491,11 @@ restoreSleepConfig();
 document.getElementById('sleepStatus').textContent = '☕ Device awake';
 SLEEP_CONFIG_FIELDS.forEach(id => {
   const el = document.getElementById(id);
-  const onEdit = () => { saveSleepConfig(); updateSleepSummary(); };
+  // The mode and timer are not in the canvas doc, so — exactly like the display
+  // pins above — this is the only hook that can carry a mid-cycle edit through to
+  // the broker's stored wake response. Without it the device keeps waking on the
+  // duration it was originally registered with.
+  const onEdit = () => { saveSleepConfig(); updateSleepSummary(); scheduleWakeResponseSync(); };
   el.addEventListener('input', onEdit);
   el.addEventListener('change', onEdit);
 });
@@ -2479,7 +2503,24 @@ SLEEP_CONFIG_FIELDS.forEach(id => {
 // Open/close wiring (mirrors the display modal).
 document.getElementById('btnSleepConfig').addEventListener('click', () => sleepModal.classList.remove('hidden'));
 document.getElementById('sleepClose').addEventListener('click', () => sleepModal.classList.add('hidden'));
-document.getElementById('sleepDone').addEventListener('click', () => sleepModal.classList.add('hidden'));
+
+// Save is an explicit "apply this now", so it re-registers immediately instead of
+// waiting out the edit debounce, and forces the POST even when the registration
+// looks unchanged — pressing Save should always put the current values in front of
+// the broker. Only the NEXT wake can pick them up: the device is already asleep on
+// the config it was handed at its last checkin, and nothing can reach it until it
+// comes back.
+document.getElementById('sleepDone').addEventListener('click', async () => {
+  sleepModal.classList.add('hidden');
+  saveSleepConfig();
+  updateSleepSummary();
+  if (!sleepCycle) return;   // no cycle in flight — the next sleep command carries these values
+  const { mode, durSeconds } = currentSleepConfig();
+  const ok = await syncWakeResponse({ force: true });
+  toast(ok
+    ? `Sleep config registered — device picks up ${SLEEP_MODE_LABELS[mode] || mode} · ${durSeconds}s on its next wake`
+    : 'Could not register the sleep config — is the broker running?');
+});
 sleepModal.addEventListener('click', (e) => { if (e.target === sleepModal) sleepModal.classList.add('hidden'); });
 
 // Live countdown after a sleep command. Client-side only: the editor uses the
@@ -2535,25 +2576,40 @@ function canvasChanged() { return canvasSignature() !== deviceCanvasSig; }
 // broker is holding for this device so we only re-POST when it's actually wrong.
 let sleepCycle = null; // { user, device, mode, durSeconds, registeredDisplay }
 
+// Bumped by every "Reset state". The cycle is driven by long-lived async loops
+// (the per-wake resend chain, writeCanvasUntilAck's 45s retransmit window) that
+// nulling a variable cannot interrupt — they are already awaiting a fetch. Each
+// captures the epoch it started under and abandons itself the moment it changes,
+// so a reset can't be followed by a write to a device we just tore down.
+let stateEpoch = 0;
+
 // The broker replays ONE stored wake response on every checkin, and it is
 // registered before the device wakes — so an edit made mid-sleep has to overwrite
 // that registration now, or the device wakes with no display and the write has
 // nothing to apply to. Point the registration at whatever the design currently
 // needs; a no-op when it already matches, unless there is also a watch to re-arm.
-async function syncWakeResponse({ rearmMs } = {}) {
+async function syncWakeResponse({ rearmMs, force } = {}) {
   if (!sleepCycle) return false;
-  // Only deep sleep has a registration to maintain — a light-sleeping device
-  // never drops its display, so there is nothing to re-add and the backend just
+  // The mode and timer come from the LIVE form, never from the cycle. The stored
+  // wake response carries the sleepConfig the device is handed on every checkin,
+  // so re-reading the form here is what makes a mid-cycle timer edit take effect.
+  const { mode, durSeconds } = currentSleepConfig();
+  // Only deep sleep has a display to maintain — a light-sleeping device never
+  // drops its display, so there is nothing to re-add and the backend just
   // re-arms the watch for us.
-  const want = sleepCycle.mode === 'S_DEEP' && canvasChanged();
-  if (!rearmMs && want === sleepCycle.registeredDisplay) return true;
+  const want = mode === 'S_DEEP' && canvasChanged();
+  // Dedupe on the WHOLE registration, not just the display flag. Changing the
+  // duration leaves `want` untouched, so keying on it alone made this return
+  // early and silently swallow exactly the edit the user was trying to make.
+  const sig = `${mode}|${durSeconds}|${want}`;
+  if (!force && !rearmMs && sig === sleepCycle.registeredSig) return true;
   try {
     const res = await fetch(BACKEND + '/sleep/wake-response', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        mode: sleepCycle.mode,
-        duration: sleepCycle.durSeconds,
+        mode,
+        duration: durSeconds,
         user: sleepCycle.user,
         device: sleepCycle.device,
         ...(want ? { display: buildDisplayBody() } : {}),
@@ -2567,8 +2623,13 @@ async function syncWakeResponse({ rearmMs } = {}) {
     // stop retrying while the broker still holds the wrong response. Any re-arm
     // is local to our own backend and happened regardless, which is what the
     // return value reports.
-    if (sleepCycle.mode !== 'S_DEEP' || (data.wakeCheckin && data.wakeCheckin.registered)) {
+    if (mode !== 'S_DEEP' || (data.wakeCheckin && data.wakeCheckin.registered)) {
+      sleepCycle.registeredSig = sig;
       sleepCycle.registeredDisplay = want;
+      // What the broker now holds — i.e. what the device gets at its NEXT checkin.
+      // The sleep it is running right now was fixed when it last checked in.
+      sleepCycle.mode = mode;
+      sleepCycle.durSeconds = durSeconds;
     }
     return true;
   } catch { /* backend down — the next edit or wake retries */ }
@@ -2583,7 +2644,11 @@ const cycleWatchMs = (durSeconds) => durSeconds * 1000 + 150000;
 // registration POST.
 let wakeSyncTimer = null;
 function scheduleWakeResponseSync() {
-  if (!sleepCycle || sleepCycle.mode !== 'S_DEEP') return;
+  // Gated on the CYCLE, not on the mode: switching the form from Deep to Light is
+  // itself a change the broker has to hear about (its stored deep-sleep response
+  // would otherwise keep re-provisioning and re-sleeping the device), and that
+  // edit reads as non-deep right here. syncWakeResponse decides what to send.
+  if (!sleepCycle) return;
   clearTimeout(wakeSyncTimer);
   wakeSyncTimer = setTimeout(syncWakeResponse, 500);
 }
@@ -2670,8 +2735,17 @@ function waitForSleepEvents(durSeconds, { sendBmpOnWake = false } = {}) {
   const GOODNIGHT_SLOW_MS = 90000;
   const checkinDeadline   = start + durSeconds * 1000 + WAKE_CHECKIN_MS; // wake + reconnect + checkin + redraw
   let gotGoodnight = false, warnedSlow = false;
-  goodnightPollTimer = setInterval(async () => {
+  const epoch = stateEpoch;
+  // Held locally as well as in goodnightPollTimer: a reset nulls the shared
+  // handle and a fresh cycle may already own it by the time a stale tick fires,
+  // so a stale tick must only ever cancel ITSELF.
+  let self = null;
+  self = setInterval(async () => {
+    // A reset happened — this watch belongs to the world that was torn down. It
+    // must not write status text or re-arm anything for the new one.
+    if (epoch !== stateEpoch) { clearInterval(self); return; }
     const s = await pumpSleepEvents();
+    if (epoch !== stateEpoch) return; // reset landed while the poll was in flight
 
     // Report the watch as a live state, not just a list of candidate ids: a bare
     // list reads like an id mismatch when the real answer is usually "the mailbox
@@ -2716,6 +2790,13 @@ function waitForSleepEvents(durSeconds, { sendBmpOnWake = false } = {}) {
       if (sleepCountdownTimer) { clearInterval(sleepCountdownTimer); sleepCountdownTimer = null; }
       dbg.textContent = `checkin.complete from client "${woke.client || '?'}"`;
       toast('Device back Online');
+      // The checkin response the device just consumed carried whatever was
+      // registered a moment ago, so THAT duration is the sleep it is about to
+      // run — read it before the syncs below possibly register a newer one. Every
+      // deadline and countdown for this next leg has to use it, or shortening the
+      // timer mid-sleep would make the watch give up on a device still napping
+      // legitimately on the old value.
+      const activeDur = sleepCycle ? sleepCycle.durSeconds : durSeconds;
       // The device woke and re-checked-in. What it received is whatever the
       // broker had registered for it, which we keep in step with the design:
       //
@@ -2734,14 +2815,15 @@ function waitForSleepEvents(durSeconds, { sendBmpOnWake = false } = {}) {
         if (!canvasChanged()) {
           // Nothing to send, so nothing re-armed the backend watch — the same
           // POST that keeps the registration sleep-only re-arms it for us.
-          const rearmed = await syncWakeResponse({ rearmMs: cycleWatchMs(durSeconds) });
+          const rearmed = await syncWakeResponse({ rearmMs: cycleWatchMs(activeDur) });
+          if (epoch !== stateEpoch) return;   // reset landed mid-POST
           if (!rearmed) {
             el.textContent = '⚠️ Canvas unchanged, but could not re-arm the watch — stopping';
             sleepCycle = null;
             return;
           }
           el.textContent = '☕ Canvas unchanged — nothing sent, watching for next wake…';
-          waitForSleepEvents(durSeconds, { sendBmpOnWake: true }); // waits for the next Goodnight
+          waitForSleepEvents(activeDur, { sendBmpOnWake: true }); // waits for the next Goodnight
           return;
         }
 
@@ -2751,18 +2833,22 @@ function waitForSleepEvents(durSeconds, { sendBmpOnWake = false } = {}) {
         const sig = canvasSignature();
         let b64 = null;
         try { b64 = (await backendRender()).bmp; } catch { /* backend down */ }
+        if (epoch !== stateEpoch) return;   // reset landed mid-render
         if (!b64) {
           el.textContent = '⚠️ Device back online — render failed, cannot resend';
           return;
         }
-        const { acked } = await writeCanvasUntilAck(b64, { statusEl: el });
+        const { acked, aborted } = await writeCanvasUntilAck(b64, { statusEl: el });
+        // Reset while the write was in flight: the status line and cycle now
+        // belong to the post-reset world, so leave both alone.
+        if (aborted || epoch !== stateEpoch) return;
         if (acked) {
           el.textContent = '☕ Write confirmed — watching for next wake…';
           deviceCanvasSig = sig;          // the panel now matches this design
           // Downgrade to sleep-only for the next wake, and extend the watch to
           // cover the whole cycle — send-bmp only armed the short write-ack window.
-          await syncWakeResponse({ rearmMs: cycleWatchMs(durSeconds) });
-          waitForSleepEvents(durSeconds, { sendBmpOnWake: true }); // waits for the next Goodnight
+          await syncWakeResponse({ rearmMs: cycleWatchMs(activeDur) });
+          waitForSleepEvents(activeDur, { sendBmpOnWake: true }); // waits for the next Goodnight
         } else {
           el.textContent = '⚠️ Write not confirmed on wake — stopping';
           sleepCycle = null;
@@ -2795,6 +2881,7 @@ function waitForSleepEvents(durSeconds, { sendBmpOnWake = false } = {}) {
           : `no device traffic at all on: ${s.clients.join(', ')}`;
     }
   }, 2000);
+  goodnightPollTimer = self;
 }
 
 // After a canvas/BMP write, the device publishes display.WriteComplete on ws-d2b
@@ -2805,25 +2892,52 @@ function waitForSleepEvents(durSeconds, { sendBmpOnWake = false } = {}) {
 // the ack, or false on timeout so the caller can fall back (e.g. a fixed refresh
 // delay before sleep).
 let writePollTimer = null;
+
+// Resolvers for waits a reset has to unblock. Killing the poll timer is not
+// enough on its own: the promise is settled from inside the interval callback, so
+// an interval cleared out from under it can never settle — and the caller (the
+// sleep flow) would await it forever with its button left disabled. A reset
+// settles these explicitly instead.
+const pendingWaits = new Set();
+
+function abortPendingWaits() {
+  for (const settle of [...pendingWaits]) settle(false);
+  pendingWaits.clear();
+}
+
 function waitForWriteComplete({ timeoutMs = 20000, onStatus } = {}) {
   return new Promise((resolve) => {
     if (writePollTimer) { clearInterval(writePollTimer); writePollTimer = null; }
     const start = Date.now();
-    writePollTimer = setInterval(async () => {
+    const epoch = stateEpoch;
+    // Local handle for the same reason as the goodnight poller: after a reset the
+    // shared one may already belong to a newer wait.
+    let self = null;
+    const settle = (v) => {
+      pendingWaits.delete(settle);
+      clearInterval(self);
+      resolve(v);
+    };
+    pendingWaits.add(settle);
+    self = setInterval(async () => {
+      // Reset — give up on this ack rather than reporting it against the new
+      // state. Resolving false lets the caller unwind (it checks the epoch too).
+      if (epoch !== stateEpoch) { settle(false); return; }
       await pumpSleepEvents();
       const ev = takeSleepEvent('write');
       if (ev) {
-        clearInterval(writePollTimer); writePollTimer = null;
+        writePollTimer = null;
         if (onStatus) onStatus({ acked: true, client: ev.client });
-        resolve(true);
+        settle(true);
         return;
       }
       if (Date.now() - start > timeoutMs) {
-        clearInterval(writePollTimer); writePollTimer = null;
+        writePollTimer = null;
         if (onStatus) onStatus({ acked: false });
-        resolve(false);
+        settle(false);
       }
     }, 2000);
+    writePollTimer = self;
   });
 }
 
@@ -2839,9 +2953,14 @@ async function writeCanvasUntilAck(b64, { btn, statusEl } = {}) {
   const retryWindowMs = retryMins * 60000;
   const val = (id) => (document.getElementById(id).value || '').trim();
   const startedAt = performance.now();
-  let acked = false, attempt = 0, sendFailed = false;
+  const epoch = stateEpoch;
+  let acked = false, attempt = 0, sendFailed = false, aborted = false;
 
   while (true) {
+    // A reset can land in the middle of the retry window (each attempt waits 45s
+    // for an ack). Stop before re-POSTing a BMP to a device whose state we just
+    // cleared; the caller sees acked=false + aborted and unwinds quietly.
+    if (epoch !== stateEpoch) { aborted = true; break; }
     attempt++;
     if (btn) btn.textContent = attempt === 1 ? 'Writing to device…' : `Resending (attempt ${attempt})…`;
     const res = await fetch(BACKEND + '/display/send-bmp', {
@@ -2870,6 +2989,7 @@ async function writeCanvasUntilAck(b64, { btn, statusEl } = {}) {
       },
     });
     if (acked) break;
+    if (epoch !== stateEpoch) { aborted = true; break; } // reset during the ack wait
 
     // No ack this window — give up if the retry budget is spent, else resend.
     if (performance.now() - startedAt >= retryWindowMs) break;
@@ -2878,7 +2998,7 @@ async function writeCanvasUntilAck(b64, { btn, statusEl } = {}) {
     if (statusEl) statusEl.textContent = `⚠️ ${msg}`;
   }
 
-  return { acked, sendFailed, retryMins };
+  return { acked, sendFailed, retryMins, aborted };
 }
 
 // "Sleep Now" — send the sleep config on its own, without a BMP. Useful for
@@ -2932,6 +3052,121 @@ document.getElementById('sleepNow').addEventListener('click', async () => {
     btn.textContent = 'Sleep Now';
   }
 });
+
+// ---------- Reset state ----------
+// One button to get back to a known-empty world after a session of poking at a
+// device. Three kinds of state accumulate and none of them are visible enough to
+// reason about once a cycle has been running for a while:
+//
+//   1. the canvas — the elements plus the persisted canvas.json behind them
+//   2. this page's cycle state — the deep-sleep cycle being driven, the "what is
+//      the panel currently showing" baseline, the queued device events, and the
+//      four timers (countdown, goodnight poll, write poll, wake-response sync)
+//   3. state living OUTSIDE the browser — the backend's device-event watch and
+//      the broker registrations it made: the delivery-tracker mailboxes it holds
+//      open, the wake response replayed on every checkin (what keeps the
+//      wake/goodnight loop alive), and any registered autoresponders
+//
+// (3) is why clicking around in the editor isn't enough: a broker still holding a
+// wake response will keep re-provisioning and re-sleeping the device forever,
+// long after the page that started it has moved on. So this clears all three,
+// and the epoch bump above abandons any async loop still mid-flight.
+//
+// Deliberately KEPT: the display descriptor, sleep settings and IO credentials.
+// Those are the bench setup, not device state — wiping them would mean retyping
+// SPI pins and an AIO key to do the next test.
+async function resetState() {
+  const btn = document.getElementById('btnResetState');
+  if (!confirm('Reset state?\n\nThis clears the canvas, stops the sleep/wake cycle, '
+    + 'and clears the broker\'s wake response and autoresponders for this device.\n\n'
+    + 'Display, sleep and Adafruit IO settings are kept.')) return;
+
+  const val = (id) => (document.getElementById(id).value || '').trim();
+  const user = val('pmUser') || 'test_user';
+  const device = val('pmDevice') || 'magtag';
+
+  // 1) Invalidate every in-flight loop FIRST, before anything else changes under
+  // them — an awaiting retransmit must not get a chance to write to the device.
+  stateEpoch++;
+
+  btn.disabled = true;
+  btn.textContent = 'Resetting…';
+  try {
+    // 2) Settle anything being awaited, THEN kill the timers. Order matters: a
+    // wait settles itself from inside its own interval, so clearing the interval
+    // first would strand the promise and its caller with it.
+    abortPendingWaits();
+
+    // Each timer is also epoch-guarded, but clearing them stops the polling
+    // immediately instead of one tick from now.
+    if (goodnightPollTimer)   { clearInterval(goodnightPollTimer);   goodnightPollTimer = null; }
+    if (writePollTimer)       { clearInterval(writePollTimer);       writePollTimer = null; }
+    if (sleepCountdownTimer)  { clearInterval(sleepCountdownTimer);  sleepCountdownTimer = null; }
+    clearTimeout(wakeSyncTimer);  wakeSyncTimer = null;
+    clearTimeout(canvasSaveTimer); canvasSaveTimer = null;
+
+    // 3) Cycle state. deviceCanvasSig back to null means "we no longer know what
+    // the panel is showing", so the next send writes unconditionally.
+    sleepCycle = null;
+    deviceCanvasSig = null;
+    sleepEventQueue = [];
+    sleepEventCursor = 0;
+    sleepWatchId = null;
+
+    // 4) The canvas. Elements only — the display block stays, so the panel
+    // geometry and dither settings survive.
+    hideDitherPreview();
+    layer.find('.element').forEach(n => n.destroy());
+    select(null);
+    counter = 0;               // element ids start over from el1
+    layer.draw();
+
+    // 5) The world outside the browser: the backend watch, the broker's wake
+    // response + autoresponders, and canvas.json.
+    let r = null;
+    try {
+      const res = await fetch(BACKEND + '/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user, device }),
+      });
+      r = await res.json().catch(() => null);
+      if (!res.ok) r = null;
+    } catch { /* backend down — reported below */ }
+
+    // 6) Re-baseline the local view of canvas.json. lastCanvasJson is what
+    // suppresses no-op writes; the backend just rewrote the file underneath us, so
+    // it has to be dropped or the empty canvas would never be persisted.
+    lastCanvasJson = null;
+    saveCanvasNow();
+
+    // 7) Resync the event cursor onto the backend's post-reset log.
+    await resetSleepEvents();
+
+    document.getElementById('sleepStatus').textContent = '☕ Device awake';
+    document.getElementById('sleepDebug').textContent = '';
+    updateDims();
+
+    if (!r) {
+      toast('Canvas and editor state reset — but the backend was unreachable, so broker state may remain');
+    } else {
+      // Name what did NOT get cleared: a still-registered wake response is the one
+      // failure that leaves the device cycling on its own, so it must not be quiet.
+      const failed = [];
+      if (!r.wakeCheckin || !r.wakeCheckin.cleared) failed.push('wake response');
+      if (!r.autoresponders || !r.autoresponders.cleared) failed.push('autoresponders');
+      if (!r.canvas || !r.canvas.cleared) failed.push('canvas.json');
+      toast(failed.length
+        ? `State reset — could not clear: ${failed.join(', ')} (is the broker running?)`
+        : 'State reset — canvas cleared, watch stopped, broker registrations cleared');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Reset state';
+  }
+}
+
+document.getElementById('btnResetState').addEventListener('click', resetState);
 
 // Build the /display/add request body from the live Display Configuration form
 // (broken-out SPI pins, panel size, rotation, mode, identity). Shared by

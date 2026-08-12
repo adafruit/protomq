@@ -441,6 +441,8 @@
       <button class="tool" id="addImageBtn"><span class="glyph">▣</span> Image</button>
       <input type="file" id="imgInput" accept="image/png,image/jpeg,image/bmp,.png,.jpg,.jpeg,.bmp" hidden>
       <button class="tool" id="addFeedData"><span class="glyph">⌁</span> Feed Data</button>
+      <button class="tool" id="addIndicatorBtn"><span class="glyph">◉</span> Indicator</button>
+      <button class="tool" id="addBatteryBtn"><span class="glyph">▰</span> Battery</button>
       <button class="tool" id="duplicateBtn"><span class="glyph">⧉</span> Duplicate</button>
     </div>
     <hr>
@@ -588,12 +590,18 @@
     <div class="group" id="displayPresets" style="flex-wrap:wrap; margin-bottom:4px;">
       <button type="button" id="presetMagtag" title="Adafruit MagTag (2025) — 2.9&quot; 296×128 mono, SSD1680">MagTag 2025</button>
       <button type="button" id="presetTricolorFW" title="Adafruit 2.13&quot; HD Tri-Color eInk / ePaper Display FeatherWing — 250×122 RW panel with SSD1680">2.13&quot; Tri-Color FeatherWing</button>
+      <button type="button" id="presetQuad213" title="Adafruit 2.13&quot; Quad-Color eInk / ePaper Bare Display — 250×122 BWRY panel with JD79661">2.13&quot; Quad-Color</button>
+      <button type="button" id="presetTricolor42" title="Adafruit 4.2&quot; Tri-Color eInk / ePaper Bare Display — 400×300 RW panel with SSD1683">4.2&quot; Tri-Color</button>
+      <button type="button" id="presetGray42" title="Adafruit 4.2&quot; Grayscale eInk / ePaper Bare Display — 400×300 4-level grayscale panel with SSD1683">4.2&quot; Grayscale</button>
+      <button type="button" id="presetMono75" title="Adafruit 7.5&quot; Mono eInk / ePaper Bare Display — 800×480 mono panel with UC8179">7.5&quot; Mono</button>
+      <button type="button" id="presetTri75" title="Adafruit 7.5&quot; Tri-Color eInk / ePaper Bare Display — 800×480 RW panel with UC8179">7.5&quot; Tri</button>
     </div>
 
     <label class="field"><span class="eyebrow">Panel Size</span>
       <select id="preset">
         <option value="200x200">1.54" — 200×200</option>
         <option value="250x122">2.13" — 250×122</option>
+        <option value="122x250">2.13" — 122×250 (portrait native)</option>
         <option value="296x128" selected>2.9" — 296×128</option>
         <option value="400x300">4.2" — 400×300</option>
         <option value="600x448">5.65" — 600×448</option>
@@ -633,6 +641,7 @@
           <option value="UC8179">UC8179</option>
           <option value="UC8151">UC8151</option>
           <option value="SSD1683">SSD1683</option>
+          <option value="JD79661">JD79661</option>
         </optgroup>
         <optgroup label="TFT">
           <option value="ST7789">ST7789</option>
@@ -1069,18 +1078,43 @@ function randTempSeries() {
 }
 function randTemp() { return Math.round(45 + Math.random() * 45); }
 
-function isWidget(n) {
-  const t = n.getAttr('etype');
-  return t === 'linechart' || t === 'gauge';
-}
+// Group-based elements that rebuild their children from attrs. Membership here is
+// load-bearing, not a convenience: an etype missing from this set falls through
+// wireNode's transformend chain into the LABEL branch and throws on fontSize()
+// (a Group has no such method), and through refreshProps into the DIVIDER branch.
+const WIDGET_TYPES = ['linechart', 'gauge', 'indicator', 'battery'];
+function isWidget(n) { return WIDGET_TYPES.includes(n.getAttr('etype')); }
+// Elements that carry a feedKey and get re-read by refreshFeedElements(). This used
+// to be a bare `etype === 'indicator'` down at the call site, where a new feed-bound
+// widget silently never polls; keep new types listed here.
+const FEED_ETYPES = ['indicator', 'battery'];
+// Which attr each feed-bound widget parks its last sample in. Konva's Node registers
+// a `value` getter/setter whose default is 0, so an attr literally named `value` can
+// never read back as unset: setAttr('value', null) DELETES it and getAttr('value')
+// then returns 0 from Konva's getter. The battery stores its sample under `feedValue`
+// so that "unknown" stays distinguishable from a real reading of zero.
+const FEED_VALUE_ATTR = { indicator: 'value', battery: 'feedValue' };
+const feedValueAttr = (n) => FEED_VALUE_ATTR[n.getAttr('etype')] || 'value';
+// Smallest authored width per widget, used when baking a transform back into attrs
+// and by the properties-panel size inputs. Anything unlisted floors at 40.
+const MIN_WIDGET_W = { indicator: 6, battery: 20 };
 function elementColor(n) { return isWidget(n) ? n.getAttr('ink') : n.fill(); }
 function setElementColor(n, c) {
   if (isWidget(n)) { n.setAttr('ink', c); rebuildWidget(n); }
   else n.fill(c);
 }
+// Explicit dispatch. This was `if (linechart) … else buildGauge()`, which drew any
+// unrecognized widget AS A GAUGE — a silent wrong-render rather than an error.
+const WIDGET_BUILDERS = {
+  linechart: buildLineChart,
+  gauge: buildGauge,
+  indicator: buildIndicator,
+  battery: buildBattery,
+};
 function rebuildWidget(n) {
-  if (n.getAttr('etype') === 'linechart') buildLineChart(n);
-  else buildGauge(n);
+  const build = WIDGET_BUILDERS[n.getAttr('etype')];
+  if (!build) { console.warn('rebuildWidget: no builder for etype', n.getAttr('etype')); return; }
+  build(n);
   if (tr.nodes().includes(n)) tr.forceUpdate();
 }
 
@@ -1166,6 +1200,199 @@ function addGauge(attrs = {}) {
   return g;
 }
 
+// ---------- indicator: on/off lamp driven by an Adafruit IO feed ----------
+// The feed's last value is compared against one condition; true draws the lamp in
+// `onColor`, false in `offColor`. Bind a feed via the Adafruit IO feed picker (the
+// "Choose feed" button in the properties panel).
+
+// Operators are stored as JSON-safe tokens and shown as symbols in the dropdown.
+const INDICATOR_OPS = [
+  { op: 'eq', label: '=' }, { op: 'ne', label: '≠' },
+  { op: 'gt', label: '>' }, { op: 'lt', label: '<' },
+  { op: 'ge', label: '≥' }, { op: 'le', label: '≤' },
+];
+
+// Numeric when BOTH sides parse as finite numbers, else a case-insensitive string
+// compare: "all values are assumed numeric; if the feed value can't be converted
+// to a number it's treated as a string".
+function compareValues(raw, op, cmp) {
+  const a = Number(raw), b = Number(cmp);
+  const numeric = String(raw).trim() !== '' && String(cmp).trim() !== ''
+    && Number.isFinite(a) && Number.isFinite(b);
+  const [x, y] = numeric
+    ? [a, b]
+    : [String(raw ?? '').trim().toLowerCase(), String(cmp ?? '').trim().toLowerCase()];
+  switch (op) {
+    case 'eq': return x === y;
+    case 'ne': return x !== y;
+    case 'gt': return x > y;
+    case 'lt': return x < y;
+    case 'ge': return x >= y;
+    case 'le': return x <= y;
+    default:   return false;
+  }
+}
+
+// An unavailable value (never bound, fetch failed, empty feed) is false -> Off.
+function indicatorValueKnown(g) {
+  const v = g.getAttr('value');
+  return v !== null && v !== undefined && v !== '';
+}
+function evalIndicator(g) {
+  if (!indicatorValueKnown(g)) return false;
+  return compareValues(g.getAttr('value'), g.getAttr('op'), g.getAttr('cmp'));
+}
+
+function buildIndicator(g) {
+  g.destroyChildren();
+  const w = g.getAttr('w');
+  g.setAttr('h', w);                                                        // square
+  g.add(new Konva.Rect({ width: w, height: w, fill: '#000', opacity: 0 })); // hit area
+  // The outline is not decoration: on a mono panel the palette is only ink+paper,
+  // so an Off lamp filled with paper would be invisible against the page.
+  g.add(new Konva.Circle({
+    x: w / 2, y: w / 2, radius: Math.max(1, w / 2 - 1),
+    fill: evalIndicator(g) ? g.getAttr('onColor') : g.getAttr('offColor'),
+    stroke: g.getAttr('ink'), strokeWidth: 1,
+  }));
+}
+
+function addIndicator(attrs = {}) {
+  const { w: cw, h: ch } = logicalDims();
+  const g = new Konva.Group({
+    x: attrs.x ?? Math.round(cw / 2 - 8), y: attrs.y ?? Math.round(ch / 2 - 8),
+    draggable: true, name: 'element', id: 'el' + (++counter),
+  });
+  g.setAttr('etype', 'indicator');
+  g.setAttr('w', attrs.w ?? 16);
+  // Defaults use the darkest ink and the PAPER constant, both of which exist in
+  // EVERY palette. Positional shortcuts don't: [1] is a dark grey on gray4, and
+  // the last entry is paper on gray4 (an invisible "on" lamp).
+  g.setAttr('onColor', attrs.onColor ?? PALETTES[display.type][0]);
+  g.setAttr('offColor', attrs.offColor ?? PAPER);
+  g.setAttr('ink', attrs.ink ?? PALETTES[display.type][0]);
+  g.setAttr('op', attrs.op ?? 'eq');
+  g.setAttr('cmp', attrs.cmp ?? '1');
+  g.setAttr('feedKey', attrs.feedKey ?? '');
+  g.setAttr('feedName', attrs.feedName ?? '');
+  g.setAttr('value', attrs.value ?? null);
+  buildIndicator(g);
+  wireNode(g);
+  layer.add(g);
+  return g;
+}
+
+// ---------- battery level gauge: a battery icon filled from an IO feed ----------
+// The feed's last value drives the bar length (assumed numeric, 0-100). A list of
+// conditions is evaluated top to bottom against the SAME value; the first one that
+// holds supplies the fill shade, otherwise `defaultShade` is used. Conditions reuse
+// the indicator's operators and comparison rules, so a non-numeric feed value still
+// matches as case-insensitive text — it just draws an empty bar.
+//
+// Shades are neutrals only (see neutralShades). A grey ramp reads correctly on every
+// panel type, where a red/yellow one would exist on quadcolor and nowhere else.
+
+const BATTERY_ASPECT = 0.5;    // body height as a fraction of body width
+
+// Bar length only. Unknown or non-numeric reads as EMPTY, not full: a broken feed
+// binding should look obviously wrong rather than like a healthy battery.
+function batteryFraction(g) {
+  const raw = g.getAttr('feedValue');
+  if (raw === null || raw === undefined || String(raw).trim() === '') return null;
+  const v = Number(raw);
+  if (!Number.isFinite(v)) return null;
+  return Math.max(0, Math.min(1, v / 100));
+}
+
+// First matching condition wins, top to bottom.
+function batteryShade(g) {
+  const raw = g.getAttr('feedValue');
+  if (raw !== null && raw !== undefined && raw !== '') {
+    for (const c of g.getAttr('conds') || [])
+      if (compareValues(raw, c.op, c.cmp)) return c.color;
+  }
+  return g.getAttr('defaultShade');
+}
+
+function buildBattery(g) {
+  g.destroyChildren();
+  const w = g.getAttr('w');
+  const ink = g.getAttr('ink');
+  const bodyH = Math.max(6, Math.round(w * BATTERY_ASPECT));
+  const nubW  = Math.max(2, Math.round(w * 0.07));
+  const nubH  = Math.max(2, Math.round(bodyH * 0.4));
+  const bodyW = w - nubW;                       // `w` is the whole icon, nub included
+  g.setAttr('h', bodyH);                        // derived from width, as buildGauge does
+
+  const frac = batteryFraction(g);
+  const pctText = frac === null ? '—' : `${Math.round(Number(g.getAttr('feedValue')))}%`;
+  const fontSize = Math.max(7, Math.round(bodyH * 0.6));
+  // Reserve a fixed 4-character box so the icon doesn't shift as the value changes.
+  const textW = g.getAttr('showPct') ? Math.ceil(fontSize * 0.62 * 4) : 0;
+  const gap = g.getAttr('showPct') ? Math.max(2, Math.round(w * 0.08)) : 0;
+  const totalW = w + gap + textW;
+
+  // Hit area spans the percentage text too, so the whole widget is grabbable.
+  g.add(new Konva.Rect({ width: totalW, height: bodyH, fill: '#000', opacity: 0 }));
+
+  // Body outline. Always drawn in ink, never in the condition shade: on a mono panel
+  // a paper-shaded fill is invisible, so the outline is what keeps the battery on the
+  // page at all. Same reasoning as the indicator's lamp stroke.
+  g.add(new Konva.Rect({
+    x: 0.5, y: 0.5, width: bodyW - 1, height: bodyH - 1,
+    stroke: ink, strokeWidth: 1, cornerRadius: 1,
+  }));
+  // Terminal nub on the right edge.
+  g.add(new Konva.Rect({
+    x: bodyW, y: Math.round((bodyH - nubH) / 2), width: nubW, height: nubH, fill: ink,
+  }));
+
+  // Fill bar, inset inside the outline so the two never touch.
+  const inset = 2;
+  const innerW = bodyW - 1 - inset * 2;
+  const innerH = bodyH - 1 - inset * 2;
+  if (frac !== null && frac > 0 && innerW > 0 && innerH > 0) {
+    g.add(new Konva.Rect({
+      x: inset + 0.5, y: inset + 0.5,
+      width: Math.max(1, Math.round(innerW * frac)), height: innerH,
+      fill: batteryShade(g),
+    }));
+  }
+
+  if (g.getAttr('showPct')) {
+    g.add(new Konva.Text({
+      text: pctText, fontSize, fontFamily: 'monospace', fill: ink,
+      x: w + gap, y: Math.round((bodyH - fontSize) / 2), width: textW, align: 'left',
+    }));
+  }
+}
+
+function addBattery(attrs = {}) {
+  const { w: cw, h: ch } = logicalDims();
+  const g = new Konva.Group({
+    x: attrs.x ?? Math.round(cw / 2 - 24), y: attrs.y ?? Math.round(ch / 2 - 12),
+    draggable: true, name: 'element', id: 'el' + (++counter),
+  });
+  const ink = attrs.ink ?? PALETTES[display.type][0];
+  g.setAttr('etype', 'battery');
+  g.setAttr('w', attrs.w ?? 48);
+  // Every default resolves to the darkest ink, which exists in EVERY palette —
+  // positional shortcuts don't (see the note on addIndicator). Both the seeded
+  // condition and the fallback are visible the moment the widget is dropped.
+  g.setAttr('ink', ink);
+  g.setAttr('showPct', attrs.showPct ?? false);
+  g.setAttr('conds', (attrs.conds ?? [{ op: 'lt', cmp: '20', color: ink }])
+    .map(c => ({ op: c.op, cmp: c.cmp, color: c.color })));
+  g.setAttr('defaultShade', attrs.defaultShade ?? ink);
+  g.setAttr('feedKey', attrs.feedKey ?? '');
+  g.setAttr('feedName', attrs.feedName ?? '');
+  g.setAttr('feedValue', attrs.feedValue ?? null);   // not 'value' — see FEED_VALUE_ATTR
+  buildBattery(g);
+  wireNode(g);
+  layer.add(g);
+  return g;
+}
+
 // ---------- image element ----------
 const IMG_MAX_BYTES = 25 * 1024 * 1024; // 25 MB per file
 const IMG_TYPES = ['image/png', 'image/jpeg', 'image/bmp', 'image/x-ms-bmp'];
@@ -1239,7 +1466,11 @@ function wireNode(node) {
       node.width(Math.max(1, Math.round(node.width() * node.scaleX())));
       node.height(Math.max(1, Math.round(node.height() * node.scaleY())));
     } else if (isWidget(node)) {
-      node.setAttr('w', Math.max(40, Math.round(node.getAttr('w') * node.scaleX())));
+      // A lamp is legitimately tiny, so the 40px floor that suits a chart/gauge
+      // would stop it shrinking at all. Declared per-etype rather than inline so
+      // adding a widget doesn't mean editing a ternary.
+      const minW = MIN_WIDGET_W[node.getAttr('etype')] ?? 40;
+      node.setAttr('w', Math.max(minW, Math.round(node.getAttr('w') * node.scaleX())));
       if (node.getAttr('etype') === 'linechart')
         node.setAttr('h', Math.max(30, Math.round(node.getAttr('h') * node.scaleY())));
       rebuildWidget(node);
@@ -1328,14 +1559,17 @@ function select(node) {
     const etype = node.getAttr('etype');
     if (etype === 'divider')
       tr.enabledAnchors(['middle-left', 'middle-right', 'top-center', 'bottom-center']);
-    else if (etype === 'gauge')
+    else if (etype === 'gauge' || etype === 'indicator' || etype === 'battery')
       tr.enabledAnchors(['top-left', 'top-right', 'bottom-left', 'bottom-right']);
     else if (etype === 'image')
       tr.enabledAnchors(['top-left', 'top-right', 'bottom-left', 'bottom-right',
                          'middle-left', 'middle-right', 'top-center', 'bottom-center']);
     else
       tr.enabledAnchors(['top-left', 'top-right', 'bottom-left', 'bottom-right', 'middle-left', 'middle-right']);
-    tr.keepRatio(etype === 'image' || etype === 'label' || etype === 'gauge' || etype === 'linechart');
+    // An explicit allow-list: an etype omitted here silently gets keepRatio(false),
+    // which would let the indicator lamp be dragged into an ellipse.
+    tr.keepRatio(etype === 'image' || etype === 'label' || etype === 'gauge'
+      || etype === 'linechart' || etype === 'indicator' || etype === 'battery');
     tr.nodes([node]);
   } else {
     tr.nodes([]);
@@ -1345,10 +1579,15 @@ function select(node) {
 
 stage.on('click tap', (e) => { if (e.target === stage || e.target === bgRect) select(null); });
 
-function swatchHTML(current) {
-  return '<div class="swatches">' + PALETTES[display.type].map(c =>
-    `<button class="swatch ${c === current ? 'active' : ''}" data-color="${c}" style="background:${c}" aria-label="Set color ${c}"></button>`
-  ).join('') + '</div>';
+// `target` names the node attribute a row writes to (e.g. 'onColor'), for elements
+// that carry more than one color. Omitted = the plain single-ink row, which routes
+// through setElementColor as before. `colors` narrows the offered set — the battery
+// gauge passes neutralShades() so a grey ramp never offers red/yellow.
+function swatchHTML(current, target, colors = PALETTES[display.type]) {
+  return `<div class="swatches"${target ? ` data-target="${target}"` : ''}>`
+    + colors.map(c =>
+      `<button class="swatch ${c === current ? 'active' : ''}" data-color="${c}" style="background:${c}" aria-label="Set color ${c}"></button>`
+    ).join('') + '</div>';
 }
 
 function refreshProps() {
@@ -1391,6 +1630,81 @@ function refreshProps() {
         <option value="right" ${n.align() === 'right' ? 'selected' : ''}>Right</option>
       </select>
     </div>`;
+  } else if (etype === 'indicator') {
+    const bound = !!n.getAttr('feedKey');
+    const known = indicatorValueKnown(n);
+    html += `
+    <div class="prop-row">
+      <span class="eyebrow">Size</span><input type="number" id="pIndSize" value="${n.getAttr('w')}" min="6" max="512">
+    </div>
+    <span class="eyebrow">Feed</span>
+    <div class="prop-row">
+      <span class="mono" style="flex:1; overflow:hidden; text-overflow:ellipsis; ${bound ? '' : 'opacity:.6;'}">${
+        bound ? escapeHtml(n.getAttr('feedName') || n.getAttr('feedKey')) : '(not bound)'}</span>
+      <button id="pIndFeed">${bound ? 'Change' : 'Choose feed'}</button>
+    </div>
+    <div class="prop-row">
+      <span class="eyebrow">Value</span>
+      <span class="mono" style="flex:1; ${known ? '' : 'opacity:.6;'}">${
+        known ? escapeHtml(String(n.getAttr('value'))) : '(unknown)'}</span>
+      <button id="pIndRefresh"${bound ? '' : ' disabled'}>↻</button>
+    </div>
+    <span class="eyebrow">Condition</span>
+    <div class="prop-row">
+      <select id="pIndOp" style="flex:0 0 64px">${INDICATOR_OPS.map(o =>
+        `<option value="${o.op}"${n.getAttr('op') === o.op ? ' selected' : ''}>${o.label}</option>`).join('')}</select>
+      <input type="text" id="pIndCmp" style="flex:1" value="${escapeAttr(String(n.getAttr('cmp') ?? ''))}">
+    </div>
+    <p class="hint">Lamp is <b>On</b> when the condition holds. Compared as numbers
+      when both sides are numeric, otherwise as case-insensitive text.${
+      bound ? '' : ' Unbound and unknown values read as <b>Off</b>.'}</p>
+    <span class="eyebrow">On Color</span>${swatchHTML(n.getAttr('onColor'), 'onColor')}
+    <span class="eyebrow">Off Color</span>${swatchHTML(n.getAttr('offColor'), 'offColor')}`;
+  } else if (etype === 'battery') {
+    const bound = !!n.getAttr('feedKey');
+    const frac = batteryFraction(n);
+    const shades = neutralShades();
+    const conds = n.getAttr('conds') || [];
+    html += `
+    <div class="prop-row">
+      <span class="eyebrow">Size</span><input type="number" id="pBatSize" value="${n.getAttr('w')}" min="${MIN_WIDGET_W.battery}" max="512">
+    </div>
+    <span class="eyebrow">Feed</span>
+    <div class="prop-row">
+      <span class="mono" style="flex:1; overflow:hidden; text-overflow:ellipsis; ${bound ? '' : 'opacity:.6;'}">${
+        bound ? escapeHtml(n.getAttr('feedName') || n.getAttr('feedKey')) : '(not bound)'}</span>
+      <button id="pBatFeed">${bound ? 'Change' : 'Choose feed'}</button>
+    </div>
+    <div class="prop-row">
+      <span class="eyebrow">Value</span>
+      <span class="mono" style="flex:1; ${frac === null ? 'opacity:.6;' : ''}">${
+        frac === null
+          ? (n.getAttr('feedValue')
+              ? escapeHtml(String(n.getAttr('feedValue'))) + ' (not a number)' : '(unknown)')
+          : escapeHtml(String(n.getAttr('feedValue')))}</span>
+      <button id="pBatRefresh"${bound ? '' : ' disabled'}>↻</button>
+    </div>
+    <label class="check-row"><input type="checkbox" id="pBatPct"${
+      n.getAttr('showPct') ? ' checked' : ''}> Show percentage</label>
+    <div class="prop-row" style="margin-top:4px;">
+      <span class="eyebrow" style="flex:1">Conditions</span>
+      <button id="pBatCondAdd">+ Add</button>
+    </div>`
+      + (conds.length ? conds.map((c, i) => `
+    <div class="prop-row">
+      <select id="pBatCondOp${i}" style="flex:0 0 64px">${INDICATOR_OPS.map(o =>
+        `<option value="${o.op}"${c.op === o.op ? ' selected' : ''}>${o.label}</option>`).join('')}</select>
+      <input type="text" id="pBatCondCmp${i}" style="flex:1; width:0; min-width:0" value="${escapeAttr(String(c.cmp ?? ''))}">
+      <button class="danger" id="pBatCondDel${i}" style="flex:0 0 auto" title="Remove condition">×</button>
+    </div>
+    ${swatchHTML(c.color, 'cond:' + i, shades)}`).join('')
+        : `<p class="hint">No conditions — the bar always uses the default shade.</p>`)
+      + `
+    <span class="eyebrow">Default (no match)</span>${swatchHTML(n.getAttr('defaultShade'), 'defaultShade', shades)}
+    <p class="hint">The value fills the bar as a percentage (0–100). Conditions are checked
+      top to bottom and the <b>first</b> one that holds picks the fill shade. Compared as
+      numbers when both sides are numeric, otherwise as case-insensitive text — a value
+      that isn't a number draws an <b>empty</b> bar but can still match a condition.</p>`;
   } else if (isWidget(n)) {
     html += `
     <div class="prop-row">
@@ -1419,8 +1733,13 @@ function refreshProps() {
     </div>
     <div class="prop-row"><button id="pFlip" style="flex:1">Rotate 90°</button></div>`;
   }
-  // images carry their own colors; everything else gets an ink swatch
-  html += (etype === 'image' ? '' : `<span class="eyebrow">Ink</span>${swatchHTML(elementColor(n))}`)
+  // images carry their own colors; everything else gets an ink swatch. For an
+  // indicator that ink is the lamp's outline (its fill comes from On/Off above);
+  // same for a battery, whose fill comes from the conditions.
+  html += (etype === 'image' ? ''
+    : `<span class="eyebrow">${etype === 'indicator' || etype === 'battery' ? 'Outline' : 'Ink'}</span>`
+      + swatchHTML(elementColor(n), undefined,
+          etype === 'battery' ? neutralShades() : PALETTES[display.type]))
     + `<hr><div class="prop-row">`
     + `<button id="pDuplicate" style="flex:1">Duplicate</button>`
     + `<button class="danger" id="pDelete" style="flex:1">Delete</button>`
@@ -1469,10 +1788,72 @@ function refreshProps() {
     n.width(n.getAttr('natW')); n.height(n.getAttr('natH'));
     tr.forceUpdate(); refreshProps();
   });
+  bind('pIndSize', e => { n.setAttr('w', Math.max(6, Math.round(+e.target.value) || 6)); rebuildWidget(n); });
+  bind('pIndOp', e => { n.setAttr('op', e.target.value); rebuildWidget(n); });
+  bind('pIndCmp', e => { n.setAttr('cmp', e.target.value); rebuildWidget(n); });
+  bind('pIndFeed', () => openFeedPicker(n));
+  bind('pIndRefresh', async () => {
+    const ok = await refreshFeedElements([n]);
+    rebuildWidget(n);
+    refreshProps();
+    toast(ok ? `${n.getAttr('feedName') || 'Feed'} = ${n.getAttr('value')}` : 'Could not read the feed');
+  });
+  bind('pBatSize', e => {
+    const min = MIN_WIDGET_W.battery;
+    n.setAttr('w', Math.max(min, Math.round(+e.target.value) || min));
+    rebuildWidget(n);
+  });
+  bind('pBatPct', e => { n.setAttr('showPct', e.target.checked); rebuildWidget(n); });
+  bind('pBatFeed', () => openFeedPicker(n));
+  bind('pBatRefresh', async () => {
+    const ok = await refreshFeedElements([n]);
+    rebuildWidget(n);
+    refreshProps();
+    toast(ok ? `${n.getAttr('feedName') || 'Feed'} = ${n.getAttr('feedValue')}`
+             : 'Could not read the feed');
+  });
+  // Conditions are a variable-length list, so the rows are bound by index. The op and
+  // cmp handlers deliberately DON'T call refreshProps() — it replaces the whole panel
+  // via innerHTML, which would blow away focus on every keystroke. Add/remove are
+  // buttons, so re-rendering there is safe and necessary.
+  const setConds = (fn) => {
+    const conds = (n.getAttr('conds') || []).map(c => ({ ...c }));
+    fn(conds);
+    n.setAttr('conds', conds);
+    rebuildWidget(n);
+  };
+  (n.getAttr('etype') === 'battery' ? (n.getAttr('conds') || []) : []).forEach((_, i) => {
+    bind(`pBatCondOp${i}`,  e => setConds(cs => { cs[i].op  = e.target.value; }));
+    bind(`pBatCondCmp${i}`, e => setConds(cs => { cs[i].cmp = e.target.value; }));
+    bind(`pBatCondDel${i}`, () => { setConds(cs => { cs.splice(i, 1); }); refreshProps(); });
+  });
+  bind('pBatCondAdd', () => {
+    // Seed from the last row so adding a second threshold is a tweak, not a retype.
+    setConds(cs => {
+      const prev = cs[cs.length - 1];
+      cs.push({ op: prev ? prev.op : 'lt', cmp: prev ? prev.cmp : '20',
+                color: n.getAttr('defaultShade') });
+    });
+    refreshProps();
+  });
   bind('pDelete', () => { n.destroy(); select(null); });
   bind('pDuplicate', () => duplicateSelected());
-  body.querySelectorAll('.swatch').forEach(s =>
-    s.addEventListener('click', () => { setElementColor(n, s.dataset.color); refreshProps(); }));
+  // Scoped per row: a `data-target` row writes that attribute directly (elements
+  // with more than one color), a plain row goes through setElementColor as before.
+  body.querySelectorAll('.swatches').forEach(box => {
+    const target = box.dataset.target;
+    box.querySelectorAll('.swatch').forEach(s => s.addEventListener('click', () => {
+      // `cond:<i>` addresses a shade inside the battery's conditions array, which the
+      // flat setAttr path below can't reach.
+      if (target && target.startsWith('cond:')) {
+        const i = +target.slice(5);
+        setConds(cs => { if (cs[i]) cs[i].color = s.dataset.color; });
+      }
+      else if (target) { n.setAttr(target, s.dataset.color); rebuildWidget(n); }
+      else setElementColor(n, s.dataset.color);
+      refreshProps();
+    }));
+  });
 }
 
 // Universal duplicate: copy the selected element (any type), offset it by one
@@ -1508,7 +1889,7 @@ document.addEventListener('keydown', (e) => {
     document.getElementById('publishModal').classList.add('hidden');
     document.getElementById('displayModal').classList.add('hidden');
     document.getElementById('ioSettingsModal').classList.add('hidden');
-    document.getElementById('feedDataModal').classList.add('hidden');
+    closeFeedPicker();   // also clears feedPickerTarget, so a cancelled bind doesn't leak
   }
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
   // Cmd/Ctrl+D duplicates the selection (universal command).
@@ -1544,19 +1925,46 @@ document.addEventListener('keydown', (e) => {
 // Display config controls
 // ============================================================
 function remapColorsToPalette() {
-  const palHex = PALETTES[display.type];
-  const pal = palHex.map(hexToRGB);
-  const nearest = (hex) => {
-    const c = hexToRGB(hex);
-    let best = 0, bestD = Infinity;
-    pal.forEach((p, i) => {
-      const d = (p[0]-c[0])**2 + (p[1]-c[1])**2 + (p[2]-c[2])**2;
-      if (d < bestD) { bestD = d; best = i; }
-    });
-    return palHex[best];
+  // Parameterised by the candidate set so the battery can snap to NEUTRALS only:
+  // snapping its grey ramp to the full quadcolor palette could pull a mid-grey
+  // onto red, which is exactly what a grey-only widget must never do.
+  const nearestIn = (palHex) => {
+    const pal = palHex.map(hexToRGB);
+    return (hex) => {
+      const c = hexToRGB(hex);
+      let best = 0, bestD = Infinity;
+      pal.forEach((p, i) => {
+        const d = (p[0]-c[0])**2 + (p[1]-c[1])**2 + (p[2]-c[2])**2;
+        if (d < bestD) { bestD = d; best = i; }
+      });
+      return palHex[best];
+    };
   };
+  const nearest = nearestIn(PALETTES[display.type]);
+  const nearestNeutral = nearestIn(neutralShades());
   layer.find('.element').forEach(n => {
     if (n.getAttr('etype') === 'image') return; // images dithered at render time, no single ink color
+    // An indicator carries THREE colors, so the single-color elementColor/
+    // setElementColor pair can't express it — remap each one explicitly or the
+    // off-palette leftovers get silently shifted by the dither at render time.
+    if (n.getAttr('etype') === 'indicator') {
+      n.setAttr('onColor', nearest(n.getAttr('onColor')));
+      n.setAttr('offColor', nearest(n.getAttr('offColor')));
+      n.setAttr('ink', nearest(n.getAttr('ink')));
+      rebuildWidget(n);
+      return;
+    }
+    // A battery carries its outline plus one shade per condition plus the default,
+    // so it needs the same explicit treatment — and against the neutral subset,
+    // since its whole point is a grey ramp.
+    if (n.getAttr('etype') === 'battery') {
+      n.setAttr('ink', nearestNeutral(n.getAttr('ink')));
+      n.setAttr('defaultShade', nearestNeutral(n.getAttr('defaultShade')));
+      n.setAttr('conds', (n.getAttr('conds') || [])
+        .map(c => ({ ...c, color: nearestNeutral(c.color) })));
+      rebuildWidget(n);
+      return;
+    }
     setElementColor(n, nearest(elementColor(n)));
   });
 }
@@ -1565,6 +1973,16 @@ function hexToRGB(hex) {
   const v = hex.replace('#', '');
   return [parseInt(v.slice(0,2),16), parseInt(v.slice(2,4),16), parseInt(v.slice(4,6),16)];
 }
+
+// A palette entry is "neutral" when its channels are near-equal. Derived rather than
+// hardcoded so a new palette gets the right behaviour for free. The paper/ink hexes
+// aren't pure greys (#2F2429, #F2F4EF), hence the tolerance rather than r===g===b.
+//   mono / tricolor / quadcolor -> [ink, paper];  gray4 -> all four shades.
+function isNeutralHex(hex) {
+  const [r, g, b] = hexToRGB(hex);
+  return Math.max(r, g, b) - Math.min(r, g, b) <= 24;
+}
+function neutralShades() { return PALETTES[display.type].filter(isNeutralHex); }
 
 function setResolution(w, h) {
   display.width = w; display.height = h;
@@ -1690,6 +2108,30 @@ function serialize() {
       } else if (etype === 'image') {
         Object.assign(base, { src: n.getAttr('src'), w: Math.round(n.width()), h: Math.round(n.height()),
           natW: n.getAttr('natW'), natH: n.getAttr('natH') });
+      } else if (etype === 'indicator') {
+        // Explicit branch: the generic widget shape below is {ink,title,w}+value,
+        // which would drop the feed binding, the condition and the on/off colors.
+        // The sampled `value` is included deliberately — it is what makes a state
+        // change register in canvasSignature() and redraw the panel on the next wake.
+        Object.assign(base, {
+          w: n.getAttr('w'), ink: n.getAttr('ink'),
+          onColor: n.getAttr('onColor'), offColor: n.getAttr('offColor'),
+          op: n.getAttr('op'), cmp: n.getAttr('cmp'),
+          feedKey: n.getAttr('feedKey') || '', feedName: n.getAttr('feedName') || '',
+          value: n.getAttr('value') ?? null,
+        });
+      } else if (etype === 'battery') {
+        // Same reasoning as the indicator above: the generic widget shape would drop
+        // the feed binding, every condition and the default shade. `conds` is copied
+        // rather than passed by reference so the saved doc can't alias live attrs.
+        Object.assign(base, {
+          w: n.getAttr('w'), ink: n.getAttr('ink'),
+          showPct: !!n.getAttr('showPct'),
+          conds: (n.getAttr('conds') || []).map(c => ({ op: c.op, cmp: c.cmp, color: c.color })),
+          defaultShade: n.getAttr('defaultShade'),
+          feedKey: n.getAttr('feedKey') || '', feedName: n.getAttr('feedName') || '',
+          feedValue: n.getAttr('feedValue') ?? null,
+        });
       } else {
         Object.assign(base, { ink: n.getAttr('ink'), title: n.getAttr('title'), w: n.getAttr('w') });
         if (etype === 'linechart') Object.assign(base, { h: n.getAttr('h'), data: n.getAttr('data') });
@@ -1716,7 +2158,8 @@ function deserialize(doc) {
   document.getElementById('preset').value = 'custom';
   document.getElementById('customRes').classList.remove('hidden');
   setResolution(display.width, display.height);
-  const makers = { label: addLabel, divider: addDivider, linechart: addLineChart, gauge: addGauge };
+  const makers = { label: addLabel, divider: addDivider, linechart: addLineChart,
+    gauge: addGauge, indicator: addIndicator, battery: addBattery };
   (doc.elements || []).forEach(el => {
     if (el.etype === 'image') {
       if (!el.src) return;
@@ -1921,6 +2364,7 @@ function fmtBytes(n) {
 
 async function exportBMP() {
   const { w, h } = logicalDims();
+  await refreshFeedElements();   // indicators reflect current feed state, not stale
   let blob;
   try {
     const r = await backendRender();
@@ -1949,6 +2393,7 @@ document.getElementById('btnRender').addEventListener('click', async () => {
   const imgEl = document.getElementById('previewImg');
   const scale = Math.max(1, Math.min(3, Math.floor(440 / w)));
   imgEl.style.width = (w * scale) + 'px';
+  await refreshFeedElements();   // indicators reflect current feed state, not stale
   let srcUrl, bytes;
   try {
     const r = await backendRender();
@@ -1995,6 +2440,7 @@ document.getElementById('publishSend').addEventListener('click', async () => {
   btn.disabled = true;
   btn.textContent = 'Publishing…';
   try {
+    await refreshFeedElements();   // indicators reflect current feed state, not stale
     // BMP from the backend (real ImageMagick) — the only render path.
     let b64;
     try {
@@ -2052,6 +2498,7 @@ async function sendBmpToDevice() {
   const feed = document.getElementById('ioFeed').value.trim();
   if (!user || !key || !feed) { toast('Username, AIO key, and feed key are all required'); return { ok: false, error: 'missing credentials' }; }
 
+  await refreshFeedElements();   // indicators reflect current feed state, not stale
   // BMP from the backend (real ImageMagick) — the only render path.
   let b64;
   try {
@@ -2141,6 +2588,10 @@ document.getElementById('sendBmpSleep').addEventListener('click', async () => {
   btn.disabled = true;
   btn.textContent = 'Sending…';
   try {
+    // Refresh feeds BEFORE the signature snapshot: the sampled values are part of
+    // serialize(), so sampling after would bake a signature the very next
+    // canvasChanged() call disagrees with, forcing a redundant resend on wake.
+    await refreshFeedElements();
     // Snapshot the design BEFORE rendering, so an edit made while the render and
     // write are in flight still reads as pending afterwards.
     const sig = canvasSignature();
@@ -2297,6 +2748,57 @@ const DISPLAY_PRESETS = {
     name: 'epd0', driver: 'SSD1680', panel: '213-tricolor-MFGNR',
     pins: { busy: '-1', dc: 'D10', rst: '-1', cs: 'D9', sramCs: 'D6', mosi: 'D35', sck: 'D36', bus: 0 },
   },
+  // Adafruit 2.13" Quad-Color eInk / ePaper bare display: 250×122 BWRY, JD79661
+  // (ThinkInk_213_Quadcolor_AJHE5 — Adafruit_JD79661(122, 250, ...)). The panel
+  // size here is the UNROTATED framebuffer (122×250 portrait), because that's
+  // what ships as DisplayProperties.width/height and what the device's
+  // setRotation() is applied on top of. Rotation 270° (index 3) therefore lands
+  // on a 250×122 landscape canvas — the same shape as the library's own
+  // begin() default of setRotation(1), just flipped 180°.
+  // EPD pins per the board's #defines (EPD_DC=6, EPD_CS=5, EPD_BUSY=12,
+  // EPD_RESET=11); no SRAM chip, so SRAM_CS is -1. MOSI/SCK are the Feather's
+  // hardware SPI bus (35/36), i.e. EPD_SPI = &SPI.
+  quad213: {
+    preset: '122x250', rotation: '270', mode: 'quadcolor',
+    name: 'epd0', driver: 'JD79661', panel: '213-quad-AJHE5',
+    pins: { busy: 'D12', dc: 'D6', rst: 'D11', cs: 'D5', sramCs: '-1', mosi: 'D35', sck: 'D36', bus: 0 },
+  },
+  // Adafruit 4.2" Tri-Color eInk / ePaper bare display: 400×300 RW, SSD1683
+  // (ThinkInk_420_Tricolor_MFGNR). EPD pins per the board's #defines
+  // (EPD_DC=10, EPD_CS=9, EPD_BUSY=7, SRAM_CS=6, EPD_RESET=8) — unlike the 2.13"
+  // FeatherWing this panel breaks out real BUSY and RESET pins, so neither is -1.
+  // MOSI/SCK are the Feather's hardware SPI bus (35/36), i.e. EPD_SPI = &SPI.
+  tricolor42: {
+    preset: '400x300', rotation: '0', mode: 'tricolor',
+    name: 'epd0', driver: 'SSD1683', panel: '420-tricolor-MFGNR',
+    pins: { busy: 'D7', dc: 'D10', rst: 'D8', cs: 'D9', sramCs: 'D6', mosi: 'D35', sck: 'D36', bus: 0 },
+  },
+  // Adafruit 4.2" Grayscale eInk / ePaper bare display: 400×300 4-level gray,
+  // SSD1683 (ThinkInk_420_Grayscale4_MFGN). BUSY and RESET aren't wired here, so
+  // both are -1 ("pin not used") like the 2.13" FeatherWing; the rest of the SPI
+  // EPD pins match the 4.2" tri-color above.
+  gray42: {
+    preset: '400x300', rotation: '0', mode: 'gray4',
+    name: 'epd0', driver: 'SSD1683', panel: '420-gray-MFGN',
+    pins: { busy: '-1', dc: 'D10', rst: '-1', cs: 'D9', sramCs: 'D6', mosi: 'D35', sck: 'D36', bus: 0 },
+  },
+  // Adafruit 7.5" Mono eInk / ePaper bare display: 800×480 mono, UC8179
+  // (ThinkInk_750_Mono_AAAMFGN). Same SPI EPD wiring as the 4.2" grayscale
+  // above, BUSY and RESET included (-1, i.e. not wired). This panel has no
+  // SRAM chip, so SRAM_CS is -1 too.
+  mono75: {
+    preset: '800x480', rotation: '0', mode: 'mono',
+    name: 'epd0', driver: 'UC8179', panel: '750-mono-AAAMFGN',
+    pins: { busy: '-1', dc: 'D10', rst: '-1', cs: 'D9', sramCs: '-1', mosi: 'D35', sck: 'D36', bus: 0 },
+  },
+  // Adafruit 7.5" Tri-Color eInk / ePaper bare display: 800×480 RW, UC8179.
+  // Same panel family and SPI EPD wiring as the 7.5" mono above (BUSY, RESET
+  // and SRAM_CS all -1, i.e. not wired) — only the color mode differs.
+  tri75: {
+    preset: '800x480', rotation: '0', mode: 'tricolor',
+    name: 'epd0', driver: 'UC8179', panel: '750-tricolor-AABMFGNR',
+    pins: { busy: '-1', dc: 'D10', rst: '-1', cs: 'D9', sramCs: '-1', mosi: 'D35', sck: 'D36', bus: 0 },
+  },
 };
 
 function applyDisplayPreset(p) {
@@ -2339,6 +2841,26 @@ document.getElementById('presetMagtag').addEventListener('click', () => {
 document.getElementById('presetTricolorFW').addEventListener('click', () => {
   applyDisplayPreset(DISPLAY_PRESETS.tricolorFW);
   toast('Loaded 2.13" Tri-Color FeatherWing preset');
+});
+document.getElementById('presetQuad213').addEventListener('click', () => {
+  applyDisplayPreset(DISPLAY_PRESETS.quad213);
+  toast('Loaded 2.13" Quad-Color preset');
+});
+document.getElementById('presetTricolor42').addEventListener('click', () => {
+  applyDisplayPreset(DISPLAY_PRESETS.tricolor42);
+  toast('Loaded 4.2" Tri-Color preset');
+});
+document.getElementById('presetGray42').addEventListener('click', () => {
+  applyDisplayPreset(DISPLAY_PRESETS.gray42);
+  toast('Loaded 4.2" Grayscale preset');
+});
+document.getElementById('presetMono75').addEventListener('click', () => {
+  applyDisplayPreset(DISPLAY_PRESETS.mono75);
+  toast('Loaded 7.5" Mono preset');
+});
+document.getElementById('presetTri75').addEventListener('click', () => {
+  applyDisplayPreset(DISPLAY_PRESETS.tri75);
+  toast('Loaded 7.5" Tri-Color preset');
 });
 document.getElementById('displayClose').addEventListener('click', () => { displayModal.classList.add('hidden'); updateDisplaySummary(); });
 displayModal.addEventListener('click', (e) => { if (e.target === displayModal) { displayModal.classList.add('hidden'); updateDisplaySummary(); } });
@@ -2385,7 +2907,7 @@ const DISPLAY_CONFIG_KEY = 'marquee.displayConfig';
 // A preset button "glows" while the form still holds exactly the config that
 // preset pre-fills. Derived from the live fields, so it lights up on click,
 // survives reloads (fields are persisted), and clears once the user diverges.
-const PRESET_BUTTONS = { magtag: 'presetMagtag', tricolorFW: 'presetTricolorFW' };
+const PRESET_BUTTONS = { magtag: 'presetMagtag', tricolorFW: 'presetTricolorFW', quad213: 'presetQuad213', tricolor42: 'presetTricolor42', gray42: 'presetGray42', mono75: 'presetMono75', tri75: 'presetTri75' };
 function presetMatchesForm(p) {
   const g = id => (document.getElementById(id).value || '');
   return g('preset') === p.preset && g('rotSel') === String(p.rotation) &&
@@ -2812,6 +3334,13 @@ function waitForSleepEvents(durSeconds, { sendBmpOnWake = false } = {}) {
       // Either way the loop ends when the device stops checking in (timeout
       // below) or the tab is closed.
       if (sendBmpOnWake) {
+        // Re-read bound feeds BEFORE canvasChanged() decides whether to send. That
+        // check is the only thing standing between a waking device and a new BMP,
+        // so without a refresh here an Indicator would never update on a panel that
+        // is deep-sleep cycling — the whole point of the element. Costs one IO
+        // request per bound feed per wake.
+        await refreshFeedElements();
+        if (epoch !== stateEpoch) return;   // reset landed mid-refresh
         if (!canvasChanged()) {
           // Nothing to send, so nothing re-armed the backend watch — the same
           // POST that keeps the registration sleep-only re-arms it for us.
@@ -3194,7 +3723,9 @@ function buildDisplayBody() {
   return {
     width: display.width,
     height: display.height,
-    // DisplayProperties.rotation is 0..3 (90° increments); display.rotation is degrees.
+    // display.rotation is degrees; ws_display_DisplayProperties.rotation is the
+    // clockwise 90° step index the device passes to setRotation():
+    //   0 -> 0°, 1 -> 90°, 2 -> 180°, 3 -> 270°
     rotation: Math.round((display.rotation || 0) / 90) % 4,
     mode: display.type,
     name: val('pmName') || 'epd0',
@@ -3307,6 +3838,8 @@ document.getElementById('addLabel').addEventListener('click', () => select(addLa
 document.getElementById('addDivider').addEventListener('click', () => select(addDivider()));
 document.getElementById('addChart').addEventListener('click', () => select(addLineChart()));
 document.getElementById('addGaugeBtn').addEventListener('click', () => select(addGauge()));
+document.getElementById('addIndicatorBtn').addEventListener('click', () => select(addIndicator()));
+document.getElementById('addBatteryBtn').addEventListener('click', () => select(addBattery()));
 document.getElementById('addImageBtn').addEventListener('click', () =>
   document.getElementById('imgInput').click());
 document.getElementById('imgInput').addEventListener('change', (e) => {
@@ -3338,11 +3871,20 @@ function renderFeedList() {
 function escapeHtml(s) { return String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
 function escapeAttr(s) { return escapeHtml(s).replace(/"/g, '&quot;'); }
 
-document.getElementById('addFeedData').addEventListener('click', async () => {
+// Which element the picker is binding to. null = the original "Feed Data" flow,
+// which drops a NEW label on the canvas. A node = bind that existing element to
+// the chosen feed instead. Always cleared when the modal closes so a cancelled
+// bind can't leak into the next open.
+let feedPickerTarget = null;
+
+// Open the picker and load the feed list. Shared by the Feed Data toolbox button
+// and the Indicator's "Choose feed" button.
+async function openFeedPicker(target = null) {
   const user = document.getElementById('ioUser').value.trim();
   const key  = document.getElementById('ioKey').value.trim();
   if (!user || !key) { toast('Set your IO username and key under Adafruit IO Configuration'); return; }
 
+  feedPickerTarget = target;
   feedDataModal.classList.remove('hidden');
   document.getElementById('feedFilter').value = '';
   document.getElementById('feedList').innerHTML = '';
@@ -3362,7 +3904,48 @@ document.getElementById('addFeedData').addEventListener('click', async () => {
     document.getElementById('feedListStatus').textContent = 'Could not reach Adafruit IO';
     toast(`Could not reach ${ioHost()} — sandboxed previews block this; open the file directly`);
   }
-});
+}
+
+function closeFeedPicker() {
+  feedDataModal.classList.add('hidden');
+  feedPickerTarget = null;
+}
+
+document.getElementById('addFeedData').addEventListener('click', () => openFeedPicker(null));
+
+// Read one feed's last value. Resolves to a string, or null when the feed is
+// unreadable/empty — callers treat null as "unknown", never as a real value.
+async function readFeedValue(feedKey) {
+  const user = document.getElementById('ioUser').value.trim();
+  const key  = document.getElementById('ioKey').value.trim();
+  if (!user || !key || !feedKey) return null;
+  try {
+    const res = await fetch(
+      `https://${ioHost()}/api/v2/${encodeURIComponent(user)}/feeds/${encodeURIComponent(feedKey)}/data/last`,
+      { headers: { 'X-AIO-Key': key } });
+    if (!res.ok) return null;
+    const datum = await res.json().catch(() => ({}));
+    return datum && datum.value != null ? String(datum.value) : null;
+  } catch { return null; }
+}
+
+// Re-read every feed-bound element (or just the ones passed in) and refresh the
+// lamps. Best-effort by design: a failed read LEAVES THE PREVIOUS VALUE rather
+// than blanking the lamp, so one flaky request can't turn a panel off.
+// Returns true when every attempted read succeeded.
+async function refreshFeedElements(nodes) {
+  const targets = (nodes || layer.find('.element'))
+    .filter(n => FEED_ETYPES.includes(n.getAttr('etype')) && n.getAttr('feedKey'));
+  if (!targets.length) return true;
+  const results = await Promise.all(targets.map(async (n) => {
+    const v = await readFeedValue(n.getAttr('feedKey'));
+    if (v === null) return false;
+    n.setAttr(feedValueAttr(n), v);
+    rebuildWidget(n);
+    return true;
+  }));
+  return results.every(Boolean);
+}
 
 document.getElementById('feedFilter').addEventListener('input', renderFeedList);
 
@@ -3387,11 +3970,24 @@ document.getElementById('feedList').addEventListener('click', async (e) => {
     const value = datum && datum.value != null ? String(datum.value) : '';
     if (value === '') { toast(`"${feedName}" has no value`); return; }
 
+    if (feedPickerTarget) {
+      // Binding an existing element (the Indicator's "Choose feed").
+      const node = feedPickerTarget;
+      node.setAttr('feedKey', feedKey);
+      node.setAttr('feedName', feedName);
+      node.setAttr(feedValueAttr(node), value);
+      rebuildWidget(node);
+      closeFeedPicker();
+      select(node);          // re-render the properties panel with the new binding
+      toast(`Bound ${feedName} = ${value}`);
+      return;
+    }
+
     const node = addLabel({ text: `${feedName}: ${value}` });
     node.setAttr('feedKey', feedKey);
     node.setAttr('feedName', feedName);
+    closeFeedPicker();
     select(node);
-    feedDataModal.classList.add('hidden');
     toast(`Added ${feedName} = ${value}`);
   } catch {
     document.getElementById('feedListStatus').textContent = 'Could not reach Adafruit IO';
@@ -3399,8 +3995,8 @@ document.getElementById('feedList').addEventListener('click', async (e) => {
   }
 });
 
-document.getElementById('feedDataClose').addEventListener('click', () => feedDataModal.classList.add('hidden'));
-feedDataModal.addEventListener('click', (e) => { if (e.target === feedDataModal) feedDataModal.classList.add('hidden'); });
+document.getElementById('feedDataClose').addEventListener('click', closeFeedPicker);
+feedDataModal.addEventListener('click', (e) => { if (e.target === feedDataModal) closeFeedPicker(); });
 
 fitZoom();
 refreshProps();

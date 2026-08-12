@@ -1,0 +1,590 @@
+/* ============================================================================
+   Marquee — application layout.
+
+   Screen-by-screen structure for A3–A8. Built on base.css primitives and the
+   tokens in tokens.css; no literal colors below except where a rule describes
+   physical hardware (the panel glass, the device shell), and those come from the
+   PANEL group of tokens.css.
+
+   Every screen lives in the DOM at once and is shown/hidden by the router. That
+   is load-bearing, not laziness: the Konva stage mounts into A7 exactly once and
+   must never be torn down, and the display descriptor fields on A5 are read by
+   the device pipeline from every other screen. See js/router.js.
+   ========================================================================== */
+
+/* ---- app shell ----------------------------------------------------------- */
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.chrome {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 46px;
+  flex: none;
+  padding: 0 18px;
+  background: var(--color-chrome);
+  color: var(--color-chrome-text);
+}
+.chrome .crumb {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 17px;
+  letter-spacing: 0.02em;
+}
+.chrome .crumb-current { color: var(--color-accent-300); }
+.chrome .crumb-leaf { font-family: var(--font-body); font-size: 13px; }
+.chrome .sep { opacity: 0.4; }
+.chrome .chrome-note { font-size: 12px; opacity: 0.65; }
+
+/* ---- step rail ----------------------------------------------------------- */
+/* Three equal cells during Act I (58px), collapsing to 44px once Act I is done.
+   Cells are inert until reached; after Act I they become buttons. */
+
+#stepRail {
+  display: flex;
+  align-items: stretch;
+  flex: none;
+  height: 70px;
+  background: var(--color-rail);
+  border-bottom: 1px solid var(--color-divider);
+  transition: height 0.18s ease;
+}
+#stepRail[data-collapsed="true"] { height: 52px; }
+
+.step {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 22px;
+  min-width: 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: default;
+}
+.step + .step { border-left: 1px solid var(--color-divider); }
+.step .numeral { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 22px; }
+.step .step-title {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.step .step-status { font-size: 11px; opacity: 0.6; }
+.step[data-state="locked"] { opacity: 0.45; }
+.step[data-state="active"] { border-bottom-color: var(--color-accent); }
+.step[data-state="active"] .numeral { color: var(--color-accent); }
+.step[data-state="done"] { opacity: 0.55; }
+.step[data-state="done"] .step-status { color: var(--color-accent-text); opacity: 1; }
+.step[data-clickable="true"] { cursor: pointer; }
+.step[data-clickable="true"]:hover { background: color-mix(in srgb, var(--color-text) 5%, transparent); }
+
+/* Collapsed rail: title and status sit on ONE line. flex-direction has to be
+   reset explicitly — inheriting the column below would stack two lines inside a
+   52px bar and push the status text through the bottom edge. */
+#stepRail[data-collapsed="true"] .step { gap: 10px; }
+#stepRail[data-collapsed="true"] .step-lines {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 10px;
+}
+#stepRail[data-collapsed="true"] .step-title { font-size: 14px; }
+#stepRail[data-collapsed="true"] .step[data-state="active"] { color: var(--color-accent); }
+#stepRail[data-collapsed="true"] .step[data-state="active"] .step-status { display: none; }
+
+.step-lines { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+
+/* ---- screens ------------------------------------------------------------- */
+
+#screens { flex: 1; min-height: 0; position: relative; }
+
+.screen { display: none; height: 100%; min-height: 0; }
+.screen[data-active="true"] { display: flex; flex-direction: column; }
+
+/* A padded, scrollable single column — A3's default shape. */
+.screen-pad {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 34px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* Main column + fixed side rail — A5 (400px) and A6 (420px). */
+.screen-split {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr var(--rail-w, 400px);
+}
+.screen-split > .col-main {
+  min-width: 0;
+  overflow: auto;
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  border-right: 1px solid var(--color-divider);
+}
+.screen-split > .col-rail {
+  min-width: 0;
+  overflow: auto;
+  padding: 28px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--color-rail);
+}
+
+.screen-head { display: flex; flex-direction: column; gap: 6px; }
+.screen-head p { font-size: 14px; opacity: 0.8; max-width: 640px; text-wrap: pretty; }
+.screen-foot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: auto;
+  padding-top: 16px;
+}
+.screen-foot.ruled { border-top: 1px solid var(--color-divider); }
+.screen-foot .note { font-size: 12.5px; opacity: 0.75; }
+
+/* ---- A3 · the firmware fork ---------------------------------------------- */
+
+#a3 .fork {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+  flex: 1;
+  min-height: 0;
+}
+.fork-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+}
+/* The detected path is outlined, not filled — the card stays a line drawing. */
+.fork-card[data-detected="true"] { outline: 2px solid var(--color-accent); }
+.fork-card .fork-title {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 22px;
+  letter-spacing: 0.04em;
+}
+.fork-card p { font-size: 13.5px; opacity: 0.85; text-wrap: pretty; }
+.fork-path { display: flex; flex-direction: column; gap: 7px; font-size: 13px; }
+.fork-path > div { display: flex; gap: 9px; }
+.fork-path .n { color: var(--color-accent); flex: none; }
+/* The extra CircuitPython step is called out in accent body text so the cost of
+   that path is visible before the user commits to it. */
+.fork-path .extra { color: var(--color-accent-800); }
+.fork-card .footnote { margin-top: auto; font-size: 12.5px; opacity: 0.7; }
+
+/* ---- A4 · pick the display ----------------------------------------------- */
+
+#a4 .panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 18px;
+}
+.panel-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+.panel-card[data-selected="true"] { outline: 2px solid var(--color-accent); }
+.panel-card:hover { border-color: color-mix(in srgb, var(--color-text) 40%, transparent); }
+.panel-card .photo {
+  height: 118px;
+  display: grid;
+  place-items: center;
+  background: var(--color-neutral-300);
+  color: var(--color-neutral-700);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+}
+.panel-card .body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 13px 14px;
+  border-top: 1px solid var(--color-divider);
+}
+.panel-card .name { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 17px; }
+.panel-card .spec { font-size: 11.5px; opacity: 0.7; }
+.panel-card .tag { align-self: flex-start; margin-top: 4px; }
+#a4 .empty-note { font-size: 13px; opacity: 0.7; padding: 20px 0; }
+
+/* ---- A5 · confirm settings ----------------------------------------------- */
+
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* The summary plate: a panel proxy beside the resolved config. */
+.summary-plate { display: flex; gap: 18px; align-items: center; padding: 16px; }
+.summary-plate .proxy {
+  width: 150px;
+  height: 66px;
+  flex: none;
+  background: var(--panel-paper);
+  border: 1px solid var(--panel-bezel);
+  box-shadow: var(--shadow-glass);
+}
+.summary-plate .lines { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.summary-plate .headline { font-family: var(--font-heading); font-weight: var(--font-heading-weight); font-size: 17px; }
+.summary-plate .detail { font-size: 12.5px; opacity: 0.75; }
+
+/* Advanced disclosure. Collapsed by default — the intimidating fields stay out
+   of the way of a user who bought a supported board. */
+.disclosure { display: flex; flex-direction: column; }
+.disclosure > summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.disclosure > summary::-webkit-details-marker { display: none; }
+.disclosure > summary::after { content: "＋"; margin-left: auto; font-size: 18px; opacity: 0.6; }
+.disclosure[open] > summary::after { content: "－"; }
+.disclosure .disclosure-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 16px 16px;
+  border-top: 1px solid var(--color-divider);
+}
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.warn-line { font-size: 12.5px; color: var(--color-warn); }
+
+/* Preset chips. A chip is outlined in accent while the form still holds exactly
+   what that preset fills in, so divergence is visible. */
+.preset-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.preset-chip[data-active="true"] { border-color: var(--color-accent); color: var(--color-accent-text); }
+
+/* ---- A6 · the code bundle ------------------------------------------------ */
+
+.drag-plate { display: flex; gap: 22px; align-items: center; padding: 16px 18px; }
+.drag-plate .boxes { display: flex; align-items: center; gap: 14px; flex: none; }
+.drag-plate .box {
+  width: 74px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  border: 1px solid var(--color-neutral-500);
+  color: var(--color-neutral-700);
+}
+.drag-plate .box.target { border: 1px dashed var(--color-accent); color: var(--color-accent-800); letter-spacing: 0.06em; }
+.drag-plate .arrow { font-size: 22px; color: var(--color-accent); letter-spacing: 0.1em; }
+.drag-plate .steps { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.drag-plate .steps > div { display: flex; gap: 10px; }
+.drag-plate .steps .n { opacity: 0.55; width: 14px; flex: none; }
+
+.file-list { display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.file-list .row { display: flex; gap: 10px; }
+.file-list .row .glyph { opacity: 0.5; }
+.file-list .row .size { margin-left: auto; opacity: 0.6; }
+.file-list .nested { display: flex; flex-direction: column; gap: 5px; padding-left: 22px; font-size: 12.5px; opacity: 0.75; }
+
+/* A stale bundle is the one A6 state that must not be quiet — the board is
+   running files that no longer match the config. */
+.stale-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--color-warn);
+  border: 1px solid color-mix(in srgb, var(--color-warn) 45%, transparent);
+  background: color-mix(in srgb, var(--color-warn) 7%, transparent);
+}
+
+/* ---- A7 · the editor ----------------------------------------------------- */
+
+#a7 .editor {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 200px 1fr 260px;
+}
+.toolbox, .inspector {
+  min-width: 0;
+  overflow: auto;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  background: var(--color-rail);
+}
+.toolbox { border-right: 1px solid var(--color-divider); }
+.inspector { border-left: 1px solid var(--color-divider); gap: 10px; }
+
+/* Toolbox props: a bordered glyph tile then the name, left aligned. */
+.prop-btn { justify-content: flex-start; gap: 10px; padding: 7px 9px; font-size: 13px; letter-spacing: 0; }
+.prop-btn .tile {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  border: 1px solid var(--color-divider);
+}
+
+/* Canvas ground: the dotted grid the device shell sits on. */
+.canvas-ground {
+  min-width: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 20px;
+  background-color: var(--color-canvas-ground);
+  background-image: radial-gradient(var(--color-canvas-dot) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* The device shell stands in for physical plastic — the one rounded thing in
+   the interface. Inside it the panel itself is square-cornered. */
+.device-shell {
+  padding: 22px 26px;
+  flex: none;
+  background: var(--panel-shell);
+  border-radius: var(--radius-shell);
+}
+#stage-holder {
+  position: relative;
+  line-height: 0;
+  background: var(--panel-paper);
+  border: 1px solid var(--panel-bezel);
+  box-shadow: var(--shadow-glass);
+}
+
+.canvas-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+.canvas-status .zoom-btn {
+  padding: 2px 7px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+  background: var(--color-bg);
+}
+
+/* Inspector rows. refreshProps() renders into #propBody. */
+#propBody { display: flex; flex-direction: column; gap: 8px; }
+.prop-row { display: flex; gap: 6px; align-items: center; }
+.prop-row .label { flex: none; }
+.prop-row input[type="number"] { flex: 1; width: 0; }
+.prop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+.swatch {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  cursor: pointer;
+  border: 1px solid var(--color-divider);
+}
+.swatch[data-active="true"] { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+.hint { font-size: 12px; line-height: 1.5; color: var(--color-muted); }
+
+/* The push block is pinned to the bottom of the inspector: the sleep interval
+   and the push action are one decision, so they sit together. */
+.push-block { margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding-top: 12px; }
+.push-block .cue { font-size: 11.5px; opacity: 0.7; }
+
+/* The canvas.json readout — an advanced tool, not part of the design. Kept
+   because it is how the layout document is inspected while wiring a device. */
+#canvasJsonPanel { width: 100%; max-width: 900px; flex: none; }
+#canvasJsonPanel .cj-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: var(--color-neutral-100);
+  border-bottom: 1px solid var(--color-divider);
+}
+#canvasJsonPanel .cj-title { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-muted); }
+#canvasJsonPanel .cj-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+#canvasSaveStatus { font-size: 10px; letter-spacing: 0.08em; color: var(--color-check-pass); }
+#canvasSaveStatus[data-state="saving"] { color: var(--color-warn); }
+#canvasSaveStatus[data-state="error"] { color: var(--color-danger); }
+#canvasJsonPanel pre {
+  margin: 0;
+  padding: 10px;
+  max-height: 220px;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  background: var(--color-bg);
+  white-space: pre;
+}
+
+/* ---- A8 · showtime ------------------------------------------------------- */
+
+.sleep-bar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex: none;
+  padding: 14px 26px;
+  background: var(--color-chrome);
+  color: var(--color-chrome-text);
+}
+
+/* The clapperboard. The one overt theater motif in the interface. */
+.clapper { display: flex; align-items: stretch; flex: none; border: 1px solid var(--color-chrome-hairline); }
+.clapper .stripes {
+  width: 140px;
+  border-right: 1px solid var(--color-chrome-text);
+  background: repeating-linear-gradient(115deg,
+    var(--color-chrome-text) 0 16px,
+    var(--color-accent-500) 16px 32px);
+}
+.clapper .readout { padding: 10px 34px; display: flex; flex-direction: column; gap: 2px; }
+.clapper .readout .cap { font-size: 11px; letter-spacing: 0.2em; opacity: 0.7; }
+.clapper .readout .time {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 44px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+.sleep-bar .message { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.sleep-bar .message .headline {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 18px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.sleep-bar .message .sub { font-size: 12.5px; opacity: 0.75; }
+.sleep-bar .actions { margin-left: auto; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.sleep-bar .actions .row { display: flex; align-items: center; gap: 10px; }
+
+/* EDIT DASHBOARD is deliberately the loudest thing on the screen. Sleeping must
+   not read as "come back later" — the whole point is that you can keep working.
+   It is the one place a light accent fill appears on the dark bar. */
+.btn-showtime {
+  padding: 13px 30px;
+  font-size: 17px;
+  letter-spacing: 0.1em;
+  background: var(--color-accent-300);
+  border-color: var(--color-accent-300);
+  color: var(--color-accent-900);
+}
+.btn-showtime:hover:not(:disabled) { background: var(--color-accent-200); border-color: var(--color-accent-200); }
+/* Wake-early is an escape hatch, never the recommendation — it sits beside the
+   loud button as a quiet outline, with its battery cost stated. */
+.btn-wake-early { color: var(--color-chrome-text); border-color: var(--color-chrome-hairline); }
+.btn-wake-early:hover:not(:disabled) { background: rgba(242, 242, 243, 0.12); }
+
+#a8 .takes {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  padding: 22px;
+  background-color: var(--color-canvas-ground);
+  background-image: radial-gradient(var(--color-canvas-dot) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+.take { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.take .take-label {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 18px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+.take .caption { font-size: 12px; opacity: 0.6; }
+.take .glass {
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  background: var(--panel-paper);
+  border: 1px solid var(--panel-bezel);
+  box-shadow: var(--shadow-glass);
+}
+.take .glass img { image-rendering: pixelated; }
+.take .glass .placeholder { font-size: 12px; color: var(--color-neutral-600); text-align: center; padding: 40px 20px; }
+/* Written = inert. Rendered at 75% so it reads as already-on-the-glass. */
+.take[data-role="written"] .glass { opacity: 0.75; }
+.take[data-role="next"] .take-label { color: var(--color-accent-text); opacity: 1; }
+.take[data-role="next"] .glass { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.take[data-role="next"] .caption { color: var(--color-accent-text); opacity: 1; }
+
+/* ---- advanced tools ------------------------------------------------------ */
+/* Export / publish / raw send / reset are not in the handoff. They are how this
+   prototype is driven against a real board, so they stay — grouped and labelled
+   rather than scattered through the chrome, so they don't compete with the act
+   the user is actually in. */
+
+.tools { display: flex; flex-direction: column; gap: 6px; }
+.tools .btn { justify-content: flex-start; font-size: 12px; padding: 6px 9px; letter-spacing: 0.02em; }
+.tools-status { font-size: 11.5px; line-height: 1.45; color: var(--color-muted); word-break: break-word; }
+
+.size-ok { color: var(--color-check-pass); }
+.size-bad { color: var(--color-danger); }
+
+/* The render backend is the only render path, so its absence has to be loud —
+   every render action disables when it goes away. */
+#backendBanner {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  padding: 7px 18px;
+  font-size: 12.5px;
+  color: var(--color-chrome-text);
+  background: var(--color-danger);
+}
+#backendBanner[data-offline="true"] { display: flex; }
+
+/* ---- panel thumbnails ---------------------------------------------------- */
+/* Small renderings of what a panel is showing, used in A8's captions and the
+   A5 summary proxy. Ground is the warm paper, never the UI ground. */
+
+.thumb { background: var(--panel-thumb); border: 1px solid var(--color-divider); }

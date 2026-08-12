@@ -1,0 +1,323 @@
+/* ============================================================================
+   Marquee — base layer.
+
+   The design system's primitives, rebuilt on the tokens in tokens.css: type
+   scale, the blueprint frame, buttons, fields, tags, segmented controls. No
+   literal colors here — everything routes through a var() so tokens.css stays
+   the single swap point.
+
+   The blueprint frame is the system's defining move: components are wireframe
+   objects. Square, transparent, hairline-bordered, with four registration marks
+   at the corners. The solid accent primary button is the deliberate exception.
+   Do not round them and do not drop the marks.
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--color-text);
+  background: var(--color-bg);
+  overflow: hidden;              /* the app owns its own scroll regions */
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+h1 { font-size: 42px; }
+h2 { font-size: 32px; }
+h3 { font-size: 26px; }
+h4 { font-size: 20px; }
+
+p { margin: 0; }
+a { color: var(--color-accent-text); text-underline-offset: 3px; }
+a:hover { color: var(--color-accent); }
+img { display: block; max-width: 100%; }
+
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); }
+
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.text-muted { color: var(--color-muted); }
+.hidden { display: none !important; }
+.spacer { flex: 1; }
+
+/* The UA rule for [hidden] is only `display: none`, so any component that sets
+   its own display wins and the attribute silently does nothing — which is how
+   an "ASLEEP" pill ends up on screen during Act I. Make the attribute mean what
+   it says. */
+[hidden] { display: none !important; }
+
+/* — the recurring type patterns named in the handoff — */
+
+/* Section label: sits above a group of controls in a rail. */
+.label {
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+/* Eyebrow: sits above a screen heading and names the act + step. */
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-accent-text);
+}
+
+/* Status pill: ON AIR / ASLEEP / a firmware-path badge. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+.pill .dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+/* The path badge is a real button — it routes back to the fork. */
+button.pill { cursor: pointer; color: inherit; }
+.chrome button.pill:hover { background: rgba(242, 242, 243, 0.14); }
+/* On air is the only filled pill, and its dot is the only warm color anywhere. */
+.pill-on-air { background: var(--color-chrome); color: var(--color-chrome-text); }
+.pill-on-air .dot { background: var(--color-lamp-on); }
+.pill-asleep { border: 1px solid var(--color-divider); opacity: 0.8; }
+.pill-asleep .dot { background: var(--color-lamp-off); }
+/* On the dark chrome bar both variants become outlines — a filled dark pill on a
+   dark bar would disappear. */
+.chrome .pill { border: 1px solid var(--color-chrome-hairline); background: none; color: inherit; }
+.chrome .pill-asleep { opacity: 0.8; }
+.chrome .pill-asleep .dot { background: var(--color-neutral-500); }
+
+/* — blueprint frame — */
+
+.blueprint {
+  position: relative;
+  border: 1px solid var(--color-divider);
+  border-radius: 0;
+  background: none;
+}
+.blueprint > .corner {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  pointer-events: none;
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+.blueprint > .corner::before,
+.blueprint > .corner::after { content: ""; position: absolute; background: currentColor; }
+.blueprint > .corner::before { left: 5px; top: 0; width: 1px; height: 100%; }
+.blueprint > .corner::after { top: 5px; left: 0; width: 100%; height: 1px; }
+.blueprint > .corner.tl { top: -6px; left: -6px; }
+.blueprint > .corner.tr { top: -6px; right: -6px; }
+.blueprint > .corner.bl { bottom: -6px; left: -6px; }
+.blueprint > .corner.br { bottom: -6px; right: -6px; }
+/* A primary button is filled, so its marks have to read against the accent. */
+.btn-primary.blueprint > .corner { color: color-mix(in srgb, var(--color-bg) 75%, transparent); }
+
+/* Content photography is desaturated and washed in the accent. */
+.duotone { position: relative; overflow: hidden; }
+.duotone::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--color-accent);
+  mix-blend-mode: color;
+}
+
+/* — rules — */
+
+.hr { height: 1px; border: 0; margin: 0; background: var(--color-divider); flex: none; }
+hr { height: 1px; border: 0; margin: var(--space-3) 0; background: var(--color-divider); }
+
+/* — buttons — */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  text-decoration: none;
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 14px;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  color: var(--color-text);
+  background: transparent;
+  border: 1px solid var(--color-divider);
+  border-radius: 0;
+  padding: 8px 13px;
+}
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-bg);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.btn-primary:hover:not(:disabled) { background: var(--color-accent-600); border-color: var(--color-accent-600); }
+.btn-primary:active:not(:disabled) { background: var(--color-accent-700); border-color: var(--color-accent-700); }
+.btn-secondary:hover:not(:disabled) { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.btn-secondary:active:not(:disabled) { background: color-mix(in srgb, var(--color-text) 14%, transparent); }
+.btn-ghost { border-color: transparent; color: var(--color-accent-text); }
+.btn-ghost:hover:not(:disabled) { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.btn-danger { color: var(--color-danger); border-color: color-mix(in srgb, var(--color-danger) 45%, transparent); }
+.btn-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--color-danger) 8%, transparent); }
+.btn-block { width: 100%; }
+.btn-sm { padding: 5px 9px; font-size: 12px; }
+
+/* — fields — */
+
+.field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.field > .label { letter-spacing: 0.12em; }
+
+.input,
+input[type="text"], input[type="password"], input[type="number"], select, textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  padding: 6px 9px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--color-text);
+  caret-color: var(--color-accent);
+  background: var(--color-bg);
+  border: 1px solid var(--color-divider);
+  border-radius: 0;
+}
+select { font-family: var(--font-body); }
+textarea { min-height: 64px; resize: vertical; line-height: 1.4; }
+.input:hover,
+input:hover:not(:disabled), select:hover:not(:disabled), textarea:hover { border-color: color-mix(in srgb, var(--color-text) 45%, transparent); }
+input:focus-visible, select:focus-visible, textarea:focus-visible { border-color: var(--color-accent); outline-offset: 0; }
+input:disabled, select:disabled { opacity: 0.5; cursor: not-allowed; }
+input[type="range"] { min-height: 0; padding: 0; border: 0; background: none; accent-color: var(--color-accent); }
+input[type="checkbox"] { width: 14px; height: 14px; min-height: 0; padding: 0; accent-color: var(--color-accent); }
+
+.check-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; cursor: pointer; }
+.check-row input[type="checkbox"] { flex: none; }
+
+/* — segmented control — */
+
+.seg { display: inline-flex; border: 1px solid var(--color-divider); }
+/* Same control in a 260px rail. The options keep their full names — abbreviating
+   "Floyd–Steinberg" to "F–S" would make the most consequential render setting
+   unreadable to the beginner this screen is for. */
+.seg-tight { display: flex; width: 100%; }
+.seg-tight .seg-opt { padding: 6px 4px; font-size: 10.5px; letter-spacing: -0.01em; }
+.seg-opt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.seg-opt + .seg-opt { border-left: 1px solid var(--color-divider); }
+.seg-opt input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+.seg-opt:has(input:checked) { background: var(--color-accent); color: var(--color-bg); }
+.seg-opt:not(:has(input:checked)):hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.seg-opt:has(input:focus-visible) { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+
+/* — tags — */
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  padding: 2px 9px;
+  white-space: nowrap;
+}
+.tag-accent { background: var(--color-accent-100); color: var(--color-accent-800); }
+.tag-neutral { background: var(--color-neutral-200); color: var(--color-neutral-800); }
+.tag-outline { border: 1px solid var(--color-accent); color: var(--color-accent-text); }
+
+/* — status dots (device checks) — */
+
+.check { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.check .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--color-check-wait); }
+.check[data-state="pass"] .dot { background: var(--color-check-pass); }
+.check[data-state="warn"] .dot { background: var(--color-warn); }
+.check[data-state="fail"] .dot { background: var(--color-danger); }
+.check[data-state="wait"] { opacity: 0.7; }
+
+/* — dialogs — */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+  background: color-mix(in srgb, var(--color-neutral-900) 50%, transparent);
+}
+.modal {
+  width: min(94vw, 620px);
+  max-height: 88vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  background: var(--color-bg);
+  border: 1px solid var(--color-divider);
+  box-shadow: var(--shadow-lg);
+}
+.modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.modal-head h4 { letter-spacing: 0.04em; text-transform: uppercase; }
+.modal-close {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px;
+  color: var(--color-muted);
+}
+.modal-close:hover { color: var(--color-text); }
+.modal-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+
+/* — toast — */
+
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: 40px;
+  z-index: 80;
+  transform: translateX(-50%) translateY(8px);
+  max-width: min(80vw, 640px);
+  padding: 9px 18px;
+  font-size: 12.5px;
+  color: var(--color-chrome-text);
+  background: var(--color-neutral-900);
+  border: 1px solid var(--color-neutral-700);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+@media (prefers-reduced-motion: reduce) { #toast { transition: none; } }

@@ -25,6 +25,18 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;700&family=Barlow+Condensed:wght@400;600&display=swap');
 
+/* Font Awesome 6 Free (Solid), vendored rather than pulled from a CDN — see the
+   note in js/icons.js. `swap` is deliberately NOT used: a fallback glyph baked
+   into a BMP and sent to a panel is a wrong render, so it is better for the icon
+   to be briefly absent than briefly wrong. */
+@font-face {
+  font-family: 'Font Awesome 6 Free';
+  font-style: normal;
+  font-weight: 900;
+  font-display: block;
+  src: url('../fonts/fa-solid-900.woff2') format('woff2');
+}
+
 :root {
   /* ---- 1. BRAND ---------------------------------------------------------- */
 

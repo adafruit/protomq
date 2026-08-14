@@ -5,24 +5,61 @@
  * the CIRCUITPY drive, confirm the board checked in.
  *
  * The rule that makes the two paths converge is implemented literally here:
- * changing the display, its pins, rotation, resolution, SPI bus, dithering or
- * the refresh interval marks the bundle stale and re-opens this screen. Dashboard
- * edits never do — they arrive over the air on the feed the bundle already reads.
+ * anything baked into cfg-marquee.json — the display, its pins, rotation,
+ * resolution, SPI bus — plus the feed and credentials in settings.toml marks the
+ * bundle stale and re-opens this screen. That set is not enumerated twice;
+ * configSignature() hashes the artifacts themselves.
+ *
+ * Dashboard edits never do: they arrive over the air on the feed the bundle
+ * already reads. Neither does the dither, which the render backend applies before
+ * the BMP is ever published — the board only ever sees the result. Nor the sleep
+ * window, which has a feed of its own (docs/marquee-sleep.md).
  */
 
 import { BACKEND } from '../api.js';
-import { configSignature, onConfigChange } from '../config.js';
+import { onConfigChange } from '../config.js';
+import { configSignature } from '../cfg.js';
 import { bundleFiles, bundleTotalBytes, bundleName, downloadBundle } from '../bundle.js';
 import { getState, setState } from '../state.js';
 import { navigate, completeActOne } from '../router.js';
 import { DISPLAY_PRESETS } from '../presets.js';
-import { $, val, toast, show, fmtBytes, setCheck, escapeHtml } from '../util.js';
+import { $, $$, val, toast, show, fmtBytes, setCheck, escapeHtml, escapeAttr, copyFromButton } from '../util.js';
 
+/**
+ * The side rail's manifest, with each entry openable to show what is actually in
+ * it. The preview is the real generated text, not a sample — it comes from the
+ * same bundleFiles() call that builds the ZIP, so what you read here is byte for
+ * byte what lands on the drive.
+ *
+ * Hover reveals; the +/− pins it open. Both are wired because they answer
+ * different questions — hover for "what is cfg-marquee.json?", pinned for "let me
+ * read this properly and copy it". The panel opens BELOW its row so the row the
+ * pointer is on never moves, which is what stops hover from flickering.
+ */
 function renderFileList() {
   const files = bundleFiles();
-  $('bundleFiles').innerHTML = files.map((f) =>
-    `<div class="row"><span class="glyph">▸</span> ${escapeHtml(f.name)}<span class="size">${fmtBytes(f.bytes)}</span></div>`
-  ).join('')
+
+  // A re-render is triggered by any config change, and losing the panel you were
+  // reading mid-edit would be its own small betrayal.
+  const open = new Set(
+    $$('#bundleFiles .file-item[data-open="true"]').map((el) => el.dataset.name)
+  );
+
+  $('bundleFiles').innerHTML = files.map((f) => {
+    const isOpen = open.has(f.name);
+    return `<div class="file-item" data-name="${escapeAttr(f.name)}" data-open="${isOpen}">
+      <div class="row">
+        <button type="button" class="peek-toggle" aria-expanded="${isOpen}"
+                title="Show the contents of ${escapeAttr(f.name)}">${isOpen ? '−' : '+'}</button>
+        <span>${escapeHtml(f.name)}</span>
+        <span class="size">${fmtBytes(f.bytes)}</span>
+      </div>
+      <div class="peek">
+        <pre class="peek-body">${escapeHtml(f.text)}</pre>
+        <button type="button" class="btn btn-ghost btn-sm peek-copy">Copy</button>
+      </div>
+    </div>`;
+  }).join('')
   // lib/ is genuinely absent — say so here rather than listing files the ZIP
   // does not contain. See the note at the top of bundle.js.
   + `<div class="row" style="opacity:.75"><span class="glyph">▾</span> lib/<span class="size">not included</span></div>
@@ -35,6 +72,28 @@ function renderFileList() {
 
   $('bundleMeta').textContent =
     `${fmtBytes(bundleTotalBytes(files))} · includes your IO credentials`;
+}
+
+/** One delegated handler, because the list is rebuilt on every config change. */
+function initFileList() {
+  $('bundleFiles')?.addEventListener('click', (e) => {
+    const item = e.target.closest('.file-item');
+    if (!item) return;
+
+    if (e.target.closest('.peek-copy')) {
+      // Read the text back off the <pre> rather than re-deriving it: whatever is
+      // on screen is exactly what gets copied, escaping included.
+      copyFromButton(e.target.closest('.peek-copy'), item.querySelector('.peek-body').textContent, 'Copy');
+      return;
+    }
+
+    const toggle = e.target.closest('.peek-toggle');
+    if (!toggle) return;
+    const nowOpen = item.dataset.open !== 'true';
+    item.dataset.open = String(nowOpen);
+    toggle.setAttribute('aria-expanded', String(nowOpen));
+    toggle.textContent = nowOpen ? '−' : '+';
+  });
 }
 
 function renderHeader() {
@@ -64,6 +123,8 @@ async function runDeviceChecks() {
 }
 
 export function initA6({ onEnter }) {
+  initFileList();
+
   $('bundleDownload').addEventListener('click', () => {
     const out = downloadBundle();
     setState({ bundleState: 'downloaded', bundleSig: configSignature() });

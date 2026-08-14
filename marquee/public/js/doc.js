@@ -19,7 +19,7 @@ import {
 } from './elements.js';
 import { buildDisplayBody, applyDisplayToForm, setResolution } from './config.js';
 import { scheduleWakeResponseSync } from './device.js';
-import { $, toast } from './util.js';
+import { $, copyFromButton } from './util.js';
 
 export function serialize() {
   return {
@@ -34,10 +34,15 @@ export function serialize() {
           fontFamily: n.fontFamily(), align: n.align(),
         });
         if (n.attrs.width !== undefined) base.width = Math.round(n.width());
-        // A label dropped by the feed picker remembers where its text came from.
+        // A linked label remembers where its text came from, how it wraps the value,
+        // and the sample itself — the last of these is what makes a new reading
+        // register in canvasSignature() and repaint the panel on the next wake.
         if (n.getAttr('feedKey')) {
           base.feedKey = n.getAttr('feedKey');
           base.feedName = n.getAttr('feedName') || '';
+          base.feedPrefix = n.getAttr('feedPrefix') || '';
+          base.feedSuffix = n.getAttr('feedSuffix') || '';
+          base.feedValue = n.getAttr('feedValue') ?? null;
         }
       } else if (etype === 'divider') {
         Object.assign(base, { fill: n.fill(), width: n.width(), height: n.height() });
@@ -70,10 +75,46 @@ export function serialize() {
           feedKey: n.getAttr('feedKey') || '', feedName: n.getAttr('feedName') || '',
           feedValue: n.getAttr('feedValue') ?? null,
         });
+      } else if (etype === 'gauge') {
+        // Explicit, for the reason given on the indicator: the generic widget shape
+        // is {ink,title,w}, which would drop the binding, the range, the thresholds
+        // and the icon. The bounds and warning values are saved as the RAW authored
+        // strings — '' means "not set" and must not round-trip as 0.
+        Object.assign(base, {
+          w: n.getAttr('w'), ink: n.getAttr('ink'), title: n.getAttr('title') || '',
+          min: n.getAttr('min'), max: n.getAttr('max'),
+          ringWidth: n.getAttr('ringWidth'),
+          gaugeLabel: n.getAttr('gaugeLabel') || '',
+          lowWarn: n.getAttr('lowWarn') ?? '', highWarn: n.getAttr('highWarn') ?? '',
+          decimals: n.getAttr('decimals'),
+          showIcon: !!n.getAttr('showIcon'), icon: n.getAttr('icon'),
+          warnColor: n.getAttr('warnColor'), alarmColor: n.getAttr('alarmColor'),
+          feedKey: n.getAttr('feedKey') || '', feedName: n.getAttr('feedName') || '',
+          gaugeValue: n.getAttr('gaugeValue') ?? null,
+        });
+      } else if (etype === 'linechart') {
+        // `feeds` and `series` are copied rather than passed by reference so the
+        // saved doc can't alias live attrs — same as the battery's `conds`.
+        Object.assign(base, {
+          w: n.getAttr('w'), h: n.getAttr('h'), ink: n.getAttr('ink'),
+          title: n.getAttr('title') || '',
+          feeds: (n.getAttr('feeds') || []).map((f) => ({ key: f.key, name: f.name, color: f.color })),
+          series: Object.fromEntries(Object.entries(n.getAttr('series') || {})
+            .map(([k, pts]) => [k, (pts || []).map((p) => ({ t: p.t, v: p.v }))])),
+          hours: n.getAttr('hours'),
+          xLabel: n.getAttr('xLabel') || '', yLabel: n.getAttr('yLabel') || '',
+          yMin: n.getAttr('yMin') ?? '', yMax: n.getAttr('yMax') ?? '',
+          yScale: n.getAttr('yScale'), decimals: n.getAttr('decimals'),
+          rawOnly: !!n.getAttr('rawOnly'), stepped: !!n.getAttr('stepped'),
+          gridLines: !!n.getAttr('gridLines'), keyLegend: !!n.getAttr('keyLegend'),
+        });
+        // The legacy sample series is only reachable when no feeds are bound (see
+        // chartSeries), so it is only worth saving in that case — carrying it
+        // alongside real data would be dead weight in every write to the device.
+        if (!(n.getAttr('feeds') || []).length) base.data = n.getAttr('data');
       } else {
         Object.assign(base, { ink: n.getAttr('ink'), title: n.getAttr('title'), w: n.getAttr('w') });
-        if (etype === 'linechart') Object.assign(base, { h: n.getAttr('h'), data: n.getAttr('data') });
-        else base.value = n.getAttr('value');
+        base.value = n.getAttr('value');
       }
       return base;
     }),
@@ -112,12 +153,10 @@ export function deserialize(doc, { keepDisplay = false } = {}) {
       img.onload = () => addImage(img, el);
       img.src = el.src;
     } else {
-      const node = (makers[el.etype] || addLabel)(el);
-      // Labels carry their feed binding as plain attrs rather than constructor args.
-      if (el.etype === 'label' && el.feedKey) {
-        node.setAttr('feedKey', el.feedKey);
-        node.setAttr('feedName', el.feedName || '');
-      }
+      // Every factory reads its own attrs off the raw saved object, so the factory
+      // is also the deserializer — including addGauge's `value` -> `gaugeValue`
+      // migration, which nothing else could do (nothing reads doc.version).
+      (makers[el.etype] || addLabel)(el);
     }
   });
   fitZoom();
@@ -220,25 +259,8 @@ export function getDeviceCanvasSig() { return deviceCanvasSig; }
 export function initDoc() {
   layer.on('draw', scheduleCanvasSave);
 
-  $('canvasCopyBtn')?.addEventListener('click', async (e) => {
-    const btn = e.currentTarget;
-    const text = currentCanvasJson();
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      // Clipboard API blocked (insecure context / sandbox) — fall back.
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      try { document.execCommand('copy'); } catch { toast('Copy failed — select the JSON manually'); }
-      ta.remove();
-    }
-    const prev = btn.textContent;
-    btn.textContent = '✓ Copied';
-    setTimeout(() => { btn.textContent = prev; }, 1200);
+  $('canvasCopyBtn')?.addEventListener('click', (e) => {
+    copyFromButton(e.currentTarget, currentCanvasJson());
   });
 
   $('canvasExportBtn')?.addEventListener('click', () => {

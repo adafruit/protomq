@@ -14,10 +14,71 @@ import {
   loadImageFile, applyTemplate,
 } from '../elements.js';
 import { refreshInterval } from '../config.js';
-import { $, $$, toast } from '../util.js';
+import { getState, subscribe } from '../state.js';
+import { $, $$, toast, show } from '../util.js';
 
-/** Options offered by "Wake and redraw", in seconds. */
-const INTERVAL_OPTIONS = [60, 300, 900, 1800, 3600];
+/**
+ * Options offered by "Wake and redraw", in seconds. Must match the option values
+ * in index.html — anything not in here renders as "Custom — Ns".
+ *
+ * Roughly geometric rather than evenly spaced: the useful range spans 15 seconds
+ * to an hour, and a linear ramp over that would be either 240 entries or a list
+ * whose bottom end is unreachable.
+ */
+const INTERVAL_OPTIONS = [15, 30, 60, 300, 900, 1800, 3600];
+
+/**
+ * The push means two different things on the two paths, so it says two different
+ * things. On the broker path the write is confirmed before the device is told to
+ * sleep; on the CircuitPython path both facts go onto feeds the board reads when
+ * it next wakes, and nothing here ever hears back.
+ */
+const PUSH_CUE = {
+  wippersnapper: "It's showtime — the dashboard is written, then the display sleeps.",
+  circuitpython: "It's showtime — the dashboard and the sleep window go to Adafruit IO, and the board collects them on its next wake.",
+};
+
+/**
+ * The same block while the display is ASLEEP — reached by editing the dashboard
+ * from Act III, or by any edit made mid-cycle.
+ *
+ * A sleeping panel has nothing listening, so "Push to display" would offer
+ * something the hardware cannot do right now. The button becomes the queue, and
+ * the cue says which wake the edit lands on.
+ */
+const SLEEP_CUE = {
+  wippersnapper: 'The display is sleeping — this edit is held and written the moment the board checks in.',
+  circuitpython: 'The display is sleeping — this edit goes to Adafruit IO, and the board collects it on its next wake.',
+};
+
+const PUSH_LABEL = 'Push to display';
+const QUEUE_LABEL = 'Queue for the next take';
+
+/**
+ * The button carries four blueprint corner <i>s, so its label lives on a text
+ * node — assigning textContent would delete them.
+ */
+function setPushLabel(text) {
+  const btn = $('sendBmpSleep');
+  if (!btn) return;
+  const node = [...btn.childNodes].find((n) => n.nodeType === Node.TEXT_NODE);
+  if (node) node.textContent = text;
+  else btn.insertBefore(document.createTextNode(text), btn.firstChild);
+}
+
+/**
+ * The push block reads the device: awake it pushes, asleep it queues. Cue and
+ * label are set together so the sentence above the button always describes the
+ * button — exported because device.js restores the label after a push.
+ */
+export function syncPushBlock() {
+  const st = getState();
+  const path = st.firmwarePath === 'circuitpython' ? 'circuitpython' : 'wippersnapper';
+  const asleep = st.deviceState === 'asleep';
+  const cue = $('pushCue');
+  if (cue) cue.textContent = (asleep ? SLEEP_CUE : PUSH_CUE)[path];
+  setPushLabel(asleep ? QUEUE_LABEL : PUSH_LABEL);
+}
 
 /**
  * The inspector's interval select and the numeric field in Settings are two
@@ -36,6 +97,16 @@ function syncIntervalFromField() {
     const opt = sel.querySelector('option[value="custom"]');
     if (opt) opt.textContent = `Custom — ${secs}s`;
   }
+}
+
+/**
+ * The alarm choice only exists on the CircuitPython path. The broker's
+ * /sleep/config encodes a TimerConfig and defers Ext0Config (server.js), so
+ * offering a pin there would be a control nothing downstream honours.
+ */
+function syncPathCopy() {
+  show($('wakeAlarmField'), getState().firmwarePath === 'circuitpython');
+  syncPushBlock();
 }
 
 export function initA7({ onEnter }) {
@@ -91,6 +162,14 @@ export function initA7({ onEnter }) {
 
   syncIntervalFromField();
   syncDitherPreviewBtn();
+  syncPathCopy();
+
+  // The board can fall asleep while this screen is still open — a cycle started
+  // here never leaves it — so the push block follows the device rather than only
+  // being read on entry.
+  subscribe((_st, patch) => {
+    if ('deviceState' in patch) syncPushBlock();
+  });
 
   onEnter('a7', () => {
     // The canvas ground has no size until this screen is visible, so the first
@@ -98,5 +177,8 @@ export function initA7({ onEnter }) {
     fitZoom();
     refreshProps();
     syncIntervalFromField();
+    // Re-read the fork on every entry rather than once at boot: the path badge is
+    // a route back to A3, so this screen can be re-entered on the other path.
+    syncPathCopy();
   });
 }

@@ -193,6 +193,25 @@
    that path is visible before the user commits to it. */
 .fork-path .extra { color: var(--color-accent-800); }
 .fork-card .footnote { margin-top: auto; font-size: 12.5px; opacity: 0.7; }
+/* A path that isn't shipping yet. Full-bleed to the card edges — pulled back out
+   through .fork-card's own padding — so it reads as a banner across the card
+   rather than one more tag inside it. The blueprint corner marks sit outside the
+   border at -6px, so this does not clip them. */
+.fork-card .fork-banner {
+  margin: -20px -20px 0;
+  padding: 7px 20px;
+  /* Darkened off the pass green rather than picking a second green: at this size
+     the token itself is only 3.6:1 against the label, which fails AA. 80% lands
+     at 5.3:1. */
+  background: color-mix(in srgb, var(--color-check-pass) 80%, black);
+  color: var(--color-neutral-100);
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+}
 
 /* ---- A4 · pick the display ----------------------------------------------- */
 
@@ -313,6 +332,68 @@
 .file-list .row .size { margin-left: auto; opacity: 0.6; }
 .file-list .nested { display: flex; flex-direction: column; gap: 5px; padding-left: 22px; font-size: 12.5px; opacity: 0.75; }
 
+/* Each manifest entry can be opened to show the file it stands for. The panel is
+   laid out in flow BELOW its row rather than floated over the rail: .col-rail
+   scrolls, so anything absolutely positioned outside it would be clipped. Opening
+   downward also means the hovered row itself never moves, which is what keeps
+   hover from flickering as the list reflows beneath it. */
+.file-list .file-item { display: flex; flex-direction: column; gap: 7px; }
+.file-list .file-item .row { align-items: baseline; gap: 8px; }
+
+.file-list .peek-toggle {
+  flex: none;
+  width: 14px;
+  padding: 0;
+  font: inherit;
+  font-family: var(--font-mono);
+  line-height: 1;
+  color: inherit;
+  text-align: center;
+  background: none;
+  border: 0;
+  opacity: 0.55;
+  cursor: pointer;
+}
+.file-list .peek-toggle:hover { opacity: 1; }
+.file-list .file-item[data-open="true"] .peek-toggle { opacity: 1; }
+
+.file-list .peek { display: none; position: relative; }
+.file-list .file-item:hover > .peek,
+.file-list .file-item[data-open="true"] > .peek { display: block; }
+/* Keyboard parity: tabbing to the toggle should reveal the same thing hovering
+   does, or the preview is mouse-only. :focus-visible rather than :focus-within,
+   because a mouse click also focuses the button — and with :focus-within the
+   click that sets data-open="false" would leave the panel open anyway, making
+   the − look broken. */
+.file-list .file-item:has(:focus-visible) > .peek { display: block; }
+
+.file-list .peek-body {
+  max-height: 240px;
+  margin: 0;
+  /* Right padding clears the copy button so a long first line cannot slide
+     underneath it. */
+  padding: 9px 66px 9px 11px;
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.55;
+  white-space: pre;
+  tab-size: 2;
+  /* --color-surface, not --color-bg: the rail is already #f5f5f8 and the two are
+     a shade apart, so the block would not read as recessed. */
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider);
+}
+/* Opaque, because it floats over the code rather than beside it. */
+.file-list .peek-copy {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  background: var(--color-surface);
+  border-color: var(--color-divider);
+}
+.file-list .peek-copy:hover { background: var(--color-accent-100); }
+
 /* A stale bundle is the one A6 state that must not be quiet — the board is
    running files that no longer match the config. */
 .stale-banner {
@@ -424,6 +505,36 @@
 .swatch[data-active="true"] { outline: 2px solid var(--color-accent); outline-offset: 1px; }
 .hint { font-size: 12px; line-height: 1.5; color: var(--color-muted); }
 
+/* Secondary options, collapsed by default. The chart block carries a dozen of
+   them and the rail is 260px: shown flat they push the feed list and the history
+   window — the controls you actually reach for — off the top of the scroll. */
+.prop-group {
+  border: 1px solid var(--color-divider);
+  padding: 0 8px;
+}
+/* Matched to .label (base.css) so a group heading reads as the same rank as the
+   field captions it contains. */
+.prop-group > summary {
+  cursor: pointer;
+  padding: 6px 0;
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+.prop-group[open] > summary { margin-bottom: 6px; }
+.prop-group > *:not(summary) { margin-bottom: 8px; }
+
+/* Font Awesome glyphs in the chrome, alongside the ones Konva draws onto the
+   canvas (see js/icons.js). Sized down because a chainlink next to 11px button
+   text reads as an illustration at matching size. */
+.fa-icon {
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  font-size: 0.9em;
+  line-height: 1;
+}
+
 /* The push block is pinned to the bottom of the inspector: the sleep interval
    and the push action are one decision, so they sit together. */
 .push-block { margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding-top: 12px; }
@@ -497,6 +608,15 @@
   text-transform: uppercase;
 }
 .sleep-bar .message .sub { font-size: 12.5px; opacity: 0.75; }
+/* The board's reported times. Monospaced and quieter than the sub: it is a log line,
+   read for its numbers rather than its prose, and it must not compete with the
+   headline that says what those numbers mean. */
+.sleep-bar .message .report {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+  opacity: 0.55;
+}
 .sleep-bar .actions { margin-left: auto; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
 .sleep-bar .actions .row { display: flex; align-items: center; gap: 10px; }
 
@@ -512,10 +632,6 @@
   color: var(--color-accent-900);
 }
 .btn-showtime:hover:not(:disabled) { background: var(--color-accent-200); border-color: var(--color-accent-200); }
-/* Wake-early is an escape hatch, never the recommendation — it sits beside the
-   loud button as a quiet outline, with its battery cost stated. */
-.btn-wake-early { color: var(--color-chrome-text); border-color: var(--color-chrome-hairline); }
-.btn-wake-early:hover:not(:disabled) { background: rgba(242, 242, 243, 0.12); }
 
 #a8 .takes {
   flex: 1;

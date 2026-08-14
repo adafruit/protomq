@@ -34,6 +34,30 @@ const DEFAULTS = {
   wakesAt: null,
   lastWriteAt: null,
 
+  /** The sleep window the board actually collected, in seconds — NOT the number
+   *  the form currently shows. A8 models the CircuitPython cycle from this, and
+   *  an interval edited mid-sleep changes nothing until the board reads the feed
+   *  again. Null until a cycle has run. */
+  sleepSeconds: null,
+
+  /** Epoch ms of the last wake and the last sleep the DEVICE ITSELF reported — the
+   *  status feed on the CircuitPython path, checkin/goodnight on the broker path. Null
+   *  until it says so; never set from anything the editor merely published.
+   *
+   *  Act III shows the pair as the board's own record, and while `deviceState` is
+   *  'online-awake' the wake also anchors the redraw clock: the start is evidence, the
+   *  length is still the panel estimate.
+   *
+   *  Neither survives a reload — see load(). */
+  lastWokeAt: null,
+  lastSleptAt: null,
+
+  /** CircuitPython only. What the last published sleep window wakes on:
+   *  'timer' | 'pin' | 'timer+pin' | null. A pin-only alarm has no wake TIME, so
+   *  A8 has to say "until you press the button" rather than tick a countdown at
+   *  a `wakesAt` that would be a fiction. */
+  wakeSource: null,
+
   /** Whether Act I has been completed at least once — the step rail collapses
    *  and becomes navigable from that point on. */
   actOneDone: false,
@@ -47,7 +71,11 @@ let state = load();
 function load() {
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {};
-    return { ...DEFAULTS, ...saved };
+    // The reported times are dropped rather than restored, for the reason `published`
+    // isn't saved at all: they are claims about what a device is doing, the device has
+    // certainly moved on, and no watch is running yet to correct them. Restored, they
+    // would have Act III reporting a wake that ended hours ago.
+    return { ...DEFAULTS, ...saved, lastWokeAt: null, lastSleptAt: null };
   } catch {
     return { ...DEFAULTS };
   }
@@ -105,6 +133,21 @@ export function clearPublished() {
   published = { png: null, doc: null, at: null };
   listeners.forEach((fn) => fn(state, { published: true }));
 }
+
+// ---------- the queued take -------------------------------------------------
+//
+// CircuitPython only. What has been published to the feeds but not yet drawn: the
+// board is asleep, so this is neither on the glass nor merely a local edit. It is
+// held until the modelled redraw completes, at which point it BECOMES `published`
+// — see device.js, which owns that clock.
+//
+// Not persisted, for the same reason `published` isn't.
+
+let queued = null;
+
+export function getQueued() { return queued; }
+export function setQueued(take) { queued = take; }
+export function clearQueued() { queued = null; }
 
 /**
  * How many elements differ between what was written and what the editor holds.

@@ -106,9 +106,16 @@ export function tooLargeForIO(b64) {
   return true;
 }
 
-/** POST one base64 BMP to an Adafruit IO feed, browser-direct. */
-export async function publishToIO(b64) {
-  const user = val('ioUser'), key = val('ioKey'), feed = val('ioFeed');
+/**
+ * POST one datum to an Adafruit IO feed, browser-direct.
+ *
+ * The feed defaults to the image feed, which is what every caller wanted until
+ * the CircuitPython push started writing a second feed with the sleep window.
+ * Failures name the feed, so "which of the two POSTs went wrong" is answerable
+ * from the toast alone.
+ */
+export async function publishToIO(value, feed = val('ioFeed')) {
+  const user = val('ioUser'), key = val('ioKey');
   if (!user || !key || !feed) {
     toast('Username, AIO key and feed key are all required — set them under Settings');
     return { ok: false, error: 'missing credentials' };
@@ -120,18 +127,18 @@ export async function publishToIO(b64) {
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-AIO-Key': key },
-        body: JSON.stringify({ value: b64 }),
+        body: JSON.stringify({ value }),
       });
-    if (res.ok) return { ok: true, host };
+    if (res.ok) return { ok: true, host, feed };
     if (res.status === 422 || res.status === 413) {
-      toast(`IO rejected the datum (${res.status}) — likely too large for this feed's history setting`);
+      toast(`IO rejected the datum for "${feed}" (${res.status}) — likely too large for this feed's history setting`);
     } else {
-      toast(`IO replied ${res.status} — check credentials and feed key`);
+      toast(`IO replied ${res.status} for feed "${feed}" — check credentials and that the feed exists`);
     }
-    return { ok: false, error: `IO ${res.status}` };
+    return { ok: false, error: `IO ${res.status}`, feed };
   } catch {
     toast(`Could not reach ${host} — check the network`);
-    return { ok: false, error: 'network' };
+    return { ok: false, error: 'network', feed };
   }
 }
 

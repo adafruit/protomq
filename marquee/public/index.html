@@ -32,7 +32,7 @@
          change it. -->
     <button type="button" class="pill" id="pathBadge" hidden
             title="Change what's running on your board"></button>
-    <span class="pill pill-asleep" id="devicePill" hidden><span class="dot"></span><span data-role="text">ASLEEP</span></span>
+    <span class="pill pill-asleep" id="devicePill" hidden><span class="dot"></span><span data-role="text">SLEEPING…</span></span>
     <button type="button" class="btn btn-sm btn-ghost" id="btnSettings" style="color:var(--color-chrome-text)">Settings</button>
   </header>
 
@@ -86,6 +86,7 @@
                extra step is visible BEFORE the user commits to that path. -->
           <div class="fork-card blueprint" id="forkWipper">
             <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <div class="fork-banner">Coming Soon!</div>
             <div style="display:flex; align-items:center; gap:10px">
               <span class="fork-title">WipperSnapper</span>
               <span class="tag tag-neutral" id="wipperTag" style="margin-left:auto">Checking…</span>
@@ -199,11 +200,13 @@
                 <label class="field"><span class="label">Driver</span>
                   <select id="pmDriver">
                     <optgroup label="EPD">
+                      <!-- Values must match a key in EPD_DRIVERS (presets.js) or
+                           cfg-marquee.json cannot name a class to import. -->
                       <option value="SSD1680" selected>SSD1680</option>
-                      <option value="ILI0373">ILI0373</option>
+                      <option value="IL0373">IL0373</option>
                       <option value="UC8253">UC8253</option>
                       <option value="UC8179">UC8179</option>
-                      <option value="UC8151">UC8151</option>
+                      <option value="UC8151D">UC8151D</option>
                       <option value="SSD1683">SSD1683</option>
                       <option value="JD79661">JD79661</option>
                     </optgroup>
@@ -223,7 +226,8 @@
                     <option value="200x200">1.54" — 200×200</option>
                     <option value="250x122">2.13" — 250×122</option>
                     <option value="122x250">2.13" — 122×250 (portrait native)</option>
-                    <option value="296x128" selected>2.9" — 296×128</option>
+                    <option value="128x296" selected>2.9" — 128×296 (portrait native)</option>
+                    <option value="296x128">2.9" — 296×128</option>
                     <option value="400x300">4.2" — 400×300</option>
                     <option value="600x448">5.65" — 600×448</option>
                     <option value="800x480">7.5" — 800×480</option>
@@ -232,10 +236,10 @@
                 </label>
                 <label class="field"><span class="label">Rotation</span>
                   <select id="rotSel">
-                    <option value="0" selected>0° — native</option>
+                    <option value="0">0° — native</option>
                     <option value="90">90°</option>
                     <option value="180">180°</option>
-                    <option value="270">270°</option>
+                    <option value="270" selected>270°</option>
                   </select>
                 </label>
                 <label class="field"><span class="label">Mode</span>
@@ -250,9 +254,9 @@
 
               <div class="prop-row hidden" id="customRes">
                 <span class="label">Custom</span>
-                <input type="number" id="resW" value="296" min="8" max="4096" aria-label="Panel width in pixels">
+                <input type="number" id="resW" value="128" min="8" max="4096" aria-label="Panel width in pixels">
                 <span class="label">×</span>
-                <input type="number" id="resH" value="128" min="8" max="4096" aria-label="Panel height in pixels">
+                <input type="number" id="resH" value="296" min="8" max="4096" aria-label="Panel height in pixels">
               </div>
 
               <div>
@@ -366,7 +370,10 @@
         <aside class="toolbox">
           <span class="label">Props</span>
           <button type="button" class="btn prop-btn" id="addLabel"><span class="tile">T</span>Text</button>
-          <button type="button" class="btn prop-btn" id="addFeedData"><span class="tile">⌁</span>Feed value</button>
+          <!-- The shortcut for "text, already linked to a feed". The same binding is
+               reachable from any Text block's inspector via "Connect to IO Feed";
+               this just skips a step. -->
+          <button type="button" class="btn prop-btn" id="addFeedData"><span class="tile fa-icon">&#xf0c1;</span>Linked text</button>
           <button type="button" class="btn prop-btn" id="addChart"><span class="tile">∿</span>Chart</button>
           <button type="button" class="btn prop-btn" id="addGaugeBtn"><span class="tile">◠</span>Gauge</button>
           <button type="button" class="btn prop-btn" id="addImageBtn"><span class="tile">▣</span>Image</button>
@@ -478,7 +485,12 @@
           <span class="label">Refresh &amp; sleep</span>
           <label class="field">
             <span class="label" style="letter-spacing:0.06em; text-transform:none; font-size:11px">Wake and redraw</span>
+            <!-- Roughly geometric, so each step is a real change rather than a
+                 nudge: 15s doubles to a minute, then the minute range fans out to
+                 an hour. -->
             <select id="wakeInterval">
+              <option value="15">Every 15 seconds</option>
+              <option value="30">Every 30 seconds</option>
               <option value="60">Every minute</option>
               <option value="300" selected>Every 5 minutes</option>
               <option value="900">Every 15 minutes</option>
@@ -487,9 +499,21 @@
               <option value="custom">Custom…</option>
             </select>
           </label>
+          <!-- CircuitPython only: the alarm the board arms before it sleeps. The
+               WipperSnapper broker path only implements a timer (server.js defers
+               Ext0Config), so this stays hidden there rather than offering a
+               choice nothing downstream would honour. -->
+          <label class="field hidden" id="wakeAlarmField">
+            <span class="label" style="letter-spacing:0.06em; text-transform:none; font-size:11px">Wake on</span>
+            <select id="wakeAlarm">
+              <option value="timer" selected>Timer</option>
+              <option value="pin">Button press</option>
+              <option value="timer+pin">Timer or button</option>
+            </select>
+          </label>
 
           <div class="push-block">
-            <span class="cue">It's showtime — the dashboard is written, then the display sleeps.</span>
+            <span class="cue" id="pushCue">It's showtime — the dashboard is written, then the display sleeps.</span>
             <button type="button" class="btn btn-primary btn-block blueprint" id="sendBmpSleep">Push to display<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i></button>
           </div>
         </aside>
@@ -505,19 +529,21 @@
         <div class="clapper">
           <div class="stripes"></div>
           <div class="readout">
-            <span class="cap">Next take in</span>
+            <span class="cap" id="clapperCap">Next take in</span>
             <span class="time" id="clapperTime">--:--</span>
           </div>
         </div>
         <div class="message">
           <span class="headline" id="sleepHeadline">Display is sleeping</span>
           <span class="sub" id="sleepSub">Anything you edit will be included in the next take.</span>
+          <!-- The board's own record, when there is one: the times IT reported, as
+               opposed to the times the editor inferred. Hidden until a device says
+               something, so it never pads the banner with an empty claim. -->
+          <span class="report" id="sleepReport" hidden></span>
         </div>
         <div class="actions">
           <span style="font-size:12.5px; opacity:0.75" id="queueNote">No changes waiting</span>
           <div class="row">
-            <button type="button" class="btn btn-wake-early btn-sm" id="wakeEarly"
-                    title="Forces a redraw before the timer — costs a full wake cycle of battery">Wake early · costs a full wake cycle</button>
             <button type="button" class="btn btn-primary blueprint btn-showtime" id="editDashboard">Edit dashboard<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i></button>
           </div>
         </div>

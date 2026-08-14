@@ -144,7 +144,7 @@ function syncChrome() {
     const offline = st.deviceState === 'offline';
     pill.className = `pill ${asleep || offline ? 'pill-asleep' : 'pill-on-air'}`;
     pill.querySelector('[data-role="text"]').textContent =
-      offline ? 'OFFLINE' : asleep ? 'ASLEEP' : 'ON AIR';
+      offline ? 'OFFLINE' : asleep ? 'SLEEPING…' : 'ON AIR';
   }
 
   $('chromeNote').hidden = !inActOne;

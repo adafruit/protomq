@@ -9,10 +9,17 @@
  * bindings that do exactly that.
  */
 
+/**
+ * Seeded with the MagTag, matching the DISPLAY_PRESETS entry and the HTML
+ * defaults in index.html. width/height are the panel's NATIVE scan geometry —
+ * the 2.9" is a portrait 128×296 buffer — and `rotation` is what turns it into
+ * the 296×128 landscape the product is used in. logicalDims() below is the one
+ * that answers "how big is the canvas".
+ */
 export const display = {
-  width: 296,        // physical panel width, before rotation
-  height: 128,       // physical panel height, before rotation
-  rotation: 0,       // 0 | 90 | 180 | 270 (degrees)
+  width: 128,        // physical panel width, before rotation
+  height: 296,       // physical panel height, before rotation
+  rotation: 270,     // 0 | 90 | 180 | 270 (degrees)
   type: 'mono',      // mono | gray4 | tricolor | quadcolor
   dither: 'FloydSteinberg',
   diffusion: 85,
@@ -78,6 +85,39 @@ export function isNeutralHex(hex) {
 
 export function neutralShades() {
   return PALETTES[display.type].filter(isNeutralHex);
+}
+
+/**
+ * Roughly how long this panel takes to put a new image on the glass, in seconds.
+ *
+ * E-ink refresh is a physical process, so it scales with BOTH the color mode and
+ * the panel area: a mono 2.9" clears in a couple of seconds, while a four-color
+ * 7.5" spends most of half a minute cycling its particles. These are
+ * datasheet-order FULL refresh times — a board waking from deep sleep has no
+ * previous frame to do a partial update against — fitted as a floor plus a
+ * per-megapixel slope:
+ *
+ *   mono       2.9" ≈  2s    7.5" ≈  5s
+ *   gray4      2.9" ≈  3s    7.5" ≈  8s
+ *   tricolor   2.9" ≈ 14s    7.5" ≈ 25s
+ *   quadcolor  2.9" ≈ 19s    7.5" ≈ 30s
+ *
+ * An estimate, and used only where being EARLY is the failure — see A8's
+ * clapperboard, which would otherwise call a redraw overdue while the panel is
+ * still visibly flashing.
+ */
+const REFRESH_FIT = {
+  mono:      { base: 1.5, perMpx: 8 },
+  gray4:     { base: 3,   perMpx: 12 },
+  tricolor:  { base: 13,  perMpx: 30 },
+  quadcolor: { base: 18,  perMpx: 30 },
+};
+
+export function panelRefreshSeconds() {
+  const { base, perMpx } = REFRESH_FIT[display.type] || REFRESH_FIT.mono;
+  // Native geometry, not logicalDims(): rotation doesn't change how many pixels
+  // the driver has to cycle.
+  return Math.round(base + perMpx * (display.width * display.height) / 1e6);
 }
 
 /** Human-readable summary of the active dither method + its parameter. */

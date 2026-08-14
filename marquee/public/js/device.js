@@ -11,7 +11,8 @@
  * others queued in order for whoever owns them.
  */
 
-import { BACKEND } from './api.js';
+import { BACKEND, sleepFeedKey, statusFeedKey } from './api.js';
+import { navigate } from './router.js';
 import { layer, hideDitherPreview } from './stage.js';
 import { select } from './selection.js';
 import { resetCounter } from './elements.js';
@@ -21,9 +22,14 @@ import {
   invalidateCanvasBaseline, saveCanvasNow, cancelCanvasSave,
 } from './doc.js';
 import { renderOrReport, tooLargeForIO, publishToIO } from './render.js';
-import { refreshFeedElements } from './feeds.js';
-import { setState, setPublished, clearPublished } from './state.js';
-import { $, val, toast, fmtBytes } from './util.js';
+import { refreshFeedElements, readFeedData } from './feeds.js';
+import { panelRefreshSeconds } from './palette.js';
+import {
+  getState, setState, setPublished, clearPublished,
+  getQueued, setQueued, clearQueued,
+} from './state.js';
+import { syncPushBlock } from './screens/a7.js';
+import { $, val, toast, fmtBytes, fmtLocalSeconds } from './util.js';
 
 // ---------- observers -------------------------------------------------------
 
@@ -71,13 +77,34 @@ function currentSleepConfig() {
   };
 }
 
+/** ws.sleep.SleepMode -> the spelling the CircuitPython sleep feed uses. */
+const SLEEP_MODE_JSON = { S_LIGHT: 'light', S_DEEP: 'deep' };
+
+/**
+ * The sleep window as it goes onto the feed, for the CircuitPython path. Three
+ * fields and no more.
+ *
+ * The wake PIN is deliberately absent: it is a fact about how the board is wired,
+ * not about this take, so it lives on the CIRCUITPY drive next to code.py rather
+ * than being re-sent with every push. `sleep_time` is always included and is
+ * ignored by the consumer when `alarm_type` is "pin". See docs/marquee-sleep.md.
+ */
+function currentSleepPayload() {
+  const { mode, durSeconds } = currentSleepConfig();
+  return {
+    alarm_type: $('wakeAlarm')?.value || 'timer',
+    sleep_mode: SLEEP_MODE_JSON[mode] || 'deep',
+    sleep_time: durSeconds,
+  };
+}
+
 /**
  * The broker replays ONE stored wake response on every checkin, and it is
  * registered before the device wakes — so an edit made mid-sleep has to
  * overwrite that registration now, or the device wakes with no display and the
  * write has nothing to apply to.
  */
-export async function syncWakeResponse({ rearmMs, force } = {}) {
+export async function syncWakeResponse({ rearmMs } = {}) {
   if (!sleepCycle) return false;
   const { mode, durSeconds } = currentSleepConfig();
   // Only deep sleep has a display to maintain — a light-sleeping device never
@@ -88,7 +115,7 @@ export async function syncWakeResponse({ rearmMs, force } = {}) {
   // duration leaves `want` untouched, so keying on it alone would return early
   // and silently swallow exactly the edit the user was trying to make.
   const sig = `${mode}|${durSeconds}|${want}`;
-  if (!force && !rearmMs && sig === sleepCycle.registeredSig) return true;
+  if (!rearmMs && sig === sleepCycle.registeredSig) return true;
   try {
     const res = await fetch(BACKEND + '/sleep/wake-response', {
       method: 'POST',
@@ -185,17 +212,22 @@ async function resetSleepEvents() {
 let sleepCountdownTimer = null;
 
 /**
- * Client-side only: this reflects the timer duration we sent, not a device
- * acknowledgement. `wakesAt` in flow state is what A8's clapperboard ticks off,
- * so the countdown survives navigating away from the screen and back.
+ * `wakesAt` in flow state is what A8's clapperboard ticks off, so the countdown
+ * survives navigating away from the screen and back.
+ *
+ * `since` is when the sleep actually BEGAN. It defaults to now, which is right for
+ * the caller that just sent the command — but a status feed datum is read up to a
+ * poll late, and anchoring that to the read instead of to the board's own timestamp
+ * would push the wake time out a little further on every cycle.
  */
-function startSleepCountdown(seconds) {
+function startSleepCountdown(seconds, { since = Date.now() } = {}) {
   if (sleepCountdownTimer) { clearInterval(sleepCountdownTimer); sleepCountdownTimer = null; }
   const total = Math.max(0, Math.floor(seconds) || 0);
-  setState({ deviceState: 'asleep', wakesAt: Date.now() + total * 1000 });
+  const from = Number.isFinite(since) ? since : Date.now();
+  setState({ deviceState: 'asleep', wakesAt: from + total * 1000, sleepSeconds: total });
 
   const fmt = (s) => (s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`);
-  let left = total;
+  let left = Math.max(0, Math.round((from + total * 1000 - Date.now()) / 1000));
   const tick = () => {
     if (left <= 0) {
       clearInterval(sleepCountdownTimer);
@@ -398,6 +430,9 @@ function waitForSleepEvents(durSeconds, { sendBmpOnWake = false } = {}) {
       if (ev.type === 'goodnight' && !gotGoodnight) {
         gotGoodnight = true;
         debugLine(`Goodnight from client "${ev.client || '?'}"`);
+        // The broker path's equivalent of a 'sleeping' report: the device said it is
+        // going down, so this is the one place its sleep time is a fact.
+        setState({ lastSleptAt: Date.now() });
         startSleepCountdown(durSeconds); // device confirmed asleep — run the timer
       }
       // a stray 'write' (or a repeated goodnight) is not this stage's to act on
@@ -407,7 +442,10 @@ function waitForSleepEvents(durSeconds, { sendBmpOnWake = false } = {}) {
       clearInterval(goodnightPollTimer); goodnightPollTimer = null;
       stopSleepCountdown();
       debugLine(`checkin.complete from client "${woke.client || '?'}"`);
-      setState({ deviceState: 'online-awake', wakesAt: null });
+      // A checkin IS the device reporting a wake, so it feeds Act III's banner from the
+      // same two fields the status feed does — the label there says "board reported",
+      // and on this path that is just as true.
+      setState({ deviceState: 'online-awake', wakesAt: null, lastWokeAt: Date.now() });
       emit('woke');
       toast('Device back online');
 
@@ -553,7 +591,9 @@ export async function pushToDisplay() {
   const btn = $('sendBmpSleep');
   const epoch = stateEpoch;
   btn.disabled = true;
-  const restore = () => { btn.disabled = false; btn.textContent = 'Push to display'; };
+  // Through syncPushBlock, not a literal: by the time this runs the device is
+  // asleep, and the button's job on the way out is to queue, not to push.
+  const restore = () => { btn.disabled = false; syncPushBlock(); };
   btn.textContent = 'Rendering…';
 
   try {
@@ -592,7 +632,10 @@ export async function pushToDisplay() {
 
     setDeviceCanvasSig(sig);  // confirmed on the panel — the baseline for every wake
     setPublished({ png: 'data:image/png;base64,' + r.png, doc, at: Date.now() });
-    setState({ lastWriteAt: Date.now() });
+    // wakeSource cleared: it is the CircuitPython path's marker for "nothing will
+    // report back", and this cycle does report back. Someone who switched paths via
+    // the badge would otherwise leave a stale one behind for A8 to read.
+    setState({ lastWriteAt: Date.now(), wakeSource: null });
 
     // 3) Tell the device to sleep.
     btn.textContent = 'Sleeping…';
@@ -640,6 +683,603 @@ export async function pushToDisplay() {
   }
 }
 
+/**
+ * "Push to display", CircuitPython path.
+ *
+ * A CircuitPython board does not speak b2d/d2b, so there is nothing to chunk a
+ * BMP to and nothing that will ever answer with a display.WriteComplete. Both
+ * halves of the push are therefore plain Adafruit IO feed writes that the board
+ * collects on its own schedule: the dashboard on the image feed, the sleep window
+ * on its sibling.
+ *
+ * And because nothing acknowledges either write, this does NOT wait. Holding a
+ * spinner for a board that may not be awake for another fifteen minutes would be
+ * theatre — the honest UI is to say what was published and move to Act III.
+ *
+ * A separate function rather than flags through pushToDisplay(): the two share
+ * only the render, and merging them would put the whole ProtoMQ cycle behind a
+ * run of conditionals that are never true here.
+ */
+async function pushToDisplayCircuitPython() {
+  const btn = $('sendBmpSleep');
+  const epoch = stateEpoch;
+  btn.disabled = true;
+  const restore = () => { btn.disabled = false; syncPushBlock(); };
+  btn.textContent = 'Rendering…';
+
+  try {
+    // Sampled feed values are part of serialize(), so refresh before snapshotting
+    // — same reason as the broker path.
+    await refreshFeedElements();
+    const doc = serialize();
+
+    const r = await renderOrReport('push to the display');
+    if (!r) return;
+    if (tooLargeForIO(r.bmp)) return;
+
+    // Skip past whatever the board reported before this push, so a previous cycle's
+    // 'sleeping' cannot be credited to the one starting here.
+    await resetStatusWatch();
+    if (epoch !== stateEpoch) return;
+
+    // 1) The dashboard first. If only one of the two writes lands, better it is
+    // this one: a board holding a new image and an old sleep window still shows
+    // the right thing.
+    btn.textContent = 'Publishing to IO…';
+    const io = await publishToIO(r.bmp);
+    if (!io.ok) return;
+
+    // 2) The sleep window, as JSON on the sibling feed. Not size-checked — the
+    // payload is a few dozen bytes and tooLargeForIO is about the BMP.
+    btn.textContent = 'Publishing sleep…';
+    const payload = currentSleepPayload();
+    const sio = await publishToIO(JSON.stringify(payload), sleepFeedKey());
+
+    // "Reset state" ran while we were publishing — the world this was building on
+    // is gone, so stop without touching flow state.
+    if (epoch !== stateEpoch) return;
+
+    // This push republishes both feeds, so any take still waiting on a modelled
+    // redraw is superseded — letting its promotion fire later would put an older
+    // design on the left panel.
+    dropQueuedWrite();
+    setPublished({ png: 'data:image/png;base64,' + r.png, doc, at: Date.now() });
+    // Deliberately NOT setDeviceCanvasSig(): that baseline means "confirmed on the
+    // glass", and nothing here confirms anything. Its only readers —
+    // syncWakeResponse and waitForSleepEvents — are broker-path and never run here.
+
+    // A failed sleep publish leaves us not knowing what the board will do, so it
+    // arms nothing: the board falls back to code.py's own interval.
+    const armed = sio.ok ? payload.alarm_type : null;
+    setState({ lastWriteAt: Date.now(), wakeSource: armed });
+
+    // 3) The countdown, but only when there is a time to count to. A pin-only
+    // alarm has none, and neither does an unpublished window — showing a clock in
+    // either case would be inventing a wake time.
+    if (armed === 'timer' || armed === 'timer+pin') {
+      startSleepCountdown(payload.sleep_time);
+    } else {
+      stopSleepCountdown();
+      setState({ deviceState: 'asleep', wakesAt: null });
+      status(armed === 'pin'
+        ? '💤 Sleeping until the wake button is pressed'
+        : '⚠️ Dashboard published, but the sleep window did not reach the feed');
+    }
+
+    toast(sio.ok
+      ? `Published the dashboard and the sleep window — the board picks both up on its next wake`
+      : `Dashboard published, but the sleep window failed (${sio.error}) — the board will sleep on code.py's own interval`);
+
+    emit('pushed');
+    // Watch the board's own feed for the rest of the cycle. Where the broker path
+    // waits on events it can be sure of, this only LOOKS: a board running an older
+    // code.py reports nothing, and the modelled cycle stays in charge until one does.
+    watchForStatus();
+    // The broker path leaves the user in the editor because the cycle it started
+    // keeps reporting back here. This path has only Act III left to say anything.
+    navigate('a8');
+  } finally {
+    restore();
+  }
+}
+
+/**
+ * "Queue for the next take" — what the push button does while the board sleeps.
+ *
+ * Deliberately not a push: a deep-sleeping panel has nothing listening, so there
+ * is no write to make right now. What "queued" already means differs by path, so
+ * this does too.
+ *
+ *   broker        — the edit is ALREADY queued. saveCanvasNow re-registers the
+ *                   wake response, and the wake handler resends the canvas at the
+ *                   next checkin. So there is nothing to send: flush the pending
+ *                   save so the registration goes out now, and hand back to Act
+ *                   III, which is the screen that tracks the wait.
+ *   CircuitPython — nothing auto-registers, because nothing on this path speaks
+ *                   to a broker. The IO feeds ARE the mailbox, so the publish IS
+ *                   the queue — see queueForNextTakeCircuitPython.
+ */
+async function queueForNextTake() {
+  if (getState().firmwarePath === 'circuitpython') return queueForNextTakeCircuitPython();
+  saveCanvasNow();
+  toast(sleepCycle
+    ? 'Queued — the board writes it at its next check-in'
+    : 'Saved — but no sleep cycle is running, so nothing is registered for the wake');
+  navigate('a8');
+}
+
+// ---------- the modelled CircuitPython cycle --------------------------------
+//
+// The FALLBACK, for a board whose code.py does not report anything (see the status
+// watch below, which supersedes all of this the moment a real report arrives).
+// Without a report, "when will the board have drawn this" has to be answered from a
+// model. Both consumers — A8's clapperboard and the promotion below — read the same
+// two numbers, so the screen and the state can never disagree about which phase the
+// model thinks the board is in.
+
+/** WiFi associate, Adafruit IO connect and pulling the BMP down, before the panel
+ *  even starts flashing. Deliberately generous: every consumer of this number
+ *  fails by being EARLY. */
+const WAKE_NETWORK_S = 12;
+
+/** How long the board is plausibly awake for: the round trip, then the redraw. */
+export const awakeSeconds = () => WAKE_NETWORK_S + panelRefreshSeconds();
+
+/** One full cycle: the sleep window the board collected, plus that awake time. */
+const cyclePeriodMs = (st) => (st.sleepSeconds || refreshInterval()) * 1000 + awakeSeconds() * 1000;
+
+let queuedWriteTimer = null;
+
+/**
+ * Move the queued take onto the panel at the moment the board has plausibly drawn
+ * it — the only "write confirmed" this path will ever get.
+ *
+ * That moment is the END of the first awake window to START after the publish. The
+ * board fetches the feed once per wake, so a publish landing mid-wake has most
+ * likely already missed that fetch: ceil() waits for the next one rather than
+ * claiming a redraw that didn't include it.
+ */
+function scheduleQueuedWrite() {
+  clearTimeout(queuedWriteTimer);
+  const q = getQueued();
+  const st = getState();
+  const periodMs = cyclePeriodMs(st);
+  // A board that reports for itself never needs guessing at: applyStatus promotes on
+  // the real 'sleeping', and a timer running alongside it would race that with an
+  // estimate and sometimes win.
+  if (statusSeen) return;
+  if (!q || !st.wakesAt || periodMs <= 0) return;
+
+  const n = Math.max(0, Math.ceil((q.at - st.wakesAt) / periodMs));
+  const writtenAt = st.wakesAt + n * periodMs + awakeSeconds() * 1000;
+  const epoch = stateEpoch;
+
+  queuedWriteTimer = setTimeout(() => {
+    const take = getQueued();
+    if (!take || epoch !== stateEpoch) return;   // reset, or a push superseded it
+    clearQueued();
+    // Timestamped with the modelled write, not with the publish that queued it:
+    // A8's caption says "written <time>", and the queue was minutes earlier.
+    setPublished({ ...take, at: writtenAt });
+    setState({ lastWriteAt: writtenAt });
+  }, Math.max(0, writtenAt - Date.now()));
+}
+
+/** A fresh push supersedes any queued take: it publishes its own image and claims
+ *  the panel itself, so a pending promotion would later overwrite it with an older
+ *  design. */
+function dropQueuedWrite() {
+  clearTimeout(queuedWriteTimer);
+  queuedWriteTimer = null;
+  clearQueued();
+}
+
+// ---------- the CircuitPython status watch ----------------------------------
+//
+// The board reports two moments on its own feed: "awake" when it has connected to
+// the broker, and "sleeping" as it arms its alarm. That pair is the acknowledgement
+// this path has never had, and it is worth more than a richer one-shot payload,
+// because it BRACKETS the fetch: a take published before the 'awake' was on the feed
+// when the board pulled, and one published between the two may have missed it.
+//
+// Structurally this is the broker path's event pump — resetSleepEvents / pumpSleepEvents
+// / waitForSleepEvents — doing the same job over Adafruit IO instead of ProtoMQ. One
+// difference matters: the broker keeps an event LOG that has to be drained exactly
+// once, while a feed's last value is state that stays put. So a late poll here costs
+// latency and nothing else, which is what makes a throttled background tab safe.
+//
+// Payload contract: docs/marquee-status.md.
+
+const STATUS_POLL_MS = 5000;
+/** How far past the modelled awake window to keep looking before calling it offline.
+ *  A slow WiFi associate or one retry has to fit inside this. */
+const STATUS_GRACE_MS = 60000;
+/** Data points per poll. More than one so a poll that lands after both transitions
+ *  can still see the 'awake' that the 'sleeping' needs to be judged against. */
+const STATUS_BATCH = 4;
+
+let statusCursor = null;      // id of the newest datum already applied
+let statusSeen = false;       // has this board EVER reported? the model/evidence switch
+let statusPollTimer = null;
+let lastAwakeAt = null;       // created_at of the most recent 'awake', for the bracket
+let lastReportAt = null;      // created_at of the most recent report of any kind, for the log
+let statusPolls = 0;          // polls made this cycle, so the log can show it is alive
+
+const logClock = (t) => fmtLocalSeconds(new Date(t));
+
+const since = (t) => `${Math.round((Date.now() - t) / 1000)}s ago`;
+
+/** Durations in the log read in whatever unit keeps them short — an hourly interval in
+ *  seconds is a number nobody can size at a glance. */
+function fmtWait(ms) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  return s < 60 ? `${s}s` : s < 3600 ? `${Math.floor(s / 60)}m ${s % 60}s`
+    : `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}m`;
+}
+
+/**
+ * Narrate the watch.
+ *
+ * Two destinations, on purpose. The debug line under the tools panel is the LIVE
+ * state — one line, always current, the same place the broker path narrates its own
+ * watch. console.debug keeps the TRAIL, because "is the board publishing" is a
+ * question about history and one line cannot hold one; devtools hides debug-level
+ * output unless you ask for Verbose, so this costs nothing for anyone who is not
+ * currently staring at a board.
+ */
+function statusLog(line) {
+  debugLine(`${statusFeedKey() || 'status feed'} · ${line}`);
+  console.debug('[marquee-status]', line);
+}
+
+/** Has the board reported for itself at least once this session? While false, A8
+ *  falls back to the modelled cycle; once true, a silent board means offline. */
+export const boardReportsState = () => statusSeen;
+
+/**
+ * Read the status value as an object, whatever shape it arrived in.
+ *
+ * A bare "awake" is accepted as {state: "awake"} so the device half can ship in
+ * stages, and unknown keys are simply carried — the contract is additive, so a
+ * reader that rejects what it does not recognise would break on the next field
+ * anyone adds.
+ */
+function parseStatus(value) {
+  if (typeof value !== 'string') return null;
+  const text = value.trim();
+  if (!text) return null;
+  try {
+    const obj = JSON.parse(text);
+    return obj && typeof obj === 'object' ? obj : { state: String(obj) };
+  } catch {
+    return { state: text };
+  }
+}
+
+/**
+ * Start a cycle from whatever is already on the feed, without acting on it — a
+ * status left behind by a previous bench run would otherwise drive this one. Same
+ * job, same reason, as resetSleepEvents() on the broker path.
+ */
+async function resetStatusWatch() {
+  clearTimeout(statusPollTimer);
+  statusPollTimer = null;
+  lastAwakeAt = null;
+  lastReportAt = null;
+  statusPolls = 0;
+  const data = await readFeedData(statusFeedKey());
+  statusCursor = data && data.length ? data[0].id : null;
+  if (!data) statusLog('unreadable — the feed may not exist yet, or the IO key is unset');
+  else if (!data.length) statusLog('no history yet — nothing has ever been published here');
+  else statusLog(`starting from datum ${data[0].id} (${logClock(data[0].createdAt)}), ignoring anything older`);
+}
+
+/** Anything newer than the cursor, oldest-first so transitions apply in order. */
+async function pumpStatus() {
+  const data = await readFeedData(statusFeedKey(), { limit: STATUS_BATCH });
+  if (!data) return null;                       // unreadable: unknown, not "nothing"
+  if (statusCursor === null) {
+    // Unseeded — the feed was unreadable when the cycle started. Adopt the present
+    // rather than replaying history, or a previous run's 'sleeping' would restart this
+    // cycle's clock. Same rule as resetSleepEvents() skipping the broker's log.
+    statusCursor = data.length ? data[0].id : null;
+    return [];
+  }
+  const fresh = [];
+  for (const d of data) {                       // IO returns newest-first
+    if (d.id === statusCursor) break;
+    fresh.unshift(d);
+  }
+  if (fresh.length) statusCursor = fresh[fresh.length - 1].id;
+  return fresh;
+}
+
+/**
+ * One reported transition. This is the CircuitPython counterpart of the broker's
+ * checkin.complete / goodnight handling, and it drives the same flow state, so every
+ * screen that already reacts to those events reacts to these for free.
+ */
+function applyStatus(datum) {
+  const s = parseStatus(datum.value);
+  if (!s || (s.state !== 'awake' && s.state !== 'sleeping')) {
+    // Logged rather than swallowed: a board publishing something this reader does not
+    // understand is the single most likely thing to go wrong while the device half is
+    // being written, and silence would make it look like nothing was published at all.
+    statusLog(`ignored — unrecognised value ${JSON.stringify(String(datum.value).slice(0, 80))}`);
+    return;
+  }
+  // Only a RECOGNISED state counts as a report — an unparseable datum is not
+  // evidence, and treating it as such would retire the fallback for nothing.
+  const first = !statusSeen;
+  statusSeen = true;
+  const at = Number.isFinite(datum.createdAt) ? datum.createdAt : Date.now();
+  lastReportAt = at;
+  if (first) status('📡 The board is reporting its own state — estimates retired');
+
+  if (s.state === 'awake') {
+    statusLog(`← awake${s.wake_reason ? ` (${s.wake_reason})` : ''} at ${logClock(at)}`
+      + `${lastAwakeAt ? `, ${Math.round((at - lastAwakeAt) / 1000)}s after the last wake` : ''}`);
+    stopSleepCountdown();
+    lastAwakeAt = at;
+    // The board's OWN timestamp, so Act III's banner and the redraw clock both run from
+    // when it actually came up rather than from when this poll happened to see it.
+    setState({ deviceState: 'online-awake', wakesAt: null, lastWokeAt: at });
+    status(s.wake_reason === 'pin' ? '⏰ Board woke — button press'
+      : s.wake_reason === 'reset' ? '⏰ Board woke — reset or first boot'
+      : '⏰ Board woke — timer');
+    emit('woke');
+    return;
+  }
+
+  // 'sleeping': the board drew (or gave up) and is arming its alarm. Promote first,
+  // so the panel and the clock update in one pass.
+  statusLog(`← sleeping at ${logClock(at)}`
+    + `${Number.isFinite(s.sleep_time) ? ` for ${s.sleep_time}s` : ' (no sleep_time reported)'}`
+    + `${s.alarm_type ? ` on ${s.alarm_type}` : ''}`
+    + `${lastAwakeAt ? `, awake ${Math.round((at - lastAwakeAt) / 1000)}s` : ''}`);
+
+  const take = getQueued();
+  if (take && lastAwakeAt != null && take.at < lastAwakeAt) {
+    // The take was on the feed before the board connected, so that fetch saw it.
+    dropQueuedWrite();
+    setPublished({ ...take, at });
+    setState({ lastWriteAt: at });
+    emit('pushed');
+    statusLog(`queued take promoted — it was published ${Math.round((lastAwakeAt - take.at) / 1000)}s `
+      + 'before the board woke, so that fetch had it');
+  } else if (take) {
+    // Held rather than promoted. Worth saying out loud: from the outside this looks
+    // like the queue being ignored, when it is the bracket refusing to guess.
+    statusLog(lastAwakeAt == null
+      ? 'queued take held — never saw this cycle\'s wake, so cannot tell if it was fetched'
+      : `queued take held — published ${Math.round((take.at - lastAwakeAt) / 1000)}s AFTER the board `
+        + 'woke, so that fetch may have missed it; it goes out next cycle');
+  }
+
+  const secs = Number.isFinite(s.sleep_time) ? s.sleep_time : refreshInterval();
+  // wakeSource is what A8 reads to decide whether there is a wake TIME to count to.
+  // lastWokeAt is deliberately LEFT alone: paired with lastSleptAt it is how long the
+  // board was up, which is the most useful number on the banner.
+  setState({ wakeSource: s.alarm_type || 'timer', lastSleptAt: at });
+  if (s.alarm_type === 'pin') {
+    stopSleepCountdown();
+    setState({ deviceState: 'asleep', wakesAt: null, sleepSeconds: null });
+  } else {
+    startSleepCountdown(secs, { since: anchorSleep(at, secs) });
+  }
+  emit('slept');
+}
+
+/**
+ * Where to start counting from, given a 'sleeping' that may be old news.
+ *
+ * A tab hidden for an hour catches up on a report whose wake time has long passed, and
+ * the cycles the board ran since are beyond the handful of data points we fetch. Left
+ * as-is that reads 00:00 and then declares a healthy board offline — the exact kind of
+ * confident falsehood this feed exists to remove. So the observed anchor is rolled
+ * forward by whole cycles until the wake it implies is in the future, and the next
+ * report replaces the estimate with something the board actually said.
+ */
+function anchorSleep(at, secs) {
+  const periodMs = (secs + awakeSeconds()) * 1000;
+  const behind = Date.now() - (at + secs * 1000);
+  if (periodMs <= 0 || behind <= 0) return at;
+  return at + periodMs * Math.ceil(behind / periodMs);
+}
+
+/** The slow cadence, for when the board is not expected to say anything soon. */
+const STATUS_IDLE_MS = 60000;
+
+let watchStartedAt = null;
+
+/**
+ * When to look, and when to stop believing the board is coming back.
+ *
+ * Every anchor here is a FIXED point — a reported time, or when the watch began.
+ * Anchoring on "now" would push the deadline forward on every tick, so a board that
+ * died would be waited on forever at the fast cadence.
+ */
+function statusWindow(st) {
+  // A pin-only alarm has no wake time and may not fire for days. There is nothing to
+  // time out, so this watches slowly and forever rather than calling a board offline
+  // for not having been pressed.
+  if (st.wakeSource === 'pin') return { opens: Date.now(), deadline: Infinity, idle: true };
+  // Sleeping on a timer: nothing can arrive until the wake, so don't spend requests
+  // looking, and give the round trip plus the redraw plus a grace to report in.
+  if (st.wakesAt) {
+    return {
+      opens: st.wakesAt - STATUS_POLL_MS,
+      deadline: st.wakesAt + awakeSeconds() * 1000 + STATUS_GRACE_MS,
+    };
+  }
+  // Reported awake and working, or a cycle with no window to anchor on: measure from
+  // the last thing actually heard.
+  const from = lastAwakeAt ?? watchStartedAt ?? Date.now();
+  return { opens: Date.now(), deadline: from + awakeSeconds() * 1000 + STATUS_GRACE_MS };
+}
+
+/**
+ * Watch the status feed.
+ *
+ * Polling is confined to the window the board could plausibly be up in: it is
+ * unreachable for the rest, and IO's rate limit is a budget shared with every element
+ * binding on the canvas. Outside the window this reschedules rather than polls, so the
+ * watch survives an arbitrarily long sleep for the cost of one timer.
+ */
+function watchForStatus() {
+  clearTimeout(statusPollTimer);
+  watchStartedAt = Date.now();
+  const epoch = stateEpoch;
+  statusLog(statusFeedKey()
+    ? `watching for the board to report (polling every ${STATUS_POLL_MS / 1000}s around each wake)`
+    : 'no image feed set, so there is no status feed to watch');
+
+  const tick = async () => {
+    if (epoch !== stateEpoch) return;
+    const { opens, deadline, idle } = statusWindow(getState());
+    const wait = () => { statusPollTimer = setTimeout(tick, idle ? STATUS_IDLE_MS : STATUS_POLL_MS); };
+
+    if (Date.now() < opens) {
+      // Not looking yet, and saying so: a silent debug line during a 15-minute sleep is
+      // indistinguishable from a watch that has died.
+      statusLog(`waiting — nothing can arrive before the wake, ${fmtWait(opens - Date.now())} to go`);
+      statusPollTimer = setTimeout(tick, Math.min(opens - Date.now(), STATUS_IDLE_MS));
+      return;
+    }
+
+    const fresh = await pumpStatus();
+    if (epoch !== stateEpoch) return;
+    statusPolls++;
+    if (fresh === null) {
+      statusLog(`poll ${statusPolls} — feed unreadable, retrying`);
+      wait();
+      return;
+    }
+    if (fresh.length) {
+      // Applying these moves wakesAt, so the next tick re-reads the window.
+      if (fresh.length > 1) statusLog(`${fresh.length} reports at once — catching up in order`);
+      fresh.forEach(applyStatus);
+      wait();
+      return;
+    }
+
+    statusLog(`poll ${statusPolls} — nothing new`
+      + `${lastReportAt ? `, last report ${since(lastReportAt)}` : ' yet'}`);
+
+    if (Date.now() > deadline) {
+      // Only a board that HAS reported can be judged silent. One that never did is
+      // running an older code.py, and the modelled cycle is still its best answer.
+      if (statusSeen && getState().deviceState !== 'offline') {
+        // deviceState alone retires the redraw clock, which reads lastWokeAt only while
+        // the board is known to be up — so the reported times survive here on purpose,
+        // and the banner can still show when it was last heard from.
+        setState({ deviceState: 'offline', wakesAt: null });
+        status('⚠️ No report from the board this cycle — it may not have come back');
+        statusLog(`gave up on this cycle — ${fmtWait(Date.now() - deadline)} past the deadline`
+          + `${lastReportAt ? `, last report ${since(lastReportAt)}` : ''}; still watching slowly`);
+      } else if (!statusSeen) {
+        statusLog('no report ever — this board is on the estimated cycle, which is expected '
+          + 'until its code.py publishes');
+      }
+      // Keep looking, slowly: a board that is merely very late still counts, and the
+      // next report puts the screen straight.
+      statusPollTimer = setTimeout(tick, STATUS_IDLE_MS);
+      return;
+    }
+    wait();
+  };
+
+  tick();
+}
+
+/** A catch-up read, for the moments when the poll cadence cannot be trusted: a
+ *  backgrounded tab gets its timers throttled, and the feed's value is state rather
+ *  than a stream, so one read closes the whole gap. */
+export async function catchUpStatus() {
+  if (getState().firmwarePath !== 'circuitpython' || statusCursor === null) return;
+  const epoch = stateEpoch;
+  const fresh = await pumpStatus();
+  if (epoch !== stateEpoch || !fresh || !fresh.length) return;
+  statusLog(`catching up — ${fresh.length} report${fresh.length === 1 ? '' : 's'} arrived while `
+    + 'this tab was not being polled');
+  fresh.forEach(applyStatus);
+}
+
+/** Stop watching and forget what was seen — a reset drops the world this was
+ *  reporting on. `statusSeen` deliberately survives: whether the BOARD reports is a
+ *  fact about its firmware, not about this cycle. */
+function stopStatusWatch() {
+  clearTimeout(statusPollTimer);
+  statusPollTimer = null;
+  statusCursor = null;
+  lastAwakeAt = null;
+  watchStartedAt = null;
+}
+
+/**
+ * The CircuitPython half of "Queue for the next take".
+ *
+ * It writes the same two feeds as the push — they are the only mailbox a sleeping
+ * board has — but it must not make the push's CLAIMS, because the board is mid-
+ * sleep on a window it collected earlier and nothing here reaches it. So,
+ * deliberately absent:
+ *
+ *   setPublished()        — that snapshot means "this is on the glass". The board
+ *                           has not woken, let alone drawn, so recording it now
+ *                           would make A8's two panels identical and hide the very
+ *                           change being queued. It is held as the QUEUED take and
+ *                           promoted when the modelled redraw lands, which is when
+ *                           the panel actually changes — scheduleQueuedWrite.
+ *   startSleepCountdown() — writing to a feed does not move the board's wake time.
+ *                           The clapperboard belongs to the sleep already running.
+ *   lastWriteAt/wakeSource — nothing was written, and the alarm the board is
+ *                           running is the one it armed before it slept; the new
+ *                           window only takes effect after the next wake.
+ */
+async function queueForNextTakeCircuitPython() {
+  const btn = $('sendBmpSleep');
+  const epoch = stateEpoch;
+  btn.disabled = true;
+  const restore = () => { btn.disabled = false; syncPushBlock(); };
+  btn.textContent = 'Rendering…';
+
+  try {
+    // Bound feed values are part of the render, so re-read them first — same
+    // reason as both push paths.
+    await refreshFeedElements();
+    const doc = serialize();
+
+    const r = await renderOrReport('queue the dashboard');
+    if (!r) return;
+    if (tooLargeForIO(r.bmp)) return;
+
+    btn.textContent = 'Publishing to IO…';
+    const io = await publishToIO(r.bmp);
+    if (!io.ok) return;
+
+    // The sleep window goes with it: an interval changed while editing is part of
+    // the same take, and the board reads both feeds on the same wake.
+    btn.textContent = 'Publishing sleep…';
+    const sio = await publishToIO(JSON.stringify(currentSleepPayload()), sleepFeedKey());
+
+    // "Reset state" ran while we were publishing — say nothing about a world that
+    // is already gone.
+    if (epoch !== stateEpoch) return;
+
+    // Held, not published: this take is on the feed, and the panel changes when the
+    // board next wakes and redraws.
+    setQueued({ png: 'data:image/png;base64,' + r.png, doc, at: Date.now() });
+    scheduleQueuedWrite();
+
+    toast(sio.ok
+      ? 'Queued — the board collects it on its next wake'
+      : `Dashboard queued, but the sleep window failed (${sio.error}) — the board keeps its current interval`);
+    navigate('a8');
+  } finally {
+    restore();
+  }
+}
+
 /** Send the sleep config on its own, without a BMP. A bench diagnostic: it
  *  isolates whether the device receives the sleep message at all. */
 async function sleepNow() {
@@ -679,26 +1319,6 @@ async function sleepNow() {
     btn.disabled = false;
     btn.textContent = 'Sleep now (no BMP)';
   }
-}
-
-/**
- * Wake-early. Presented as an escape hatch, never the recommendation: a deep
- * sleeping board is genuinely unreachable, so all this can do is shorten the
- * NEXT registration and tell the truth about that.
- */
-async function wakeEarly() {
-  if (!sleepCycle) { toast('No sleep cycle is running — nothing to wake'); return; }
-  if (!confirm('Wake the display early?\n\nA deep-sleeping board cannot be interrupted over the air. '
-    + 'Marquee will register the shortest possible sleep so the board comes back on its next wake and '
-    + 'stays up — which costs a full wake cycle of battery.\n\nContinue?')) return;
-  const prev = refreshInterval();
-  const el = $('sleepDuration');
-  if (el) { el.value = '0'; el.dispatchEvent(new Event('input', { bubbles: true })); }
-  const ok = await syncWakeResponse({ force: true });
-  if (el) { el.value = String(prev); el.dispatchEvent(new Event('input', { bubbles: true })); }
-  toast(ok
-    ? 'Registered — the board will stay awake after its next check-in, then resume the normal interval'
-    : 'Could not reach the broker to register an early wake');
 }
 
 // ---------- reset -----------------------------------------------------------
@@ -755,7 +1375,12 @@ async function resetState() {
     sleepEventCursor = 0;
     sleepWatchId = null;
     clearPublished();
-    setState({ deviceState: 'online-awake', wakesAt: null, lastWriteAt: null });
+    dropQueuedWrite();
+    stopStatusWatch();
+    setState({
+      deviceState: 'online-awake', wakesAt: null, lastWriteAt: null,
+      wakeSource: null, sleepSeconds: null, lastWokeAt: null, lastSleptAt: null,
+    });
 
     // 4) The canvas. Elements only — the display block stays, so panel geometry
     // and dither settings survive.
@@ -813,10 +1438,25 @@ async function resetState() {
 // ---------- boot ------------------------------------------------------------
 
 export function initDevice() {
-  $('sendBmpSleep')?.addEventListener('click', pushToDisplay);
+  // The fork is read at click time, not at boot: the path badge in the chrome bar
+  // is a route back to A3, so it can change under a mounted editor.
+  $('sendBmpSleep')?.addEventListener('click', () => {
+    // One button, two jobs: a sleeping board can only be queued for.
+    if (getState().deviceState === 'asleep') return queueForNextTake();
+    return getState().firmwarePath === 'circuitpython'
+      ? pushToDisplayCircuitPython()
+      : pushToDisplay();
+  });
   $('sleepNow')?.addEventListener('click', sleepNow);
-  $('wakeEarly')?.addEventListener('click', wakeEarly);
   $('btnResetState')?.addEventListener('click', resetState);
+
+  // A hidden tab has its timers throttled to a crawl, so the status poll can sleep
+  // through a whole wake. Reading the feed once on the way back closes the gap —
+  // the value is still sitting there, which is the point of watching state rather
+  // than draining an event log.
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) catchUpStatus();
+  });
 
   $('sendBmp')?.addEventListener('click', async () => {
     const btn = $('sendBmp');

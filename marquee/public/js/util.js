@@ -21,6 +21,71 @@ export function fmtBytes(n) {
   return n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} KB`;
 }
 
+// ---------- numbers, for the data-driven widgets ----------------------------
+//
+// Feed values arrive from IO as STRINGS, and "no reading yet" has to stay
+// distinguishable from a real zero, so every conversion here funnels through
+// toNum and returns null rather than NaN or 0 for an unusable value.
+
+export const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+/** A finite number, or null for empty / non-numeric / unset. Never NaN. */
+export function toNum(raw) {
+  if (raw === null || raw === undefined || String(raw).trim() === '') return null;
+  const v = Number(raw);
+  return Number.isFinite(v) ? v : null;
+}
+
+/** `places` is user-supplied, so it's clamped to what toFixed actually accepts. */
+export function fmtDecimals(raw, places) {
+  const v = toNum(raw);
+  if (v === null) return '—';
+  return v.toFixed(clamp(Math.round(places) || 0, 0, 10));
+}
+
+/**
+ * Tick stops on a 1 / 2 / 5 × 10ⁿ ramp, the spacing that reads as "round numbers"
+ * at any magnitude. `count` is a target, not a promise: the stops are aligned to
+ * the ramp, so the count lands near it rather than on it. Always returns at least
+ * the two endpoints.
+ *
+ * The ramp rounds UP (a step of 5 where 3.3 was asked for) because these label a
+ * 60px-tall plot on an e-ink panel — erring toward fewer, further-apart stops is
+ * what keeps them legible.
+ */
+export function niceTicks(lo, hi, count = 4) {
+  if (!Number.isFinite(lo) || !Number.isFinite(hi) || hi <= lo) return [lo, hi];
+  const raw = (hi - lo) / Math.max(1, count);
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const norm = raw / mag;
+  const step = (norm > 5 ? 10 : norm > 2 ? 5 : norm > 1 ? 2 : 1) * mag;
+  // Stops are printed as axis labels, so they are rounded to the step's own
+  // precision. Accumulating (t += step) drifts, and so does re-multiplying
+  // (Math.round(t / step) * step still yields 0.30000000000000004 at step 0.1) —
+  // decimal rounding is what actually removes it.
+  const dp = clamp(Math.ceil(-Math.log10(step)), 0, 10);
+  const out = [];
+  const first = Math.ceil(lo / step - 1e-9);
+  for (let i = first; i * step <= hi + step * 1e-9; i++) out.push(Number((i * step).toFixed(dp)));
+  return out.length >= 2 ? out : [lo, hi];
+}
+
+/**
+ * Normalise a value to 0..1 across [lo, hi]. The ONE place linear vs log is
+ * decided, so plotting code stays a single expression.
+ *
+ * Log needs a strictly positive domain — log10(0) is -Infinity and negatives are
+ * undefined — so a caller that can't guarantee that gets the linear mapping
+ * instead of a silently broken plot.
+ */
+export function scaleUnit(v, lo, hi, log = false) {
+  if (log && lo > 0 && hi > 0 && v > 0) {
+    const l = Math.log10(lo), h = Math.log10(hi);
+    return h === l ? 0 : (Math.log10(v) - l) / (h - l);
+  }
+  return hi === lo ? 0 : (v - lo) / (hi - lo);
+}
+
 /** mm:ss for the clapperboard countdown; hh:mm:ss once past an hour. */
 export function fmtClock(totalSeconds) {
   const s = Math.max(0, Math.floor(totalSeconds || 0));
@@ -49,6 +114,12 @@ export function fmtLocalTime(date) {
   return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
+/** The same, WITH seconds — "9:47:12 AM". Minutes are right for "written 9:47 AM" and
+ *  useless for a device report, where a whole wake lasts twenty seconds. */
+export function fmtLocalSeconds(date) {
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+}
+
 export function base64ToBlob(b64, mime) {
   const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);
@@ -73,6 +144,43 @@ export function download(blob, name) {
   a.click();
   a.remove();
   URL.revokeObjectURL(a.href);
+}
+
+/**
+ * Copy text to the clipboard, falling back to a throwaway textarea where the
+ * async Clipboard API is unavailable — it needs a secure context, so a plain
+ * http:// origin (which is how this app is usually run locally) does not have it.
+ * Resolves false only if both routes fail.
+ */
+export async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch { /* blocked or insecure context — fall through */ }
+
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch { ok = false; }
+  ta.remove();
+  return ok;
+}
+
+/**
+ * Copy, then say so on the button that was clicked. The label is restored on a
+ * timer, so a second click before it lapses must not capture "✓ Copied" as the
+ * label to go back to.
+ */
+export async function copyFromButton(btn, text, restore = btn.textContent) {
+  const ok = await copyText(text);
+  if (!ok) { toast('Copy failed — select the text manually'); return; }
+  btn.textContent = '✓ Copied';
+  clearTimeout(btn._copyTimer);
+  btn._copyTimer = setTimeout(() => { btn.textContent = restore; }, 1200);
 }
 
 let toastTimer;

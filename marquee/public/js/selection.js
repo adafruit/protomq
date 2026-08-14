@@ -14,8 +14,11 @@ import { layer, tr, snap, editorOpts, suspendDitherPreview, scheduleDitherRefres
 import {
   isWidget, rebuildWidget, elementColor, setElementColor, wireNode, nextId,
   INDICATOR_OPS, MIN_WIDGET_W, indicatorValueKnown, batteryFraction,
+  isFeedLinked, linkedLabelText, feedValueAttr, CHART_RANGES, CHART_RAW_MAX,
+  gaugeValue,
 } from './elements.js';
-import { openFeedPicker, refreshFeedElements } from './feeds.js';
+import { openFeedPicker, refreshFeedElements, refreshChart } from './feeds.js';
+import { GAUGE_ICONS, FA_LINK } from './icons.js';
 import { $, escapeHtml, escapeAttr, toast } from './util.js';
 
 export let selected = null;
@@ -57,6 +60,78 @@ function swatchHTML(current, target, colors = PALETTES[display.type]) {
     ).join('') + '</div>';
 }
 
+/** The chainlink that marks every bind control, so one glyph decision lives here. */
+const linkGlyph = '<span class="fa-icon" aria-hidden="true">' + FA_LINK + '</span>';
+
+/**
+ * The feed binding rows — "which feed" and "what does it read right now".
+ *
+ * Hoisted because the indicator and the battery each had their own near-identical
+ * copy, and the label and the gauge would have made four. `prefix` namespaces the
+ * element ids (`pIndFeed`, `pGaugeFeed`, …) so bindFeedRow can wire them without
+ * knowing which etype it is looking at. `valueText` is passed in because "what
+ * counts as a readable value" is per-element: the battery calls a non-numeric read
+ * out as such, the indicator happily compares strings.
+ */
+function feedRowHTML(n, prefix, valueText) {
+  const bound = isFeedLinked(n);
+  return `
+    <span class="label">Feed</span>
+    <div class="prop-row">
+      <span class="mono" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; font-size:12px; ${bound ? '' : 'opacity:.6;'}">${
+        bound ? escapeHtml(n.getAttr('feedName') || n.getAttr('feedKey')) : '(not connected)'}</span>
+      <button type="button" class="btn btn-sm" id="p${prefix}Feed">${
+        linkGlyph} ${bound ? 'Change' : 'Connect'}</button>
+    </div>
+    <div class="prop-row">
+      <span class="label">Value</span>
+      <span class="mono" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; font-size:12px; ${
+        valueText.known ? '' : 'opacity:.6;'}">${escapeHtml(valueText.text)}</span>
+      <button type="button" class="btn btn-sm" id="p${prefix}Refresh"${bound ? '' : ' disabled'} title="Re-read the feed">↻</button>
+    </div>`;
+}
+
+// What the Value row says, per element. Each returns { text, known } — `known`
+// only dims the row, so a value that IS present but unusable still shows, along
+// with why. Silence there is the failure mode worth avoiding: "(unknown)" on a
+// feed that is actually returning "ON" to a numeric widget explains nothing.
+
+const rawText = (n) => String(n.getAttr(feedValueAttr(n)) ?? '');
+
+function labelValueText(n) {
+  const raw = n.getAttr('feedValue');
+  const known = raw !== null && raw !== undefined && String(raw) !== '';
+  return { text: known ? String(raw) : '(unknown)', known };
+}
+
+function indicatorValueText(n) {
+  const known = indicatorValueKnown(n);
+  return { text: known ? String(n.getAttr('value')) : '(unknown)', known };
+}
+
+function batteryValueText(n) {
+  if (batteryFraction(n) !== null) return { text: rawText(n), known: true };
+  const raw = n.getAttr('feedValue');
+  return raw ? { text: `${raw} (not a number)`, known: false } : { text: '(unknown)', known: false };
+}
+
+function gaugeValueText(n) {
+  if (gaugeValue(n) !== null) return { text: rawText(n), known: true };
+  const raw = n.getAttr('gaugeValue');
+  return raw ? { text: `${raw} (not a number)`, known: false } : { text: '(unknown)', known: false };
+}
+
+/** Wire what feedRowHTML rendered. */
+function bindFeedRow(bind, n, prefix) {
+  bind(`p${prefix}Feed`, () => openFeedPicker(n));
+  bind(`p${prefix}Refresh`, async () => {
+    const ok = await refreshFeedElements([n]);
+    refreshProps();
+    const name = n.getAttr('feedName') || 'Feed';
+    toast(ok ? `${name} = ${n.getAttr(feedValueAttr(n))}` : 'Could not read the feed');
+  });
+}
+
 export function refreshProps() {
   const body = $('propBody');
   if (!body) return;
@@ -78,9 +153,28 @@ export function refreshProps() {
     </div>`;
 
   if (etype === 'label') {
+    const linked = isFeedLinked(n);
     html += `
     <span class="label">Text</span>
-    <textarea id="pText">${escapeHtml(n.text())}</textarea>
+    <textarea id="pText"${linked ? ' readonly style="opacity:.6; cursor:not-allowed"' : ''}>${escapeHtml(n.text())}</textarea>`
+      + (linked
+        // Read-only rather than hidden: the composed string is the useful thing to
+        // see, and hiding it would leave no way to check what the panel will show.
+        ? `<p class="hint">Text comes from <b>${escapeHtml(n.getAttr('feedName') || n.getAttr('feedKey'))}</b>.
+           Use the prefix and suffix to wrap it, or unlink to type your own.</p>`
+           + feedRowHTML(n, 'Lbl', labelValueText(n))
+           + `
+        <div class="prop-row">
+          <span class="label">Before</span>
+          <input type="text" id="pLblPrefix" style="flex:1; width:0; min-width:0" value="${escapeAttr(String(n.getAttr('feedPrefix') ?? ''))}" placeholder="e.g. Temp: ">
+        </div>
+        <div class="prop-row">
+          <span class="label">After</span>
+          <input type="text" id="pLblSuffix" style="flex:1; width:0; min-width:0" value="${escapeAttr(String(n.getAttr('feedSuffix') ?? ''))}" placeholder="e.g. °F">
+        </div>
+        <button type="button" class="btn btn-sm btn-block" id="pLblUnlink">Unlink from feed</button>`
+        : `<button type="button" class="btn btn-sm btn-block" id="pLblFeed">${linkGlyph} Connect to IO Feed</button>`)
+      + `
     <div class="prop-row">
       <span class="label">Size</span><input type="number" id="pSize" value="${n.fontSize()}" min="4" max="512">
       <select id="pFont" style="flex:1">
@@ -99,24 +193,13 @@ export function refreshProps() {
       </select>
     </div>`;
   } else if (etype === 'indicator') {
-    const bound = !!n.getAttr('feedKey');
-    const known = indicatorValueKnown(n);
+    const bound = isFeedLinked(n);
     html += `
     <div class="prop-row">
       <span class="label">Size</span><input type="number" id="pIndSize" value="${n.getAttr('w')}" min="6" max="512">
-    </div>
-    <span class="label">Feed</span>
-    <div class="prop-row">
-      <span class="mono" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; font-size:12px; ${bound ? '' : 'opacity:.6;'}">${
-        bound ? escapeHtml(n.getAttr('feedName') || n.getAttr('feedKey')) : '(not bound)'}</span>
-      <button type="button" class="btn btn-sm" id="pIndFeed">${bound ? 'Change' : 'Choose feed'}</button>
-    </div>
-    <div class="prop-row">
-      <span class="label">Value</span>
-      <span class="mono" style="flex:1; font-size:12px; ${known ? '' : 'opacity:.6;'}">${
-        known ? escapeHtml(String(n.getAttr('value'))) : '(unknown)'}</span>
-      <button type="button" class="btn btn-sm" id="pIndRefresh"${bound ? '' : ' disabled'}>↻</button>
-    </div>
+    </div>`
+      + feedRowHTML(n, 'Ind', indicatorValueText(n))
+      + `
     <span class="label">Condition</span>
     <div class="prop-row">
       <select id="pIndOp" style="flex:0 0 64px">${INDICATOR_OPS.map((o) =>
@@ -129,29 +212,14 @@ export function refreshProps() {
     <span class="label">On colour</span>${swatchHTML(n.getAttr('onColor'), 'onColor')}
     <span class="label">Off colour</span>${swatchHTML(n.getAttr('offColor'), 'offColor')}`;
   } else if (etype === 'battery') {
-    const bound = !!n.getAttr('feedKey');
-    const frac = batteryFraction(n);
     const shades = neutralShades();
     const conds = n.getAttr('conds') || [];
     html += `
     <div class="prop-row">
       <span class="label">Size</span><input type="number" id="pBatSize" value="${n.getAttr('w')}" min="${MIN_WIDGET_W.battery}" max="512">
-    </div>
-    <span class="label">Feed</span>
-    <div class="prop-row">
-      <span class="mono" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; font-size:12px; ${bound ? '' : 'opacity:.6;'}">${
-        bound ? escapeHtml(n.getAttr('feedName') || n.getAttr('feedKey')) : '(not bound)'}</span>
-      <button type="button" class="btn btn-sm" id="pBatFeed">${bound ? 'Change' : 'Choose feed'}</button>
-    </div>
-    <div class="prop-row">
-      <span class="label">Value</span>
-      <span class="mono" style="flex:1; font-size:12px; ${frac === null ? 'opacity:.6;' : ''}">${
-        frac === null
-          ? (n.getAttr('feedValue')
-              ? escapeHtml(String(n.getAttr('feedValue'))) + ' (not a number)' : '(unknown)')
-          : escapeHtml(String(n.getAttr('feedValue')))}</span>
-      <button type="button" class="btn btn-sm" id="pBatRefresh"${bound ? '' : ' disabled'}>↻</button>
-    </div>
+    </div>`
+      + feedRowHTML(n, 'Bat', batteryValueText(n))
+      + `
     <label class="check-row"><input type="checkbox" id="pBatPct"${
       n.getAttr('showPct') ? ' checked' : ''}> Show percentage</label>
     <div class="prop-row" style="margin-top:4px">
@@ -172,16 +240,138 @@ export function refreshProps() {
     <p class="hint">The value fills the bar as a percentage (0–100). Conditions are checked top to
       bottom and the <b>first</b> one that holds picks the fill shade. A value that isn't a number
       draws an <b>empty</b> bar but can still match a condition.</p>`;
-  } else if (isWidget(n)) {
+  } else if (etype === 'gauge') {
+    html += `
+    <div class="prop-grid">
+      <label class="field"><span class="label">Size</span>
+        <input type="number" id="pW" value="${n.getAttr('w')}" min="40"></label>
+      <label class="field"><span class="label">Gauge width</span>
+        <input type="number" id="pGaRing" value="${n.getAttr('ringWidth')}" min="1" max="256"></label>
+    </div>
+    <label class="field"><span class="label">Block title</span>
+      <input type="text" id="pTitle" value="${escapeAttr(String(n.getAttr('title') || ''))}" placeholder="optional"></label>`
+      + feedRowHTML(n, 'Ga', gaugeValueText(n))
+      + `
+    <div class="prop-grid">
+      <label class="field"><span class="label">Min</span>
+        <input type="number" id="pGaMin" value="${escapeAttr(String(n.getAttr('min') ?? 0))}"></label>
+      <label class="field"><span class="label">Max</span>
+        <input type="number" id="pGaMax" value="${escapeAttr(String(n.getAttr('max') ?? 100))}"></label>
+    </div>
+    <label class="field"><span class="label">Gauge label</span>
+      <input type="text" id="pGaLabel" value="${escapeAttr(String(n.getAttr('gaugeLabel') ?? ''))}"></label>
+    <div class="prop-grid">
+      <label class="field"><span class="label">Low warning</span>
+        <input type="number" id="pGaLow" value="${escapeAttr(String(n.getAttr('lowWarn') ?? ''))}" placeholder="none"></label>
+      <label class="field"><span class="label">High warning</span>
+        <input type="number" id="pGaHigh" value="${escapeAttr(String(n.getAttr('highWarn') ?? ''))}" placeholder="none"></label>
+    </div>
+    <div class="prop-row">
+      <span class="label">Decimals</span>
+      <input type="number" id="pGaDec" value="${n.getAttr('decimals') ?? 2}" min="0" max="10">
+    </div>
+    <label class="check-row"><input type="checkbox" id="pGaShowIcon"${
+      n.getAttr('showIcon') ? ' checked' : ''}> Show icon with the value</label>`
+      + (n.getAttr('showIcon')
+        ? `<select id="pGaIcon">${GAUGE_ICONS.map((i) =>
+             `<option value="${i.id}"${n.getAttr('icon') === i.id ? ' selected' : ''}>${escapeHtml(i.label)}</option>`).join('')}</select>`
+        : '')
+      + `
+    <span class="label">Warning colour</span>${swatchHTML(n.getAttr('warnColor'), 'warnColor')}
+    <span class="label">Out-of-range colour</span>${swatchHTML(n.getAttr('alarmColor'), 'alarmColor')}
+    <p class="hint">Leave a warning value blank to skip it. A reading outside
+      <b>min–max</b> uses the out-of-range colour whether or not warnings are set. An
+      unreadable value draws an <b>empty</b> ring.</p>`;
+  } else if (etype === 'linechart') {
+    const feeds = n.getAttr('feeds') || [];
     html += `
     <div class="prop-grid">
       <label class="field"><span class="label">Width</span>
-        <input type="number" id="pW" value="${n.getAttr('w')}" min="40"></label>`
-      + (etype === 'linechart'
-        ? `<label class="field"><span class="label">Height</span>
-             <input type="number" id="pH" value="${n.getAttr('h')}" min="30"></label>`
-        : '')
-      + `</div>
+        <input type="number" id="pW" value="${n.getAttr('w')}" min="40"></label>
+      <label class="field"><span class="label">Height</span>
+        <input type="number" id="pH" value="${n.getAttr('h')}" min="30"></label>
+    </div>
+    <label class="field"><span class="label">Block title</span>
+      <input type="text" id="pTitle" value="${escapeAttr(String(n.getAttr('title') || ''))}" placeholder="optional"></label>
+    <div class="prop-row" style="margin-top:4px">
+      <span class="label" style="flex:1">Feeds</span>
+      <button type="button" class="btn btn-sm" id="pChAdd">${linkGlyph} Add feed</button>
+    </div>`
+      + (feeds.length ? feeds.map((f, i) => {
+        const pts = ((n.getAttr('series') || {})[f.key] || []).length;
+        return `
+    <div class="prop-row">
+      <span class="mono" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; font-size:12px">${
+        escapeHtml(f.name || f.key)}</span>
+      <span class="mono" style="flex:none; font-size:11px; opacity:.6">${pts} pt</span>
+      <button type="button" class="btn btn-sm btn-danger" id="pChDel${i}" title="Remove this feed">×</button>
+    </div>
+    ${swatchHTML(f.color, 'feed:' + i)}`;
+      }).join('')
+        // Named as the fallback it is, not as an error: an unbound chart is a valid
+        // thing to place while laying a panel out.
+        : '<p class="hint">No feeds connected — showing sample data.</p>')
+      + `
+    <div class="prop-row">
+      <span class="label">History</span>
+      <select id="pChHours" style="flex:1">${CHART_RANGES.map((r) =>
+        `<option value="${r.hours}"${(n.getAttr('hours') ?? 24) === r.hours ? ' selected' : ''}>${r.label}</option>`).join('')}</select>
+      <button type="button" class="btn btn-sm" id="pChRefresh"${feeds.length ? '' : ' disabled'} title="Re-read every feed">↻</button>
+    </div>
+    <details class="prop-group">
+      <summary>Axes &amp; scale</summary>
+      <div class="prop-grid">
+        <label class="field"><span class="label">X label</span>
+          <input type="text" id="pChX" value="${escapeAttr(String(n.getAttr('xLabel') ?? ''))}"></label>
+        <label class="field"><span class="label">Y label</span>
+          <input type="text" id="pChY" value="${escapeAttr(String(n.getAttr('yLabel') ?? ''))}"></label>
+      </div>
+      <div class="prop-grid">
+        <label class="field"><span class="label">Y minimum</span>
+          <input type="number" id="pChYMin" value="${escapeAttr(String(n.getAttr('yMin') ?? ''))}" placeholder="auto"></label>
+        <label class="field"><span class="label">Y maximum</span>
+          <input type="number" id="pChYMax" value="${escapeAttr(String(n.getAttr('yMax') ?? ''))}" placeholder="auto"></label>
+      </div>
+      <div class="prop-row">
+        <span class="label">Y scale</span>
+        <select id="pChScale" style="flex:1">
+          <option value="linear"${n.getAttr('yScale') !== 'log' ? ' selected' : ''}>Linear</option>
+          <option value="log"${n.getAttr('yScale') === 'log' ? ' selected' : ''}>Logarithmic</option>
+        </select>
+      </div>
+      <p class="hint">Leave the bounds blank to detect them from the data.</p>
+    </details>
+    <details class="prop-group">
+      <summary>Data &amp; drawing</summary>
+      <div class="prop-row">
+        <span class="label">Decimals</span>
+        <input type="number" id="pChDec" value="${n.getAttr('decimals') ?? 4}" min="0" max="10">
+      </div>
+      <label class="check-row"><input type="checkbox" id="pChRaw"${
+        n.getAttr('rawOnly') ? ' checked' : ''}> Raw data only</label>
+      <label class="check-row"><input type="checkbox" id="pChStep"${
+        n.getAttr('stepped') ? ' checked' : ''}> Stepped line</label>
+      <label class="check-row"><input type="checkbox" id="pChGrid"${
+        n.getAttr('gridLines') ? ' checked' : ''}> Draw grid lines</label>
+      <label class="check-row"><input type="checkbox" id="pChKey"${
+        n.getAttr('keyLegend') ? ' checked' : ''}> Feed key legend</label>
+      <p class="hint">Raw data skips IO's aggregates and shows at most the ${CHART_RAW_MAX}
+        most recent points. Stepped suits logic levels. Two or more feeds always get a
+        legend; the key option labels each line with its feed key (group included)
+        instead of its name.</p>
+    </details>
+    <p class="hint">Lines are told apart by colour <b>and</b> by dash pattern — on a
+      mono panel the colours all collapse to ink.</p>`;
+  } else if (isWidget(n)) {
+    // Every widget type above has its own branch, so this is unreachable today. It
+    // stays as the backstop the comment on WIDGET_TYPES asks for: without it a newly
+    // added widget lands in the DIVIDER branch below and the inspector offers it
+    // length and thickness controls that write to attrs it doesn't have.
+    html += `
+    <div class="prop-grid">
+      <label class="field"><span class="label">Width</span>
+        <input type="number" id="pW" value="${n.getAttr('w')}" min="40"></label>
+    </div>
     <label class="field"><span class="label">Title</span>
       <input type="text" id="pTitle" value="${escapeAttr(String(n.getAttr('title') || ''))}"></label>`;
   } else if (etype === 'image') {
@@ -225,7 +415,10 @@ export function refreshProps() {
 
   bind('pX', (e) => n.x(+e.target.value || 0));
   bind('pY', (e) => n.y(+e.target.value || 0));
-  bind('pText', (e) => n.text(e.target.value));
+  // Guarded rather than merely readonly: `readonly` stops typing, but a paste via
+  // the context menu or an autofill would still fire `input` and overwrite text the
+  // next feed read is about to replace anyway.
+  bind('pText', (e) => { if (!isFeedLinked(n)) n.text(e.target.value); });
   bind('pSize', (e) => n.fontSize(Math.max(4, +e.target.value || 4)));
   bind('pFont', (e) => n.fontFamily(e.target.value));
   bind('pBoxW', (e) => {
@@ -266,16 +459,33 @@ export function refreshProps() {
     refreshProps();
   });
 
+  // The Feed + Value rows on every feed-bound element, wired from one place.
+  ['Lbl', 'Ind', 'Bat', 'Ga'].forEach((prefix) => bindFeedRow(bind, n, prefix));
+
+  // Prefix and suffix fire per keystroke, so they must not call refreshProps() —
+  // it replaces #propBody wholesale and would take focus with it.
+  const setAffix = (attr) => (e) => {
+    n.setAttr(attr, e.target.value);
+    n.text(linkedLabelText(n));
+  };
+  bind('pLblPrefix', setAffix('feedPrefix'));
+  bind('pLblSuffix', setAffix('feedSuffix'));
+  bind('pLblFeed', () => openFeedPicker(n));
+  bind('pLblUnlink', () => {
+    const name = n.getAttr('feedName') || n.getAttr('feedKey');
+    // The composed text is left exactly as it stands. Reverting to the pre-link
+    // string would be worse: the user has been looking at the live text and that is
+    // what they expect to start editing from.
+    n.setAttr('feedKey', '');
+    n.setAttr('feedName', '');
+    n.setAttr('feedValue', null);
+    refreshProps();
+    toast(`Unlinked from ${name} — the text is yours to edit`);
+  });
+
   bind('pIndSize', (e) => { n.setAttr('w', Math.max(6, Math.round(+e.target.value) || 6)); rebuildWidget(n); });
   bind('pIndOp', (e) => { n.setAttr('op', e.target.value); rebuildWidget(n); });
   bind('pIndCmp', (e) => { n.setAttr('cmp', e.target.value); rebuildWidget(n); });
-  bind('pIndFeed', () => openFeedPicker(n));
-  bind('pIndRefresh', async () => {
-    const ok = await refreshFeedElements([n]);
-    rebuildWidget(n);
-    refreshProps();
-    toast(ok ? `${n.getAttr('feedName') || 'Feed'} = ${n.getAttr('value')}` : 'Could not read the feed');
-  });
 
   bind('pBatSize', (e) => {
     const min = MIN_WIDGET_W.battery;
@@ -283,13 +493,73 @@ export function refreshProps() {
     rebuildWidget(n);
   });
   bind('pBatPct', (e) => { n.setAttr('showPct', e.target.checked); rebuildWidget(n); });
-  bind('pBatFeed', () => openFeedPicker(n));
-  bind('pBatRefresh', async () => {
-    const ok = await refreshFeedElements([n]);
+
+  // ---- gauge ----
+  // Bounds and thresholds are stored as the RAW field text, not coerced to numbers:
+  // '' has to stay distinguishable from 0 so "no warning value" doesn't silently
+  // become "warn at zero". toNum() at draw time is what decides usability.
+  const setGauge = (attr, coerce = (v) => v) => (e) => {
+    n.setAttr(attr, coerce(e.target.value));
     rebuildWidget(n);
+  };
+  bind('pGaRing', setGauge('ringWidth', (v) => Math.max(1, Math.round(+v) || 1)));
+  bind('pGaMin', setGauge('min'));
+  bind('pGaMax', setGauge('max'));
+  bind('pGaLabel', setGauge('gaugeLabel'));
+  bind('pGaLow', setGauge('lowWarn'));
+  bind('pGaHigh', setGauge('highWarn'));
+  bind('pGaDec', setGauge('decimals', (v) => Math.max(0, Math.min(10, Math.round(+v) || 0))));
+  bind('pGaIcon', setGauge('icon'));
+  bind('pGaShowIcon', (e) => {
+    n.setAttr('showIcon', e.target.checked);
+    rebuildWidget(n);
+    refreshProps();     // the icon picker appears and disappears with the checkbox
+  });
+
+  // ---- chart ----
+  const setChart = (attr, coerce = (v) => v) => (e) => {
+    n.setAttr(attr, coerce(e.target.value));
+    rebuildWidget(n);
+  };
+  bind('pChX', setChart('xLabel'));
+  bind('pChY', setChart('yLabel'));
+  bind('pChYMin', setChart('yMin'));         // raw text: '' means auto-detect
+  bind('pChYMax', setChart('yMax'));
+  bind('pChScale', setChart('yScale'));
+  bind('pChDec', setChart('decimals', (v) => Math.max(0, Math.min(10, Math.round(+v) || 0))));
+  bind('pChStep', (e) => { n.setAttr('stepped', e.target.checked); rebuildWidget(n); });
+  bind('pChGrid', (e) => { n.setAttr('gridLines', e.target.checked); rebuildWidget(n); });
+  bind('pChKey', (e) => { n.setAttr('keyLegend', e.target.checked); rebuildWidget(n); });
+  bind('pChAdd', () => openFeedPicker(n, { mode: 'series' }));
+
+  // Both of these change WHAT IO returns, not just how it is drawn, so each is a
+  // refetch rather than a rebuild.
+  const refetchChart = async (label) => {
+    const ok = await refreshChart(n);
     refreshProps();
-    toast(ok ? `${n.getAttr('feedName') || 'Feed'} = ${n.getAttr('feedValue')}`
-             : 'Could not read the feed');
+    if (!ok) toast(`Showing the last good data — ${label} could not be read`);
+  };
+  bind('pChHours', async (e) => {
+    n.setAttr('hours', Math.round(+e.target.value) || 24);
+    await refetchChart('the new window');
+  });
+  bind('pChRaw', async (e) => {
+    n.setAttr('rawOnly', e.target.checked);
+    await refetchChart('the raw data');
+  });
+  bind('pChRefresh', async () => {
+    const ok = await refreshChart(n);
+    refreshProps();
+    toast(ok ? 'Chart data refreshed' : 'Some feeds could not be read');
+  });
+  (etype === 'linechart' ? (n.getAttr('feeds') || []) : []).forEach((f, i) => {
+    bind(`pChDel${i}`, () => {
+      const feeds = (n.getAttr('feeds') || []).filter((_, j) => j !== i);
+      n.setAttr('feeds', feeds);
+      // Through refreshChart rather than rebuildWidget: it also drops the removed
+      // feed's cached series, which would otherwise sit in canvas.json forever.
+      refreshChart(n).then(() => refreshProps());
+    });
   });
 
   // Conditions are a variable-length list, so the rows are bound by index. The
@@ -328,11 +598,17 @@ export function refreshProps() {
   body.querySelectorAll('.swatches').forEach((box) => {
     const target = box.dataset.target;
     box.querySelectorAll('.swatch').forEach((s) => s.addEventListener('click', () => {
-      // `cond:<i>` addresses a shade inside the battery's conditions array,
-      // which the flat setAttr path below can't reach.
+      // `cond:<i>` and `feed:<i>` address a colour INSIDE an array attr, which the
+      // flat setAttr path below can't reach.
       if (target && target.startsWith('cond:')) {
         const i = +target.slice(5);
         setConds((cs) => { if (cs[i]) cs[i].color = s.dataset.color; });
+      } else if (target && target.startsWith('feed:')) {
+        const i = +target.slice(5);
+        const feeds = (n.getAttr('feeds') || []).map((f) => ({ ...f }));
+        if (feeds[i]) feeds[i].color = s.dataset.color;
+        n.setAttr('feeds', feeds);
+        rebuildWidget(n);
       } else if (target) {
         n.setAttr(target, s.dataset.color);
         rebuildWidget(n);

@@ -15,11 +15,22 @@
  */
 
 import { display, logicalDims } from './palette.js';
-import { buildDisplayBody, refreshInterval } from './config.js';
-import { DISPLAY_PRESETS } from './presets.js';
+import { cfgMarqueeJson } from './cfg.js';
+import { DISPLAY_PRESETS, driverFor } from './presets.js';
 import { getState } from './state.js';
 import { ioHost } from './api.js';
 import { val, download } from './util.js';
+
+/**
+ * How long the standalone board sleeps between takes.
+ *
+ * NOT read from cfg-marquee.json, and not the editor's refresh interval: that
+ * setting configures the *live* device through the broker's wake response
+ * (device.js, `durSeconds`), which a board running this code.py never sees. The
+ * descriptor describes the panel, so the sleep window is code.py's own default
+ * and the user edits it on the drive.
+ */
+const DEFAULT_REFRESH_SECONDS = 900;
 
 // ---------- store-only ZIP writer -------------------------------------------
 
@@ -106,35 +117,35 @@ export function bundleName() {
   return 'marquee-' + stem.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.zip';
 }
 
-function configJson() {
-  const body = buildDisplayBody();
-  const { w, h } = logicalDims();
-  return JSON.stringify({
-    marquee_version: 1,
-    name: val('marqueeName') || 'Marquee',
-    feed: val('ioFeed') || 'marquee',
-    refresh_seconds: refreshInterval(),
-    panel: {
-      width: body.width,
-      height: body.height,
-      logical_width: w,
-      logical_height: h,
-      rotation: body.rotation,
-      mode: body.mode,
-      driver: body.driver,
-      panel: body.panel,
-    },
-    pins: {
-      busy: body.interface.spiEpd.pinBusy,
-      dc: body.interface.spiEpd.pinDc,
-      reset: body.interface.spiEpd.pinRst,
-      cs: body.interface.spiEpd.spi.pinCs,
-      sram_cs: body.interface.spiEpd.pinSramCs,
-      mosi: body.interface.spiEpd.spi.pinMosi,
-      sck: body.interface.spiEpd.spi.pinSck,
-      spi_bus: body.interface.spiEpd.spi.bus,
-    },
-  }, null, 2) + '\n';
+/**
+ * The import line for the panel's driver, resolved for the current colour mode —
+ * a gray4 panel wants the Grayscale4 subclass, not the base class. Returned as
+ * prose when there is no CircuitPython driver for the part at all, since both
+ * callers are writing it into a comment for a human.
+ */
+function driverImport() {
+  const drv = driverFor(val('pmDriver'), display.type);
+  if (!drv) return `no adafruit_epd driver for ${val('pmDriver') || 'this part'}`;
+  const kw = Object.keys(drv.kwargs).length
+    ? `  (construct it with ${Object.entries(drv.kwargs).map(([k, v]) => `${k}=${v ? 'True' : 'False'}`).join(', ')})`
+    : '';
+  return `from ${drv.module} import ${drv.cls}${kw}`;
+}
+
+/** Just the class name, for prose. */
+function driverClassName() {
+  return driverFor(val('pmDriver'), display.type)?.cls || 'the adafruit_epd driver';
+}
+
+/**
+ * How the native buffer relates to the drawn surface — only worth spelling out
+ * when rotation actually changes it, or the sentence reads as a typo on the
+ * panels that are already landscape.
+ */
+function geomNote(lw, lh) {
+  return (lw === display.width && lh === display.height)
+    ? `Here that is ${display.width}x${display.height}, drawn as-is at rotation 0.`
+    : `Here that is ${display.width}x${display.height}, which PANEL["rotation"] turns into the ${lw}x${lh} the dashboard is drawn at.`;
 }
 
 function settingsToml() {
@@ -152,19 +163,23 @@ function settingsToml() {
     `ADAFRUIT_AIO_USERNAME = "${val('ioUser')}"`,
     `ADAFRUIT_AIO_KEY = "${val('ioKey')}"`,
     `ADAFRUIT_IO_HOST = "${ioHost()}"`,
+    // The feed lives here rather than in cfg-marquee.json: that file describes the
+    // panel, and this one describes the Adafruit IO account it talks to.
+    `ADAFRUIT_IO_FEED = "${val('ioFeed') || 'marquee'}"`,
     '',
   ].join('\n');
 }
 
 function codePy() {
+  const { w: lw, h: lh } = logicalDims();
   return `# Adafruit IO Marquee — generated code bundle.
 #
 # Fetches the dashboard your Marquee editor published to an Adafruit IO feed,
 # draws it on the e-paper panel, then deep-sleeps until the next refresh.
 #
-# Regenerate this bundle whenever the display, its pins or the refresh interval
-# change. Dashboard edits do NOT need a new bundle — they arrive over the air on
-# the feed this file already reads.
+# Regenerate this bundle whenever the display or its pins change. Dashboard edits
+# do NOT need a new bundle — they arrive over the air on the feed this file
+# already reads.
 
 import json
 import time
@@ -179,22 +194,45 @@ import ssl
 import adafruit_requests
 from os import getenv
 
-with open("marquee_config.json") as f:
+with open("cfg-marquee.json") as f:
     CONFIG = json.load(f)
 
-PANEL = CONFIG["panel"]
-PINS = CONFIG["pins"]
-REFRESH_SECONDS = CONFIG["refresh_seconds"]
+PANEL = CONFIG["display"]
+PINS = CONFIG["interface"]["pins"]
+SPI_CFG = CONFIG["interface"]["spi"]
+
+# How long to sleep between takes. cfg-marquee.json describes the panel and says
+# nothing about timing, so this lives here — edit it on the drive to re-tune.
+REFRESH_SECONDS = ${DEFAULT_REFRESH_SECONDS}
+
+# TODO: read the sleep window off Adafruit IO instead of the constant above.
+#
+# "Push to display" in the editor now publishes it as JSON to the feed named
+# "{ADAFRUIT_IO_FEED}-sleep" — for this bundle, "${val('ioFeed') || 'marquee'}-sleep".
+# The last value on that feed is exactly three fields:
+#
+#     {"alarm_type": ..., "sleep_mode": ..., "sleep_time": ...}
+#
+#     alarm_type   "timer" | "pin" | "timer+pin"   (at most one of each)
+#     sleep_mode   "light" | "deep"
+#     sleep_time   integer seconds; IGNORED when alarm_type is "pin"
+#
+# The wake PIN is NOT in the payload — it is a fact about how this board is wired,
+# not about a take, so whichever pin a PinAlarm arms belongs here in code.py as
+# its own constant. An empty or unparseable feed means fall back to
+# REFRESH_SECONDS and a plain timer; never sleep with no alarm at all.
+#
+# Full contract: docs/marquee-sleep.md in the Marquee repo.
 
 AIO_USER = getenv("ADAFRUIT_AIO_USERNAME")
 AIO_KEY = getenv("ADAFRUIT_AIO_KEY")
 AIO_HOST = getenv("ADAFRUIT_IO_HOST", "io.adafruit.com")
-FEED = CONFIG["feed"]
+FEED = getenv("ADAFRUIT_IO_FEED", "marquee")
 
 
 def pin(name):
-    """'D5' -> board.D5.  '-1' or '' means the panel does not wire this pin."""
-    if not name or name == "-1":
+    """'D5' -> board.D5.  null in cfg-marquee.json means the pin is not wired."""
+    if name is None:
         return None
     return getattr(board, name)
 
@@ -236,15 +274,19 @@ def sleep_until_next_take():
 
 displayio.release_displays()
 
-spi = busio.SPI(pin(PINS["sck"]), MOSI=pin(PINS["mosi"]))
+spi = busio.SPI(pin(SPI_CFG["sck"]), MOSI=pin(SPI_CFG["mosi"]))
 epd_cs = pin(PINS["cs"])
 epd_dc = pin(PINS["dc"])
 epd_reset = pin(PINS["reset"])
 epd_busy = pin(PINS["busy"])
+epd_sram_cs = pin(PINS["sram_cs"])
 
-# The driver class depends on the panel you confirmed in Marquee. See the guide
-# linked from the bundle screen for the import that matches ${display.type} /
-# ${val('pmDriver') || 'your driver'}.
+# PANEL["driver"] is "${val('pmDriver') || '?'}", which on CircuitPython means
+#   ${driverImport()}
+# PANEL["width"]/["height"] are its first two constructor arguments: the NATIVE,
+# unrotated framebuffer. ${geomNote(lw, lh)}
+# Wiring that up, and decoding the ${display.type === 'mono' ? 1 : 4}-bit indexed BMP the feed carries, is
+# not generated yet. See docs/cfg-marquee.md.
 import adafruit_imageload  # noqa: E402  (imported late so the panel is up first)
 
 try:
@@ -264,20 +306,29 @@ sleep_until_next_take()
 function readme() {
   const key = getState().selectedPanel;
   const label = key ? DISPLAY_PRESETS[key].label : 'your panel';
+  // The native buffer and the drawn canvas differ on every portrait-native panel,
+  // so name both — but only when they actually differ, or the line reads as a
+  // typo on the panels where rotation is 0.
+  const { w: lw, h: lh } = logicalDims();
+  const geom = (lw === display.width && lh === display.height)
+    ? `${display.width} x ${display.height}`
+    : `${display.width} x ${display.height} native, drawn as ${lw} x ${lh}`;
   return `Adafruit IO Marquee — code bundle
 =================================
 
 Built for: ${label}
-Panel:     ${display.width} x ${display.height}, ${display.type}, driver ${val('pmDriver') || '?'}
-Refresh:   every ${refreshInterval()} seconds
+Panel:     ${geom}, ${display.type}
+Driver:    ${val('pmDriver') || '?'} — ${driverImport()}
+Refresh:   every ${DEFAULT_REFRESH_SECONDS} seconds — REFRESH_SECONDS in code.py.
+           NOT what "Wake and redraw" is set to in the editor; see below.
 
 What to do
 ----------
 1. Plug the board in over USB. A CIRCUITPY drive appears.
-2. Copy code.py, settings.toml and marquee_config.json onto that drive,
+2. Copy code.py, settings.toml and cfg-marquee.json onto that drive,
    replacing what is there.
 3. Edit settings.toml and fill in your WiFi name and password.
-4. Press RESET. The board connects to Adafruit IO and draws your dashboard.
+4. Press RESET. The board connects to Adafruit IO and fetches your dashboard.
 
 Libraries — NOT INCLUDED
 ------------------------
@@ -290,15 +341,42 @@ matching your CircuitPython version from
 and copy these into CIRCUITPY/lib/:
 
     adafruit_requests.mpy
+    adafruit_connection_manager.mpy
     adafruit_imageload/
-    adafruit_display_text/
-    the ThinkInk / EPD driver module for your panel
+    adafruit_epd/            <- ${driverImport()}
+
+adafruit_epd is what cfg-marquee.json is written for, but the code.py in this ZIP
+does not construct the driver yet — see "Not finished" below.
+
+Not finished
+------------
+cfg-marquee.json is complete: it carries the driver class, the native framebuffer
+to construct it with, the rotation, every pin, and the exact layout of the image
+that arrives on the feed.
+
+code.py does not consume all of it yet. It connects, fetches the dashboard and
+reads the config, but it still draws through displayio/board.DISPLAY instead of
+constructing ${driverClassName()} from cfg-marquee.json and
+blitting the indexed BMP with epd.pixel(). On a board with a built-in display (a
+MagTag) it will draw; on a bare panel or a FeatherWing it will not, because
+nothing has told CircuitPython that panel exists.
+
+If you are wiring this up yourself, everything you need is in the JSON.
+
+Neither does code.py read the sleep window. "Push to display" in the editor
+publishes it as JSON to the "${(val('ioFeed') || 'marquee')}-sleep" feed --
+the sleep duration, light-vs-deep, and whether to wake on the timer, a button, or
+either. This code.py ignores all of that and sleeps on REFRESH_SECONDS with a
+timer alarm, so until it is taught to read that feed, "Wake and redraw" in the
+editor has no effect on this board. There is a TODO in code.py with the field
+list, and the full contract is in docs/marquee-sleep.md.
 
 When to come back
 -----------------
-Only when the display, its pins or the refresh interval change. Dashboard edits
-arrive over the air on the feed this bundle already reads, so they never need a
-fresh copy.
+Only when the display, its pins, or your Adafruit IO feed and credentials change.
+Dashboard edits arrive over the air on the feed this bundle already reads, so they
+never need a fresh copy. The sleep window will not either, once code.py reads it;
+for now it is a REFRESH_SECONDS edit on the drive.
 `;
 }
 
@@ -307,7 +385,7 @@ export function bundleFiles() {
   const files = [
     { name: 'code.py', text: codePy() },
     { name: 'settings.toml', text: settingsToml() },
-    { name: 'marquee_config.json', text: configJson() },
+    { name: 'cfg-marquee.json', text: cfgMarqueeJson() },
     { name: 'README.txt', text: readme() },
   ];
   const enc = new TextEncoder();

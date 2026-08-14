@@ -80,15 +80,6 @@ export function buildDisplayBody() {
   };
 }
 
-/**
- * Everything a CircuitPython bundle bakes in. When this changes the bundle on
- * the board is wrong — see A6's stale state. Dashboard edits are deliberately
- * absent: they arrive over the air and never invalidate the bundle.
- */
-export function configSignature() {
-  return JSON.stringify({ display: buildDisplayBody(), refresh: refreshInterval() });
-}
-
 /** The sleep timer, in seconds. The design calls this the refresh interval. */
 export function refreshInterval() {
   return Math.max(0, parseInt($('sleepDuration')?.value, 10) || 0);
@@ -335,9 +326,11 @@ function notifyConfigChanged() {
 }
 
 /**
- * Announce a change made outside this module's own fields — the refresh
- * interval and sleep mode live in the Settings dialog but are part of what a
- * CircuitPython bundle bakes in, so they invalidate one just as a re-pin does.
+ * Announce a change made outside this module's own fields — the refresh interval
+ * and sleep mode live in the Settings dialog but are what a sleeping device is
+ * re-registered with, so an edit there has to reach the same listeners a re-pin
+ * does. They are NOT in cfg-marquee.json, so they do not stale a downloaded
+ * bundle; code.py owns its own sleep window.
  */
 export function configChanged() { notifyConfigChanged(); }
 

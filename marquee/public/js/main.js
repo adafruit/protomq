@@ -13,6 +13,7 @@ import { initConfig, configChanged } from './config.js';
 import { initDoc, deserialize, saveCanvasNow } from './doc.js';
 import { initRender } from './render.js';
 import { initFeeds } from './feeds.js';
+import { initIconFont } from './elements.js';
 import { initDevice, scheduleWakeResponseSync } from './device.js';
 import { initKeyboard } from './selection.js';
 import { initRouter, navigate, onEnter, syncNav, actOneEntry, editorEntry } from './router.js';
@@ -39,6 +40,9 @@ const SETTINGS_KEY = 'marquee.settings';
 const SETTINGS_FIELDS = [
   'ioUser', 'ioKey', 'ioFeed', 'pmUser', 'pmDevice',
   'sleepMode', 'sleepDuration', 'writeRetryWindow',
+  // Lives in A7's inspector rather than this modal, but it has no backing field
+  // to be a view onto the way #wakeInterval is, so it persists on its own.
+  'wakeAlarm',
 ];
 
 function saveSettings() {
@@ -67,9 +71,14 @@ function initSettings() {
     if (!el) return;
     el.addEventListener('input', () => {
       saveSettings();
-      // The refresh interval and sleep mode are part of what a CircuitPython
-      // bundle bakes in, and are what a sleeping device is re-registered with —
-      // so an edit here has to reach both, exactly like a pin change does.
+      // The refresh interval and sleep mode are what a sleeping device is
+      // re-registered with, so an edit here has to reach the device path exactly
+      // like a pin change does. It does not stale a downloaded bundle —
+      // cfg-marquee.json carries no timing, and code.py owns its own.
+      //
+      // wakeAlarm is deliberately NOT in here: it reaches a CircuitPython board
+      // over the sleep feed, so it neither re-registers a broker cycle nor
+      // invalidates a bundle.
       if (id === 'sleepDuration' || id === 'sleepMode') {
         configChanged();
         scheduleWakeResponseSync();
@@ -157,6 +166,11 @@ async function boot() {
   const restored = await restoreCanvas();
   navigate(landingScreen());
   if (!restored) saveCanvasNow();   // render + persist the initial (empty) state
+
+  // After the restore, not before: it re-draws the gauges that show an icon once
+  // the Font Awesome face resolves, and on a cold load those gauges don't exist yet
+  // when boot starts. Deliberately not awaited — the editor must not wait on a font.
+  initIconFont();
 }
 
 boot().catch((err) => {

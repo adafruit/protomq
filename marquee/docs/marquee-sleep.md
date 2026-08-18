@@ -62,21 +62,53 @@ What the board arms before it sleeps.
 one timer and one pin covers "redraw on a schedule, but let me force it", and
 anything richer is a config format nobody asked for.
 
+`pin` also fixes `sleep_mode` at `deep`, because it is the one value with no timer
+to derive a mode from — see below.
+
 Comes from the "Wake on" select in A7's inspector. That control is hidden on the
 WipperSnapper path, where `server.js` implements `TimerConfig` and defers
 `Ext0Config` — offering a pin there would be a control nothing downstream honours.
 
 ### `sleep_mode` — `"light"` | `"deep"`
 
-Mapped from the `S_LIGHT` / `S_DEEP` values of Settings → Sleep behaviour → Sleep
-mode (`SLEEP_MODE_JSON` in `device.js`). The wire spelling is lowercase to match
-`alarm_type`; the `S_`-prefixed forms are the WipperSnapper protobuf enum
-(`ws.sleep.SleepMode`) and stay on that side of the boundary.
+**Derived from `sleep_time`, not chosen.** There is no sleep-mode control in the
+editor: the interval already determines the right answer, and a second author for
+one decision is how the editor and the board end up disagreeing — a 15-second
+refresh set to Deep paid a full boot, re-provision and redraw every fifteen
+seconds, and nothing in the UI said so.
+
+| `sleep_time` | `sleep_mode` | why |
+|---|---|---|
+| < 60 s | `light` | under the MQTT keepalive the connection survives the nap outright — free |
+| 60 s – 300 s | `light` | the reconnect is MQTT-only, still cheaper than boot + re-provision + redraw |
+| ≥ 300 s | `deep` | past here the boot stops dominating, and holding RAM and a radio that long is the worse trade |
+
+The first two rows agree, so the implementation is a single comparison at 300 s —
+`sleepModeFor()` in `public/js/config.js`, mirrored in `server.js` for the
+WipperSnapper path. The 60 s row is the reasoning, not a value read from anywhere:
+`ws.sleep.SleepConfig` has no keepalive field and nothing in the editor reads one
+off the board.
+
+**`alarm_type: "pin"` is the one exception, and is always `deep`.** A pin-only alarm
+ignores `sleep_time` (see below), so there is nothing to derive from and it keeps the
+default it always had. `timer+pin` has a `TimeAlarm` making exactly the same trade as
+a bare timer, so it follows the table.
+
+That exception is worth knowing about rather than trusting: deep-sleep pin alarms
+need an RTC-capable GPIO (see Known gaps), and pin-only has no timer to recover with.
+The answer is the fallback this file already specifies — drop the pin and arm a
+`TimeAlarm` at `REFRESH_SECONDS`, never deep-sleep with no alarm.
+
+The wire spelling is lowercase to match `alarm_type`; the `S_`-prefixed forms are the
+WipperSnapper protobuf enum (`ws.sleep.SleepMode`) and stay on that side of the
+boundary.
 
 The two are not interchangeable for the consumer:
 `alarm.exit_and_deep_sleep_until_alarms()` never returns, while
 `alarm.light_sleep_until_alarms()` resumes in place — so a `code.py` that supports
-`light` needs its take wrapped in a loop.
+`light` needs its take wrapped in a loop. Both spellings are reachable from the
+editor's own interval picker, so a consumer has to implement both rather than
+treating `light` as an exotic case.
 
 ### `sleep_time` — integer seconds
 
@@ -89,6 +121,10 @@ unconditionally keeps the payload one shape, and a pin-only alarm has no duratio
 to express. `0` is a legal value the broker path uses for "wake as soon as
 possible"; on this path it means a `TimeAlarm` in the past, so a consumer should
 treat it as "do not sleep on the timer" rather than passing it through.
+
+It now carries two facts rather than one — the duration *and*, through the table
+above, the mode. `0` lands in the light band, which is the harmless answer for a
+timer that is not going to be slept on anyway.
 
 ## What is deliberately not here
 
@@ -155,6 +191,11 @@ glass", and nothing here confirms anything.
 - **Deep-sleep pin alarms are not available on every pin.** On the ESP32-S2/S3
   only RTC-capable GPIOs survive deep sleep. A board whose only button is on a
   non-RTC pin can honour `pin` under `light` but not under `deep`.
+
+  The editor leans on this: `alarm_type: "pin"` is sent as `deep`, so such a board
+  has to take the documented fallback and arm a `TimeAlarm` instead of the pin. Under
+  `timer+pin` the same mistake degrades to timer-only and recovers on the next
+  interval rather than hanging.
 - **Nothing reports the board's real state — yet.** `deviceState` goes to `asleep`
   because we published a sleep window, not because a board said so. The
   WipperSnapper path has goodnight/checkin events for this; the equivalent here is

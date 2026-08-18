@@ -85,6 +85,39 @@ export function refreshInterval() {
   return Math.max(0, parseInt($('sleepDuration')?.value, 10) || 0);
 }
 
+/**
+ * The line between light and deep sleep, in seconds.
+ *
+ * Sleep mode is DERIVED from the interval rather than picked, because the interval
+ * is the only thing the answer depends on — and two authors for one decision is
+ * how the editor and the board end up disagreeing (a 15-second refresh set to Deep
+ * paid a full boot + re-provision + redraw every fifteen seconds, and nothing said
+ * so). Three tiers, which collapse into one comparison:
+ *
+ *   T < 60s     light. Under the MQTT keepalive the socket survives the nap
+ *               outright, so waking costs nothing at all.
+ *   60s-300s    light. The socket is gone and the reconnect is MQTT-only — still
+ *               far cheaper than the boot + re-provision + EPD redraw a deep wake
+ *               pays for.
+ *   T >= 300s   deep. Past here the boot stops dominating, and holding RAM and a
+ *               radio for five minutes to save one boot is the worse trade.
+ *
+ * The first two tiers give the same answer, so there is one threshold and it is
+ * this one. The 60s tier is the reasoning, not configuration: nothing in this repo
+ * reads a device keepalive, and ws.sleep has no field for one.
+ *
+ * MIRRORED in server.js (sleepModeFor). That copy is the authoritative one — it is
+ * what actually encodes ws.sleep.SleepConfig and registers the wake response. This
+ * one exists because the CircuitPython path never talks to the backend at all, and
+ * because the interval picker has to name the mode without a round trip.
+ */
+export const DEEP_SLEEP_THRESHOLD_SECS = 300;
+
+/** The ws.sleep.SleepMode name for a sleep of `secs`. */
+export function sleepModeFor(secs) {
+  return secs >= DEEP_SLEEP_THRESHOLD_SECS ? 'S_DEEP' : 'S_LIGHT';
+}
+
 // ---------- resolution / orientation ----------------------------------------
 
 export function setResolution(w, h) {
@@ -327,10 +360,10 @@ function notifyConfigChanged() {
 
 /**
  * Announce a change made outside this module's own fields — the refresh interval
- * and sleep mode live in the Settings dialog but are what a sleeping device is
- * re-registered with, so an edit there has to reach the same listeners a re-pin
- * does. They are NOT in cfg-marquee.json, so they do not stale a downloaded
- * bundle; code.py owns its own sleep window.
+ * lives in the Settings dialog but is what a sleeping device is re-registered with
+ * (and, via sleepModeFor, what picks its sleep mode), so an edit there has to reach
+ * the same listeners a re-pin does. It is NOT in cfg-marquee.json, so it does not
+ * stale a downloaded bundle; code.py owns its own sleep window.
  */
 export function configChanged() { notifyConfigChanged(); }
 

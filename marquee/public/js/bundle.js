@@ -214,8 +214,13 @@ REFRESH_SECONDS = ${DEFAULT_REFRESH_SECONDS}
 #     {"alarm_type": ..., "sleep_mode": ..., "sleep_time": ...}
 #
 #     alarm_type   "timer" | "pin" | "timer+pin"   (at most one of each)
-#     sleep_mode   "light" | "deep"
+#     sleep_mode   "light" | "deep"   (the editor derives this from sleep_time:
+#                  under 300s light, from 300s up deep; "pin" is always deep)
 #     sleep_time   integer seconds; IGNORED when alarm_type is "pin"
+#
+# Both modes really do arrive, so implement both: deep sleep never returns
+# (alarm.exit_and_deep_sleep_until_alarms), while light sleep resumes in place and
+# needs the take wrapped in a loop.
 #
 # The wake PIN is NOT in the payload — it is a fact about how this board is wired,
 # not about a take, so whichever pin a PinAlarm arms belongs here in code.py as
@@ -365,8 +370,8 @@ If you are wiring this up yourself, everything you need is in the JSON.
 
 Neither does code.py read the sleep window. "Push to display" in the editor
 publishes it as JSON to the "${(val('ioFeed') || 'marquee')}-sleep" feed --
-the sleep duration, light-vs-deep, and whether to wake on the timer, a button, or
-either. This code.py ignores all of that and sleeps on REFRESH_SECONDS with a
+the sleep duration, the light-or-deep mode that duration implies, and whether to
+wake on the timer, a button, or either. This code.py ignores all of that and sleeps on REFRESH_SECONDS with a
 timer alarm, so until it is taught to read that feed, "Wake and redraw" in the
 editor has no effect on this board. There is a TODO in code.py with the field
 list, and the full contract is in docs/marquee-sleep.md.

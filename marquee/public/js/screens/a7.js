@@ -13,9 +13,9 @@ import {
   addLabel, addDivider, addLineChart, addGauge, addIndicator, addBattery,
   loadImageFile, applyTemplate,
 } from '../elements.js';
-import { refreshInterval } from '../config.js';
+import { refreshInterval, sleepModeFor } from '../config.js';
 import { getState, subscribe } from '../state.js';
-import { $, $$, toast, show } from '../util.js';
+import { $, $$, toast, show, fmtInterval } from '../util.js';
 
 /**
  * Options offered by "Wake and redraw", in seconds. Must match the option values
@@ -93,9 +93,12 @@ function syncIntervalFromField() {
   sel.value = INTERVAL_OPTIONS.includes(secs) ? String(secs) : 'custom';
   if (sel.value === 'custom') {
     // Name the value rather than leaving a bare "Custom…" that hides what the
-    // device is actually doing.
+    // device is actually doing — and name the sleep mode with it, the way the
+    // fixed options in index.html do. Without this a custom interval would be the
+    // one setting that hides which side of the five-minute line it falls on.
     const opt = sel.querySelector('option[value="custom"]');
-    if (opt) opt.textContent = `Custom — ${secs}s`;
+    const mode = sleepModeFor(secs) === 'S_DEEP' ? 'deep' : 'light';
+    if (opt) opt.textContent = `Custom — ${fmtInterval(secs)} · ${mode} sleep`;
   }
 }
 

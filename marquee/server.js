@@ -78,9 +78,28 @@ const MODE_MAP = {
   quadcolor: 'EPD_MODE_QUADCOLOR',
 };
 
-// Accepted ws.sleep.SleepMode enum names (S_UNSPECIFIED is rejected — a real
-// mode must be chosen). fromObject() maps these names to their numeric values.
-const SLEEP_MODES = ['S_LIGHT', 'S_DEEP'];
+// Light vs deep is DERIVED from the sleep duration, never taken from the request:
+// the caller has no information the duration doesn't already carry, and two authors
+// for one decision is how the editor and the device end up disagreeing. Three
+// tiers, which collapse into one comparison:
+//
+//   T < 60s     light — under the MQTT keepalive the socket survives the nap
+//               outright, so waking costs nothing.
+//   60s-300s    light — the reconnect is MQTT-only; a deep wake's boot +
+//               re-provision + EPD redraw still costs more than staying up.
+//   T >= 300s   deep — past here the boot no longer dominates, and holding RAM and
+//               a radio that long is the worse trade.
+//
+// The first two tiers agree, so this is a single threshold. The 60s tier is the
+// reasoning, not a value read from anywhere: ws.sleep.SleepConfig has no keepalive
+// field and nothing here reads one off the device.
+//
+// Mirrored in public/js/config.js (sleepModeFor) for the CircuitPython path, which
+// never reaches this server. THIS copy is authoritative — it is the one that encodes
+// ws.sleep.SleepConfig and registers the wake response, i.e. the only one a device
+// ever obeys. S_UNSPECIFIED is unreachable by construction.
+const DEEP_SLEEP_THRESHOLD_SECS = 300;
+const sleepModeFor = (secs) => (secs >= DEEP_SLEEP_THRESHOLD_SECS ? 'S_DEEP' : 'S_LIGHT');
 
 // Default EPD interface wiring (Adafruit MagTag 2.9" SPI/EPD pins), ported from
 // scripts/io-marquee-bridge.py. Used when the request omits `interface`.
@@ -789,11 +808,18 @@ app.get('/sleep/status', (req, res) => {
  * supported for now (Ext0Config is deferred).
  *
  * body: {
- *   mode,                       // 'S_LIGHT' | 'S_DEEP'
- *   duration,                   // TimerConfig.duration, seconds (uint32)
- *   user, device                // -> topic {user}/ws-b2d/{device}
+ *   duration,                   // TimerConfig.duration, seconds (uint32). ALSO
+ *                               // selects the mode: >= 300s deep, else light.
+ *   user, device,               // -> topic {user}/ws-b2d/{device}
+ *   display,                    // optional: deep-sleep wake re-provision
  * }
- * returns: { ok, topic, bytes, mode, duration }
+ * returns: { ok, topic, bytes, mode, duration, watching, wakeCheckin }
+ *
+ * A `mode` in the body is IGNORED, not rejected (see DEEP_SLEEP_THRESHOLD_SECS).
+ * Honouring one would restore exactly the divergence deriving it removes — a page
+ * loaded before this change keeps POSTing S_DEEP with duration 15 forever — and
+ * 400ing one would break bench curls for no gain. Callers that need to know what
+ * was sent read `mode` back off the response.
  */
 // Register a persistent wake response with the ProtoMQ broker for a device we're
 // deep-sleeping so it keeps cycling (re-sleeps on every wake). Only fires for
@@ -810,8 +836,10 @@ async function registerWakeResponse({ mode, secs, user, device, display }) {
   // Only deep sleep needs a stored response — but a non-deep mode is NOT a no-op.
   // Any response left over from an earlier deep-sleep cycle would keep
   // re-provisioning the device and sending it back to deep sleep on every
-  // checkin, ignoring the mode the editor now has. Switching away from deep sleep
-  // therefore has to REMOVE the registration, not just decline to write one.
+  // checkin, ignoring the mode the editor now has. Dropping the interval below
+  // DEEP_SLEEP_THRESHOLD_SECS therefore has to REMOVE the registration, not just
+  // decline to write one — the mode is a function of `secs`, so that is what
+  // "switching away from deep sleep" now looks like.
   if (mode !== 'S_DEEP') {
     const del = await pmApiDelete('/api/wake-checkin', { user, device });
     const removed = del && del.status === 'OK' ? del.removed : null;
@@ -861,15 +889,14 @@ app.post('/sleep/config', async (req, res) => {
   }
 
   const {
-    mode = 'S_DEEP', duration = 0,
+    duration = 0,
     user = 'test_user', device = 'magtag',
     display,
   } = req.body || {};
 
-  if (!SLEEP_MODES.includes(mode)) {
-    return res.status(400).json({ error: `unknown sleep mode: ${mode}` });
-  }
   const secs = Math.max(0, Math.floor(Number(duration)) || 0);
+  // Derived, not requested — a `mode` in the body is ignored.
+  const mode = sleepModeFor(secs);
 
   let bytes;
   try {
@@ -938,12 +965,14 @@ app.post('/sleep/config', async (req, res) => {
  *                              sends nothing and the e-ink keeps its image
  *
  * body: {
- *   mode, duration,              // must match the sleep the device is running
+ *   duration,                    // must match the sleep the device is running; it
+ *                                // also selects the mode (>= 300s deep, else
+ *                                // light). A `mode` in the body is ignored.
  *   user, device,                // -> wake-checkin key {user}/{device}
  *   display,                     // omit for the sleep-only response
  *   client, rearmMs,             // optional: also re-arm the device-event watch
  * }
- * returns: { ok, wakeCheckin, watching }
+ * returns: { ok, mode, duration, wakeCheckin, watching }
  *
  * `rearmMs` exists because pollSleepEventsOnce deactivates the watch on checkin
  * and /display/send-bmp is what normally re-arms it for the next cycle. A cycle
@@ -954,15 +983,15 @@ app.post('/sleep/config', async (req, res) => {
  */
 app.post('/sleep/wake-response', async (req, res) => {
   const {
-    mode = 'S_DEEP', duration = 0,
+    duration = 0,
     user = 'test_user', device = 'magtag',
     display, rearmMs,
   } = req.body || {};
 
-  if (!SLEEP_MODES.includes(mode)) {
-    return res.status(400).json({ error: `unknown sleep mode: ${mode}` });
-  }
   const secs = Math.max(0, Math.floor(Number(duration)) || 0);
+  // Derived, not requested — same rule /sleep/config uses, so a re-registration
+  // cannot disagree with the sleep the device is already running.
+  const mode = sleepModeFor(secs);
 
   const wakeCheckin = await registerWakeResponse({ mode, secs, user, device, display });
 
@@ -970,7 +999,9 @@ app.post('/sleep/wake-response', async (req, res) => {
     await startSleepWatch({ user, device, client: req.body.client, ttlMs: Number(rearmMs) });
   }
 
-  res.json({ ok: true, wakeCheckin, watching: sleepWatch.clients });
+  // `mode` is reported so the editor records what the broker chose rather than what
+  // it guessed locally — if the two ever drift, this is the one the device obeys.
+  res.json({ ok: true, mode, duration: secs, wakeCheckin, watching: sleepWatch.clients });
 });
 
 // ---- /reset ----------------------------------------------------------------

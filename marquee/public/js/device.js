@@ -16,7 +16,7 @@ import { navigate } from './router.js';
 import { layer, hideDitherPreview } from './stage.js';
 import { select } from './selection.js';
 import { resetCounter } from './elements.js';
-import { buildDisplayBody, refreshInterval } from './config.js';
+import { buildDisplayBody, refreshInterval, sleepModeFor } from './config.js';
 import {
   serialize, canvasSignature, canvasChanged, setDeviceCanvasSig,
   invalidateCanvasBaseline, saveCanvasNow, cancelCanvasSave,
@@ -71,10 +71,13 @@ let sleepCycle = null; // { user, device, mode, durSeconds, registeredDisplay, r
  *  what made the timer look unchangeable, because the broker kept being handed
  *  the duration from the moment the push was pressed. */
 function currentSleepConfig() {
-  return {
-    mode: $('sleepMode')?.value || 'S_DEEP',
-    durSeconds: refreshInterval(),
-  };
+  const durSeconds = refreshInterval();
+  // Derived, not read off a control: there is no sleep-mode picker any more,
+  // because the interval already determines the answer (sleepModeFor in config.js).
+  // The backend derives it again from the duration we send, so the two agree by
+  // construction; this copy exists to answer the local questions — whether there is
+  // a display to maintain, and what the CircuitPython feed should carry.
+  return { mode: sleepModeFor(durSeconds), durSeconds };
 }
 
 /** ws.sleep.SleepMode -> the spelling the CircuitPython sleep feed uses. */
@@ -91,9 +94,21 @@ const SLEEP_MODE_JSON = { S_LIGHT: 'light', S_DEEP: 'deep' };
  */
 function currentSleepPayload() {
   const { mode, durSeconds } = currentSleepConfig();
+  const alarm = $('wakeAlarm')?.value || 'timer';
+  // The interval picks the mode wherever there IS a timer — which includes
+  // "timer+pin", whose TimeAlarm makes the same light-vs-deep trade as a bare timer.
+  // A pin-only alarm ignores sleep_time entirely (docs/marquee-sleep.md), so there
+  // is nothing to derive from and it keeps the deep default it always had.
+  //
+  // That default is the one case worth knowing about: deep-sleep PinAlarms need an
+  // RTC-capable GPIO on the ESP32-S2/S3, so a board whose only button is on a
+  // non-RTC pin cannot honour "pin" under "deep" — and pin-only has no timer to
+  // recover with. The consumer's answer is the fallback the doc already specifies:
+  // drop the pin and arm a TimeAlarm rather than deep-sleeping with no alarm.
+  const effective = alarm === 'pin' ? 'S_DEEP' : mode;
   return {
-    alarm_type: $('wakeAlarm')?.value || 'timer',
-    sleep_mode: SLEEP_MODE_JSON[mode] || 'deep',
+    alarm_type: alarm,
+    sleep_mode: SLEEP_MODE_JSON[effective] || 'deep',
     sleep_time: durSeconds,
   };
 }
@@ -113,15 +128,16 @@ export async function syncWakeResponse({ rearmMs } = {}) {
   const want = mode === 'S_DEEP' && canvasChanged();
   // Dedupe on the WHOLE registration, not just the display flag. Changing the
   // duration leaves `want` untouched, so keying on it alone would return early
-  // and silently swallow exactly the edit the user was trying to make.
-  const sig = `${mode}|${durSeconds}|${want}`;
+  // and silently swallow exactly the edit the user was trying to make. The mode is
+  // now a function of the duration, so it cannot change independently of it — the
+  // duration covers both.
+  const sig = `${durSeconds}|${want}`;
   if (!rearmMs && sig === sleepCycle.registeredSig) return true;
   try {
     const res = await fetch(BACKEND + '/sleep/wake-response', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        mode,
         duration: durSeconds,
         user: sleepCycle.user,
         device: sleepCycle.device,
@@ -134,13 +150,18 @@ export async function syncWakeResponse({ rearmMs } = {}) {
     // The backend answers ok even when it couldn't reach the broker, so only
     // record the registration once the broker actually took it — otherwise we'd
     // stop retrying while the broker still holds the wrong response.
-    if (mode !== 'S_DEEP' || (data.wakeCheckin && data.wakeCheckin.registered)) {
+    //
+    // Gated on the mode the BACKEND derived, not ours: the backend's is the copy
+    // that encodes the protobuf, so if the two ever drift it is the one the device
+    // obeys, and believing it is what keeps this retry loop honest.
+    const srvMode = data.mode || mode;
+    if (srvMode !== 'S_DEEP' || (data.wakeCheckin && data.wakeCheckin.registered)) {
       sleepCycle.registeredSig = sig;
       sleepCycle.registeredDisplay = want;
       // What the broker now holds — i.e. what the device gets at its NEXT
       // checkin. The sleep it is running right now was fixed when it last
       // checked in.
-      sleepCycle.mode = mode;
+      sleepCycle.mode = srvMode;
       sleepCycle.durSeconds = durSeconds;
     }
     return true;
@@ -155,11 +176,11 @@ const cycleWatchMs = (durSeconds) => durSeconds * 1000 + 150000;
 // registration POST.
 let wakeSyncTimer = null;
 export function scheduleWakeResponseSync() {
-  // Gated on the CYCLE, not on the mode: switching the form from Deep to Light
-  // is itself a change the broker has to hear about (its stored deep-sleep
-  // response would otherwise keep re-provisioning and re-sleeping the device),
-  // and that edit reads as non-deep right here. syncWakeResponse decides what
-  // to send.
+  // Gated on the CYCLE, not on the mode: dragging the interval down across the
+  // five-minute line turns a deep sleep into a light one, and that is itself a
+  // change the broker has to hear about (its stored deep-sleep response would
+  // otherwise keep re-provisioning and re-sleeping the device) — yet the edit reads
+  // as non-deep right here. syncWakeResponse decides what to send.
   if (!sleepCycle) return;
   clearTimeout(wakeSyncTimer);
   wakeSyncTimer = setTimeout(syncWakeResponse, 500);
@@ -646,7 +667,6 @@ export async function pushToDisplay() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        mode,
         duration: durSeconds,
         user: pmUser,
         device: pmDevice,
@@ -667,11 +687,14 @@ export async function pushToDisplay() {
     toast('Pushed. Waiting for the device to say goodnight…');
     const includedDisplay = !!(sdata.wakeCheckin && sdata.wakeCheckin.includedDisplay);
     sleepCycle = {
-      user: pmUser, device: pmDevice, mode, durSeconds,
+      user: pmUser, device: pmDevice,
+      // The backend's derivation, not ours — it is what actually went on the wire.
+      mode: sdata.mode || mode,
+      durSeconds,
       registeredDisplay: includedDisplay,
-      // What the broker ACTUALLY took just now — mode and duration included, or
-      // the first timer edit would look like a no-op and never be sent.
-      registeredSig: `${mode}|${durSeconds}|${includedDisplay}`,
+      // What the broker ACTUALLY took just now — duration included, or the first
+      // timer edit would look like a no-op and never be sent.
+      registeredSig: `${durSeconds}|${includedDisplay}`,
     };
     // The countdown starts optimistically here so Act III has something to show
     // immediately; the real goodnight resets it to the confirmed timer.
@@ -1293,7 +1316,6 @@ async function sleepNow() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        mode,
         duration: durSeconds,
         user: val('pmUser') || 'test_user',
         device: val('pmDevice') || 'magtag',

@@ -487,15 +487,21 @@
             <span class="label" style="letter-spacing:0.06em; text-transform:none; font-size:11px">Wake and redraw</span>
             <!-- Roughly geometric, so each step is a real change rather than a
                  nudge: 15s doubles to a minute, then the minute range fans out to
-                 an hour. -->
+                 an hour.
+
+                 Each option names the sleep mode it produces. There is no mode
+                 control any more — the interval derives it (sleepModeFor in
+                 config.js) — so this is where the fact the old dropdown made
+                 obvious stays visible. The value attributes are what a7.js matches
+                 on; only the labels carry the annotation. -->
             <select id="wakeInterval">
-              <option value="15">Every 15 seconds</option>
-              <option value="30">Every 30 seconds</option>
-              <option value="60">Every minute</option>
-              <option value="300" selected>Every 5 minutes</option>
-              <option value="900">Every 15 minutes</option>
-              <option value="1800">Every 30 minutes</option>
-              <option value="3600">Every hour</option>
+              <option value="15">Every 15 seconds — light sleep</option>
+              <option value="30">Every 30 seconds — light sleep</option>
+              <option value="60">Every minute — light sleep</option>
+              <option value="300" selected>Every 5 minutes — deep sleep</option>
+              <option value="900">Every 15 minutes — deep sleep</option>
+              <option value="1800">Every 30 minutes — deep sleep</option>
+              <option value="3600">Every hour — deep sleep</option>
               <option value="custom">Custom…</option>
             </select>
           </label>
@@ -631,12 +637,6 @@
     <div class="hr"></div>
     <span class="label">Sleep behaviour</span>
     <div class="grid-3">
-      <label class="field"><span class="label">Sleep mode</span>
-        <select id="sleepMode">
-          <option value="S_LIGHT">Light</option>
-          <option value="S_DEEP" selected>Deep</option>
-        </select>
-      </label>
       <label class="field"><span class="label">Duration (seconds)</span>
         <input type="number" id="sleepDuration" value="300" min="0" max="4294967295" autocomplete="off">
       </label>
@@ -644,7 +644,7 @@
         <input type="number" id="writeRetryWindow" value="5" min="1" max="60" autocomplete="off">
       </label>
     </div>
-    <p class="hint">Duration is the timer the device sleeps on, and is what "Wake and redraw" in the editor sets. The retry window is how long "Push to display" keeps resending the image (every 45s) waiting for the device to confirm the write; sleep is only sent once it does.</p>
+    <p class="hint">Duration is the timer the device sleeps on, and is what "Wake and redraw" in the editor sets. It also picks the sleep mode, which is why there is no control for one: under 5 minutes the device light-sleeps, because waking in place beats paying for a boot; from 5 minutes up it deep-sleeps. The retry window is how long "Push to display" keeps resending the image (every 45s) waiting for the device to confirm the write; sleep is only sent once it does.</p>
 
     <div class="hr"></div>
     <span class="label">Setup</span>

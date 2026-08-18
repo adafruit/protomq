@@ -39,7 +39,7 @@ import { $, wireModal, openModal, closeModal, toast } from './util.js';
 const SETTINGS_KEY = 'marquee.settings';
 const SETTINGS_FIELDS = [
   'ioUser', 'ioKey', 'ioFeed', 'pmUser', 'pmDevice',
-  'sleepMode', 'sleepDuration', 'writeRetryWindow',
+  'sleepDuration', 'writeRetryWindow',
   // Lives in A7's inspector rather than this modal, but it has no backing field
   // to be a view onto the way #wakeInterval is, so it persists on its own.
   'wakeAlarm',
@@ -71,15 +71,16 @@ function initSettings() {
     if (!el) return;
     el.addEventListener('input', () => {
       saveSettings();
-      // The refresh interval and sleep mode are what a sleeping device is
-      // re-registered with, so an edit here has to reach the device path exactly
-      // like a pin change does. It does not stale a downloaded bundle —
-      // cfg-marquee.json carries no timing, and code.py owns its own.
+      // The refresh interval is what a sleeping device is re-registered with —
+      // and now also what picks its sleep mode (sleepModeFor in config.js) — so an
+      // edit here has to reach the device path exactly like a pin change does. It
+      // does not stale a downloaded bundle: cfg-marquee.json carries no timing, and
+      // code.py owns its own.
       //
       // wakeAlarm is deliberately NOT in here: it reaches a CircuitPython board
       // over the sleep feed, so it neither re-registers a broker cycle nor
       // invalidates a bundle.
-      if (id === 'sleepDuration' || id === 'sleepMode') {
+      if (id === 'sleepDuration') {
         configChanged();
         scheduleWakeResponseSync();
       }

@@ -12,84 +12,21 @@
   "elements": [
     {
       "etype": "label",
-      "x": 68,
-      "y": 10,
-      "fill": "#2F2429",
-      "text": "Air Quality",
-      "fontSize": 19,
+      "x": 144,
+      "y": 40,
+      "fill": "#D72627",
+      "text": "Label",
+      "fontSize": 20,
       "fontFamily": "monospace",
       "align": "left"
     },
     {
-      "etype": "divider",
-      "x": 8,
-      "y": 38,
-      "fill": "#2F2429",
-      "width": 228,
-      "height": 1
-    },
-    {
-      "etype": "battery",
-      "x": 211,
-      "y": 0,
-      "w": 17,
-      "ink": "#2F2429",
-      "showPct": true,
-      "conds": [
-        {
-          "op": "lt",
-          "cmp": "20",
-          "color": "#2F2429"
-        }
-      ],
-      "defaultShade": "#2F2429",
-      "feedKey": "",
-      "feedName": "",
-      "feedValue": null
-    },
-    {
-      "etype": "linechart",
-      "x": 8,
-      "y": 86,
-      "w": 119,
-      "h": 30,
-      "ink": "#2F2429",
-      "title": "PM2.5",
-      "feeds": [],
-      "series": {},
-      "hours": 24,
-      "xLabel": "",
-      "yLabel": "",
-      "yMin": "",
-      "yMax": "",
-      "yScale": "linear",
-      "decimals": 4,
-      "rawOnly": false,
-      "stepped": false,
-      "gridLines": false,
-      "keyLegend": false,
-      "data": [
-        73,
-        76,
-        72,
-        74,
-        72,
-        73,
-        69,
-        69,
-        69,
-        68,
-        66,
-        64
-      ]
-    },
-    {
       "etype": "label",
-      "x": 93,
-      "y": 48,
+      "x": -16,
+      "y": -32,
       "fill": "#2F2429",
-      "text": "Bad",
-      "fontSize": 25,
+      "text": "Label",
+      "fontSize": 76,
       "fontFamily": "monospace",
       "align": "left"
     }

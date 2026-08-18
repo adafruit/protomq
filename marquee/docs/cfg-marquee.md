@@ -28,7 +28,10 @@ bundle, which is the point: timing is not a property of the panel, and a sleep
 setting that moved `configSignature()` would send the user back to A6 every time
 they touched a dropdown.
 
-## Worked example — MagTag 2.9"
+## Worked example — MagTag 2.9" (`builtin`)
+
+The panel is soldered to the board, so `interface` is one field and there is no
+pinout at all:
 
 ```json
 {
@@ -42,10 +45,45 @@ they touched a dropdown.
     "rotation": 3,
     "mode": "mono"
   },
+  "interface": { "kind": "builtin" }
+}
+```
+
+Consumed as:
+
+```python
+display = board.DISPLAY          # already up, at PANEL["width"]/["height"]/["rotation"]
+display.root_group = group       # no bus to open, no release_displays()
+```
+
+`display.driver` is still `SSD1680` and the geometry is still the native pair,
+because they are facts about the panel — but a `builtin` consumer needs neither.
+They are there for a consumer driving the same part over its own bus.
+
+## Worked example — 2.13" Quad-Color (`spi_epd`)
+
+A bare panel the user wired themselves, so the descriptor carries the bus and the
+five EPD pins:
+
+```json
+{
+  "cfg_version": 2,
+  "name": "Desk",
+  "display": {
+    "driver": "JD79661",
+    "panel": "213-quad-AJHE5",
+    "width": 122,
+    "height": 250,
+    "rotation": 3,
+    "mode": "quadcolor"
+  },
   "interface": {
     "kind": "spi_epd",
-    "spi": { "bus": 0, "mosi": "D35", "sck": "D36" },
-    "pins": { "cs": "D8", "dc": "D7", "reset": "D6", "busy": "D5", "sram_cs": null }
+    "spi": { "bus": 0, "mosi": "board.D35", "sck": "board.D36" },
+    "pins": {
+      "cs": "board.D5", "dc": "board.D6", "reset": "board.D11",
+      "busy": "board.D12", "sram_cs": null
+    }
   }
 }
 ```
@@ -53,16 +91,16 @@ they touched a dropdown.
 Consumed as:
 
 ```python
-from adafruit_epd.ssd1680 import Adafruit_SSD1680   # chosen from display.driver
+from adafruit_epd.jd79661 import Adafruit_JD79661   # chosen from display.driver
 
-epd = Adafruit_SSD1680(
-    PANEL["width"], PANEL["height"],                # 128, 296 — native, in that order
+epd = Adafruit_JD79661(
+    PANEL["width"], PANEL["height"],                # 122, 250 — native, in that order
     spi,
     cs_pin=dio(PINS["cs"]), dc_pin=dio(PINS["dc"]),
     sramcs_pin=dio(PINS["sram_cs"]),                # None — this panel has no SRAM
     rst_pin=dio(PINS["reset"]), busy_pin=dio(PINS["busy"]),
 )
-epd.rotation = PANEL["rotation"]                    # 3 -> a 296x128 drawing surface
+epd.rotation = PANEL["rotation"]                    # 3 -> a 250x122 drawing surface
 ```
 
 ## Fields
@@ -119,26 +157,49 @@ up upside down, that is the field to change.
 
 ### `interface`
 
+`kind` says what the consumer has to do to get a drawing surface, and it decides
+which of the other fields are present at all:
+
+| `kind` | other fields | what to do |
+|---|---|---|
+| `builtin` | **none** | The panel is part of the board. CircuitPython constructed it at boot — use `board.DISPLAY`. Do not open a bus, and do not call `displayio.release_displays()`: that releases the display you are about to draw on. |
+| `spi_epd` | `spi`, `pins` | The user wired the panel up. Open the bus and construct the `adafruit_epd` driver from the table below. |
+
+A consumer branches on `kind` before touching `interface`; reading
+`interface["pins"]` unconditionally raises `KeyError` on a `builtin` board.
+
+**`builtin` carries no pinout on purpose.** The pins the editor holds for such a
+board — `D8`, `D7`, … for a MagTag — are what the WipperSnapper firmware resolves,
+and they are *not* `board` attributes on the board itself (a MagTag's EPD is on
+`board.EPD_CS`, `board.EPD_DC`, …). Emitting them here would produce a file that
+looks drivable and dies on `getattr(board, "D8")`. The interface kind per preset is
+`ifaceKindFor()` in `public/js/presets.js`; a panel id the editor does not know is
+`spi_epd`.
+
+When `kind` is `spi_epd`:
+
 | field | type | notes |
 |---|---|---|
-| `kind` | `spi_epd` | Currently the only descriptor the editor produces. |
 | `spi.bus` | integer | Bus index. `0` is the board's default hardware SPI. |
-| `spi.mosi`, `spi.sck` | string \| null | Board pin names. |
+| `spi.mosi`, `spi.sck` | string \| null | |
 | `pins.cs` | string \| null | EPD chip select. |
 | `pins.dc` | string \| null | Data/command. |
 | `pins.reset` | string \| null | |
 | `pins.busy` | string \| null | |
 | `pins.sram_cs` | string \| null | The external SRAM chip, where the panel has one. |
 
-**A pin is a `board` attribute name (`"D5"`) or `null`.** `null` means the pin is
-not wired — pass `None` to the constructor. This is a deliberate normalisation:
-the editor form and the WipperSnapper protobuf path both use `"-1"` and `""` as
-sentinels, and collapsing them to one JSON value keeps the string-parsing off the
-device.
+**A pin is the CircuitPython expression that resolves it — `"board.D5"`, namespace
+included — or `null`.** The prefix is there so the string is the name a consumer
+would have typed, rather than a bare `"D5"` that only means something once you
+know which module the editor had in mind. `null` means the pin is not wired — pass
+`None` to the constructor. That too is a deliberate normalisation: the editor form
+and the WipperSnapper protobuf path both use `"-1"` and `""` as sentinels, and
+collapsing them to one JSON value keeps the string-parsing off the device.
 
 ```python
 def pin(name):
-    return None if name is None else getattr(board, name)
+    # split on the dot, so a bare "D5" from an older file still resolves
+    return None if name is None else getattr(board, name.split(".")[-1])
 
 def dio(name):
     p = pin(name)
@@ -183,15 +244,18 @@ mode)` does the mode resolution and returns the constructor kwargs alongside.
 
 All seven presets, as produced by `buildMarqueeCfg()`:
 
-| preset | `width`×`height` | `rotation` | drawn at | `mode` | class |
-|---|---|---|---|---|---|
-| `magtag` | 128×296 | 3 | 296×128 | mono | `Adafruit_SSD1680` |
-| `tricolorFW` | 122×250 | 3 | 250×122 | tricolor | `Adafruit_SSD1680` |
-| `quad213` | 122×250 | 3 | 250×122 | quadcolor | `Adafruit_JD79661` |
-| `tricolor42` | 400×300 | 0 | 400×300 | tricolor | `Adafruit_SSD1683` |
-| `gray42` | 400×300 | 0 | 400×300 | gray4 | `Adafruit_SSD1683_Grayscale4` |
-| `mono75` | 800×480 | 0 | 800×480 | mono | `Adafruit_UC8179` |
-| `tri75` | 800×480 | 0 | 800×480 | tricolor | `Adafruit_UC8179` + `tri_color=True` |
+| preset | `width`×`height` | `rotation` | drawn at | `mode` | `kind` | class |
+|---|---|---|---|---|---|---|
+| `magtag` | 128×296 | 3 | 296×128 | mono | `builtin` | `Adafruit_SSD1680` (unused — `board.DISPLAY`) |
+| `tricolorFW` | 122×250 | 3 | 250×122 | tricolor | `spi_epd` | `Adafruit_SSD1680` |
+| `quad213` | 122×250 | 3 | 250×122 | quadcolor | `spi_epd` | `Adafruit_JD79661` |
+| `tricolor42` | 400×300 | 0 | 400×300 | tricolor | `spi_epd` | `Adafruit_SSD1683` |
+| `gray42` | 400×300 | 0 | 400×300 | gray4 | `spi_epd` | `Adafruit_SSD1683_Grayscale4` |
+| `mono75` | 800×480 | 0 | 800×480 | mono | `spi_epd` | `Adafruit_UC8179` |
+| `tri75` | 800×480 | 0 | 800×480 | tricolor | `spi_epd` | `Adafruit_UC8179` + `tri_color=True` |
+
+`magtag` is the only `builtin` entry, so it is the only one whose descriptor has no
+`interface.spi`/`interface.pins`.
 
 ## The image on the feed
 
@@ -227,11 +291,12 @@ remap PNGs in `palettes/`.
 
 ## Known gaps
 
-- **`code.py` does not consume this file fully yet.** The generated bundle reads
-  the config, connects and fetches the dashboard, but still draws through
-  `displayio`/`board.DISPLAY` rather than constructing the `adafruit_epd` driver
-  and blitting the indexed BMP with `epd.pixel()`. On a board with a built-in
-  display it draws; on a bare panel or a FeatherWing it does not.
+- **`code.py` does not consume the `spi_epd` path yet.** The generated bundle reads
+  the config, connects and fetches the dashboard, and on a `builtin` board it draws
+  through `displayio`/`board.DISPLAY` — which is the whole of what that kind
+  requires. On `spi_epd` it resolves the bus and the pins but stops short of
+  constructing the `adafruit_epd` driver and blitting the indexed BMP with
+  `epd.pixel()`, so a bare panel or a FeatherWing does not draw.
 - **`epd.pixel()` is slow.** A per-pixel blit is 37,888 calls for a MagTag and
   384,000 for a 7.5". Filling with the background first and skipping
   background-coloured pixels is the cheap mitigation.
@@ -246,6 +311,11 @@ remap PNGs in `palettes/`.
 `buildDisplayBody()` in `public/js/config.js` serialises the same facts for
 `POST /display/add` → protobuf → the WipperSnapper C++ firmware. The two are
 separate serialisers on purpose — different consumers, different conventions
-(`"-1"` vs `null`, `interface.spiEpd.*` vs `interface.pins.*`) — but both read the
-same form and the same `DISPLAY_PRESETS` entry, so `width`, `height` and
-`rotation` here are the same numbers that go over the wire.
+(`"-1"` vs `null`, bare `"D5"` vs `"board.D5"`, `interface.spiEpd.*` vs
+`interface.pins.*`) — but both read the same form and the same `DISPLAY_PRESETS`
+entry, so `width`, `height` and `rotation` here are the same numbers that go over
+the wire.
+
+The pinout is the one place they diverge in *content* rather than in spelling: the
+protobuf body always carries the pins, including for a `builtin` board, because the
+WipperSnapper firmware drives the EPD itself and needs them.

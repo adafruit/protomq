@@ -15,7 +15,7 @@
  */
 
 import { display, logicalDims } from './palette.js';
-import { cfgMarqueeJson } from './cfg.js';
+import { buildMarqueeCfg, cfgMarqueeJson } from './cfg.js';
 import { DISPLAY_PRESETS, driverFor } from './presets.js';
 import { getState } from './state.js';
 import { ioHost } from './api.js';
@@ -172,6 +172,11 @@ function settingsToml() {
 
 function codePy() {
   const { w: lw, h: lh } = logicalDims();
+  // A builtin panel is already up as board.DISPLAY, so this bundle must NOT open a
+  // bus, must not resolve pins the board does not have, and must not call
+  // release_displays() — that last one would tear down the very display show()
+  // draws on. Everything the two paths do differently is gated on this.
+  const builtin = buildMarqueeCfg().interface.kind === 'builtin';
   return `# Adafruit IO Marquee — generated code bundle.
 #
 # Fetches the dashboard your Marquee editor published to an Adafruit IO feed,
@@ -185,9 +190,7 @@ import json
 import time
 import alarm
 import board
-import busio
-import digitalio
-import displayio
+${builtin ? '' : 'import busio\nimport digitalio\n'}import displayio
 import wifi
 import socketpool
 import ssl
@@ -198,9 +201,14 @@ with open("cfg-marquee.json") as f:
     CONFIG = json.load(f)
 
 PANEL = CONFIG["display"]
-PINS = CONFIG["interface"]["pins"]
+${builtin
+  ? `# interface.kind is "builtin": this panel is soldered to the board, CircuitPython
+# brought it up before code.py ran, and it is board.DISPLAY. There is no pinout in
+# cfg-marquee.json for such a board on purpose — the EPD is not on board.D<n> pins.
+`
+  : `PINS = CONFIG["interface"]["pins"]
 SPI_CFG = CONFIG["interface"]["spi"]
-
+`}
 # How long to sleep between takes. cfg-marquee.json describes the panel and says
 # nothing about timing, so this lives here — edit it on the drive to re-tune.
 REFRESH_SECONDS = ${DEFAULT_REFRESH_SECONDS}
@@ -235,14 +243,19 @@ AIO_HOST = getenv("ADAFRUIT_IO_HOST", "io.adafruit.com")
 FEED = getenv("ADAFRUIT_IO_FEED", "marquee")
 
 
-def pin(name):
-    """'D5' -> board.D5.  null in cfg-marquee.json means the pin is not wired."""
+${builtin ? '' : `def pin(name):
+    """Resolve a pin from cfg-marquee.json: "board.D5" -> board.D5.
+
+    cfg-marquee.json writes the pin as the expression that resolves it, namespace
+    included; splitting on the dot means a bare "D5" from an older file still works.
+    null means the pin is not wired — pass None to the constructor.
+    """
     if name is None:
         return None
-    return getattr(board, name)
+    return getattr(board, name.split(".")[-1])
 
 
-def connect():
+`}def connect():
     wifi.radio.connect(getenv("CIRCUITPY_WIFI_SSID"), getenv("CIRCUITPY_WIFI_PASSWORD"))
     pool = socketpool.SocketPool(wifi.radio)
     return adafruit_requests.Session(pool, ssl.create_default_context())
@@ -277,7 +290,9 @@ def sleep_until_next_take():
     alarm.exit_and_deep_sleep_until_alarms(wake)
 
 
-displayio.release_displays()
+${builtin ? `# No release_displays() and no bus here: board.DISPLAY is this panel, and
+# releasing it would leave show() drawing on nothing.
+` : `displayio.release_displays()
 
 spi = busio.SPI(pin(SPI_CFG["sck"]), MOSI=pin(SPI_CFG["mosi"]))
 epd_cs = pin(PINS["cs"])
@@ -285,14 +300,19 @@ epd_dc = pin(PINS["dc"])
 epd_reset = pin(PINS["reset"])
 epd_busy = pin(PINS["busy"])
 epd_sram_cs = pin(PINS["sram_cs"])
-
-# PANEL["driver"] is "${val('pmDriver') || '?'}", which on CircuitPython means
+`}
+${builtin ? `# PANEL["driver"] is "${val('pmDriver') || '?'}" and PANEL["width"]/["height"] are the
+# NATIVE, unrotated framebuffer. ${geomNote(lw, lh)}
+# Nothing below needs either — board.DISPLAY already IS that panel at that geometry.
+# They are in the file for a consumer that drives the same part over its own bus:
+#   ${driverImport()}
+` : `# PANEL["driver"] is "${val('pmDriver') || '?'}", which on CircuitPython means
 #   ${driverImport()}
 # PANEL["width"]/["height"] are its first two constructor arguments: the NATIVE,
 # unrotated framebuffer. ${geomNote(lw, lh)}
 # Wiring that up, and decoding the ${display.type === 'mono' ? 1 : 4}-bit indexed BMP the feed carries, is
 # not generated yet. See docs/cfg-marquee.md.
-import adafruit_imageload  # noqa: E402  (imported late so the panel is up first)
+`}import adafruit_imageload  # noqa: E402  (imported late so the panel is up first)
 
 try:
     session = connect()
@@ -311,6 +331,10 @@ sleep_until_next_take()
 function readme() {
   const key = getState().selectedPanel;
   const label = key ? DISPLAY_PRESETS[key].label : 'your panel';
+  // Same split as codePy(): on a builtin panel the bundle is finished and needs no
+  // EPD library at all, so promising adafruit_epd and apologising for not using it
+  // would both be wrong.
+  const builtin = buildMarqueeCfg().interface.kind === 'builtin';
   // The native buffer and the drawn canvas differ on every portrait-native panel,
   // so name both — but only when they actually differ, or the line reads as a
   // typo on the panels where rotation is 0.
@@ -323,7 +347,7 @@ function readme() {
 
 Built for: ${label}
 Panel:     ${geom}, ${display.type}
-Driver:    ${val('pmDriver') || '?'} — ${driverImport()}
+Driver:    ${val('pmDriver') || '?'} — ${builtin ? 'built into the board, drawn through board.DISPLAY' : driverImport()}
 Refresh:   every ${DEFAULT_REFRESH_SECONDS} seconds — REFRESH_SECONDS in code.py.
            NOT what "Wake and redraw" is set to in the editor; see below.
 
@@ -348,10 +372,19 @@ and copy these into CIRCUITPY/lib/:
     adafruit_requests.mpy
     adafruit_connection_manager.mpy
     adafruit_imageload/
-    adafruit_epd/            <- ${driverImport()}
+${builtin ? `
+Your panel is part of the board -- cfg-marquee.json says "kind": "builtin" -- so
+CircuitPython already brings it up as board.DISPLAY and no EPD driver library is
+needed.
+
+Not finished
+------------
+cfg-marquee.json is complete, and for a built-in panel code.py consumes what it
+needs: it connects, fetches the dashboard and draws it on board.DISPLAY.
+` : `    adafruit_epd/            <- ${driverImport()}
 
 adafruit_epd is what cfg-marquee.json is written for, but the code.py in this ZIP
-does not construct the driver yet — see "Not finished" below.
+does not construct the driver yet -- see "Not finished" below.
 
 Not finished
 ------------
@@ -360,15 +393,15 @@ to construct it with, the rotation, every pin, and the exact layout of the image
 that arrives on the feed.
 
 code.py does not consume all of it yet. It connects, fetches the dashboard and
-reads the config, but it still draws through displayio/board.DISPLAY instead of
-constructing ${driverClassName()} from cfg-marquee.json and
-blitting the indexed BMP with epd.pixel(). On a board with a built-in display (a
-MagTag) it will draw; on a bare panel or a FeatherWing it will not, because
-nothing has told CircuitPython that panel exists.
+resolves the bus and the pins, but it still draws through displayio/board.DISPLAY
+instead of constructing ${driverClassName()} from cfg-marquee.json
+and blitting the indexed BMP with epd.pixel(). Your panel is wired to the board
+rather than part of it, so nothing has told CircuitPython it exists and that draw
+will not land.
 
 If you are wiring this up yourself, everything you need is in the JSON.
-
-Neither does code.py read the sleep window. "Push to display" in the editor
+`}
+code.py does not read the sleep window either. "Push to display" in the editor
 publishes it as JSON to the "${(val('ioFeed') || 'marquee')}-sleep" feed --
 the sleep duration, the light-or-deep mode that duration implies, and whether to
 wake on the timer, a button, or either. This code.py ignores all of that and sleeps on REFRESH_SECONDS with a

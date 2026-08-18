@@ -30,6 +30,13 @@ export const DISPLAY_PRESETS = {
     terms: 'magtag 2.9 esp32-s2 mono ssd1680',
     preset: '128x296', rotation: '270', mode: 'mono',
     name: 'epd0', driver: 'SSD1680', panel: 'adafruit-magtag',
+    // The panel is soldered to the board, so CircuitPython has already brought it
+    // up as board.DISPLAY by the time code.py runs — see ifaceKindFor(). The pins
+    // below are still the truth for the WipperSnapper path, which drives the EPD
+    // itself; they are not board attribute names on a MagTag (its EPD is on
+    // board.EPD_CS/EPD_DC/..., not board.D8/board.D7), which is exactly why the
+    // CircuitPython descriptor omits a pinout for this entry.
+    iface: 'builtin',
     pins: { busy: 'D5', dc: 'D7', rst: 'D6', cs: 'D8', sramCs: '', mosi: 'D35', sck: 'D36', bus: 0 },
   },
 
@@ -119,6 +126,25 @@ export const DISPLAY_PRESETS = {
 };
 
 export const PRESET_KEYS = Object.keys(DISPLAY_PRESETS);
+
+/**
+ * `interface.kind` for a panel id — what a CircuitPython consumer has to do to get
+ * a drawing surface.
+ *
+ * `builtin`  the panel is part of the board. CircuitPython constructs it at boot
+ *            and hands it over as `board.DISPLAY`; there is no bus to open, and no
+ *            pinout to read, because the board's EPD pins are not `board.D<n>`
+ *            names at all. A preset opts in with `iface: 'builtin'`.
+ * `spi_epd`  the default: the user wired the panel up, so the descriptor carries
+ *            the SPI bus and the five EPD pins and the consumer builds the driver.
+ *
+ * An unknown panel id — the user typed their own into A5 — is `spi_epd`, which is
+ * the assumption that fails loudly rather than silently drawing nothing.
+ */
+export function ifaceKindFor(panelId) {
+  const key = PRESET_KEYS.find((k) => DISPLAY_PRESETS[k].panel === panelId);
+  return (key && DISPLAY_PRESETS[key].iface) || 'spi_epd';
+}
 
 /**
  * Driver string -> the CircuitPython class that drives it. This is the whole

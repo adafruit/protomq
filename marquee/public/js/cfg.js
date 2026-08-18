@@ -12,11 +12,13 @@
  * response, and code.py keeps its own default), and anything about the image on
  * the wire. This file describes hardware.
  *
- * Two conventions are load-bearing and explained at their definitions below:
- * native geometry, and null for an unwired pin. See docs/cfg-marquee.md.
+ * Three conventions are load-bearing and explained at their definitions below:
+ * native geometry, null for an unwired pin, and the `board.`-prefixed pin names.
+ * See docs/cfg-marquee.md.
  */
 
 import { buildDisplayBody } from './config.js';
+import { ifaceKindFor } from './presets.js';
 import { val } from './util.js';
 
 export const CFG_VERSION = 2;
@@ -25,10 +27,16 @@ export const CFG_VERSION = 2;
  * The form has two spellings for "this pin is not wired" — an empty field and the
  * literal "-1" that the WipperSnapper parsePin() wants. JSON gets one: null. A
  * consumer writes `if p is None` and is done.
+ *
+ * A wired pin is emitted as the CircuitPython expression that resolves it —
+ * `"board.D5"`, not `"D5"` — because that is the name the consumer of this file
+ * actually types. The form keeps the bare `"D5"` the protobuf path needs; the
+ * namespace is attached here, on the way out, and nowhere else.
  */
 function normPin(v) {
   const s = (v ?? '').toString().trim();
-  return (s === '' || s === '-1') ? null : s;
+  if (s === '' || s === '-1') return null;
+  return s.startsWith('board.') ? s : `board.${s}`;
 }
 
 /**
@@ -38,6 +46,7 @@ function normPin(v) {
 export function buildMarqueeCfg() {
   const body = buildDisplayBody();
   const iface = body.interface.spiEpd;
+  const kind = ifaceKindFor(body.panel);
 
   return {
     cfg_version: CFG_VERSION,
@@ -58,10 +67,14 @@ export function buildMarqueeCfg() {
       mode: body.mode,                // mono | gray4 | tricolor | quadcolor
     },
 
-    interface: {
-      // buildDisplayBody() only ever produces an SPI EPD descriptor; the constant
-      // is here so a consumer can branch on it if that stops being true.
-      kind: 'spi_epd',
+    // How the consumer gets a drawing surface, per ifaceKindFor(). A board with the
+    // panel soldered on hands it over as board.DISPLAY, so `builtin` carries no bus
+    // and no pinout: the pins the form holds for such a board belong to the
+    // WipperSnapper firmware, and are not `board` attributes on the board itself.
+    // Repeating them here as if they were is how a MagTag bundle ends up calling
+    // getattr(board, "D8") and dying on the first line that touches the panel.
+    interface: kind === 'builtin' ? { kind } : {
+      kind,
       spi: {
         bus: iface.spi.bus,
         mosi: normPin(iface.spi.pinMosi),

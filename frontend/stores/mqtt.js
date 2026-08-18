@@ -27,7 +27,7 @@ export const useMQTTStore = defineStore('mqtt', () => {
   function publishMessage(topic, message) {
     if(!this.client) { throw new Error("MQTT Client not Connected!") }
 
-    this.client.publish(topic, message)
+    this.client.publish(topic, message, { qos: 1 })
   }
 
   return { messages, filteredMessages, rejectedMessages, addMessage, publishMessage, client, clients, clientId }

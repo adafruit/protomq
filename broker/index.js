@@ -20,6 +20,19 @@ export const createBroker = async ({ activeScriptName = null } = {}) => {
   addLoggingListeners(broker)
   addReactiveEmitters(broker)
   addDefaultAuthResponses(broker)
+
+  // TEMP DIAGNOSTIC: log every packet forwarded to each connected client so we
+  // can see whether the web client actually receives the checkin request.
+  // Remove once the missing-request question is resolved.
+  broker.authorizeForward = (client, packet) => {
+    const topic = packet?.topic
+    if (topic && !topic.startsWith('$SYS') && topic !== 'state/clients') {
+      const hex = Buffer.from(packet.payload || []).toString('hex').slice(0, 24)
+      console.log(`[FWD -> ${client?.id}] ${topic}  ${hex}`)
+    }
+    return packet
+  }
+
   await addDefaultPBResponses(broker, { activeScriptName })
   addEchoService(broker)
 

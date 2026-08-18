@@ -130,3 +130,8 @@ dist
 .yarn/install-state.gz
 .pnp.*
 .claude/settings.local.json
+
+# Python client (scripts/) — virtualenv + generated protobuf modules
+.venv/
+__pycache__/
+scripts/protomq_pb/

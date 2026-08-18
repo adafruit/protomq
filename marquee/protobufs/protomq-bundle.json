@@ -1,0 +1,2805 @@
+{
+  "nested": {
+    "ws": {
+      "nested": {
+        "signal": {
+          "nested": {
+            "BrokerToDevice": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "error",
+                    "checkin",
+                    "sleep",
+                    "digitalio",
+                    "analogin",
+                    "servo",
+                    "pwm",
+                    "pixels",
+                    "ds18x20",
+                    "display",
+                    "uart",
+                    "i2c",
+                    "gps",
+                    "expander",
+                    "telemetry"
+                  ]
+                }
+              },
+              "fields": {
+                "error": {
+                  "type": "ws.error.B2D",
+                  "id": 10
+                },
+                "checkin": {
+                  "type": "ws.checkin.B2D",
+                  "id": 20
+                },
+                "sleep": {
+                  "type": "ws.sleep.B2D",
+                  "id": 21
+                },
+                "digitalio": {
+                  "type": "ws.digitalio.B2D",
+                  "id": 30
+                },
+                "analogin": {
+                  "type": "ws.analogin.B2D",
+                  "id": 31
+                },
+                "servo": {
+                  "type": "ws.servo.B2D",
+                  "id": 32
+                },
+                "pwm": {
+                  "type": "ws.pwm.B2D",
+                  "id": 33
+                },
+                "pixels": {
+                  "type": "ws.pixels.B2D",
+                  "id": 34
+                },
+                "ds18x20": {
+                  "type": "ws.ds18x20.B2D",
+                  "id": 35
+                },
+                "display": {
+                  "type": "ws.display.B2D",
+                  "id": 36
+                },
+                "uart": {
+                  "type": "ws.uart.B2D",
+                  "id": 37
+                },
+                "i2c": {
+                  "type": "ws.i2c.B2D",
+                  "id": 38
+                },
+                "gps": {
+                  "type": "ws.gps.B2D",
+                  "id": 39
+                },
+                "expander": {
+                  "type": "ws.expander.B2D",
+                  "id": 40
+                },
+                "telemetry": {
+                  "type": "ws.telemetry.B2D",
+                  "id": 41
+                }
+              },
+              "options": {
+                "submsg_callback": true
+              }
+            },
+            "DeviceToBroker": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "error",
+                    "checkin",
+                    "sleep",
+                    "telemetry",
+                    "digitalio",
+                    "analogin",
+                    "ds18x20",
+                    "uart",
+                    "i2c",
+                    "gps",
+                    "display"
+                  ]
+                }
+              },
+              "fields": {
+                "error": {
+                  "type": "ws.error.D2B",
+                  "id": 10
+                },
+                "checkin": {
+                  "type": "ws.checkin.D2B",
+                  "id": 20
+                },
+                "sleep": {
+                  "type": "ws.sleep.D2B",
+                  "id": 21
+                },
+                "telemetry": {
+                  "type": "ws.telemetry.D2B",
+                  "id": 22
+                },
+                "digitalio": {
+                  "type": "ws.digitalio.D2B",
+                  "id": 30
+                },
+                "analogin": {
+                  "type": "ws.analogin.D2B",
+                  "id": 31
+                },
+                "ds18x20": {
+                  "type": "ws.ds18x20.D2B",
+                  "id": 32
+                },
+                "uart": {
+                  "type": "ws.uart.D2B",
+                  "id": 33
+                },
+                "i2c": {
+                  "type": "ws.i2c.D2B",
+                  "id": 34
+                },
+                "gps": {
+                  "type": "ws.gps.D2B",
+                  "id": 35
+                },
+                "display": {
+                  "type": "ws.display.D2B",
+                  "id": 36
+                }
+              },
+              "options": {
+                "submsg_callback": true
+              }
+            }
+          }
+        },
+        "error": {
+          "nested": {
+            "ErrorIOBan": {
+              "fields": {}
+            },
+            "ErrorIOThrottle": {
+              "fields": {
+                "timeout": {
+                  "type": "uint32",
+                  "id": 1
+                }
+              }
+            },
+            "B2D": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "ban",
+                    "throttle"
+                  ]
+                }
+              },
+              "fields": {
+                "ban": {
+                  "type": "BanError",
+                  "id": 1
+                },
+                "throttle": {
+                  "type": "ThrottleError",
+                  "id": 2
+                }
+              },
+              "options": {
+                "submsg_callback": true
+              }
+            },
+            "D2B": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "device",
+                    "component"
+                  ]
+                }
+              },
+              "fields": {
+                "device": {
+                  "type": "DeviceError",
+                  "id": 1
+                },
+                "component": {
+                  "type": "ComponentError",
+                  "id": 2
+                }
+              }
+            },
+            "BanError": {
+              "fields": {}
+            },
+            "ThrottleError": {
+              "fields": {
+                "timeout": {
+                  "type": "uint32",
+                  "id": 1
+                }
+              }
+            },
+            "DeviceError": {
+              "oneofs": {
+                "descriptor": {
+                  "oneof": [
+                    "i2cBus"
+                  ]
+                }
+              },
+              "fields": {
+                "message": {
+                  "type": "string",
+                  "id": 1
+                },
+                "i2cBus": {
+                  "type": "i2c.AddressSpace",
+                  "id": 2
+                }
+              }
+            },
+            "ComponentError": {
+              "oneofs": {
+                "descriptor": {
+                  "oneof": [
+                    "pin",
+                    "i2c",
+                    "uart",
+                    "spi"
+                  ]
+                }
+              },
+              "fields": {
+                "message": {
+                  "type": "string",
+                  "id": 1
+                },
+                "pin": {
+                  "type": "string",
+                  "id": 2
+                },
+                "i2c": {
+                  "type": "i2c.Descriptor",
+                  "id": 3
+                },
+                "uart": {
+                  "type": "uart.Descriptor",
+                  "id": 4
+                },
+                "spi": {
+                  "type": "spi.Descriptor",
+                  "id": 5
+                }
+              }
+            }
+          }
+        },
+        "i2c": {
+          "nested": {
+            "B2D": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "probe",
+                    "add",
+                    "remove"
+                  ]
+                }
+              },
+              "fields": {
+                "probe": {
+                  "type": "Probe",
+                  "id": 1
+                },
+                "add": {
+                  "type": "Add",
+                  "id": 2
+                },
+                "remove": {
+                  "type": "Remove",
+                  "id": 3
+                }
+              }
+            },
+            "D2B": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "probed",
+                    "event"
+                  ]
+                }
+              },
+              "fields": {
+                "probed": {
+                  "type": "Probed",
+                  "id": 1
+                },
+                "event": {
+                  "type": "Event",
+                  "id": 2
+                }
+              }
+            },
+            "AddressSpace": {
+              "fields": {
+                "pinScl": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 32
+                  }
+                },
+                "pinSda": {
+                  "type": "string",
+                  "id": 2,
+                  "options": {
+                    "max_size": 32
+                  }
+                },
+                "muxAddress": {
+                  "type": "uint32",
+                  "id": 3
+                },
+                "muxChannel": {
+                  "type": "uint32",
+                  "id": 4
+                }
+              }
+            },
+            "Probe": {
+              "fields": {
+                "addressSpaces": {
+                  "rule": "repeated",
+                  "type": "AddressSpace",
+                  "id": 1
+                },
+                "addresses": {
+                  "rule": "repeated",
+                  "type": "uint32",
+                  "id": 2
+                }
+              }
+            },
+            "AddressSpaceResult": {
+              "fields": {
+                "addressSpace": {
+                  "type": "AddressSpace",
+                  "id": 1
+                },
+                "foundAddresses": {
+                  "rule": "repeated",
+                  "type": "uint32",
+                  "id": 2
+                }
+              }
+            },
+            "Probed": {
+              "fields": {
+                "results": {
+                  "rule": "repeated",
+                  "type": "AddressSpaceResult",
+                  "id": 1,
+                  "options": {
+                    "max_count": 16
+                  }
+                }
+              }
+            },
+            "Descriptor": {
+              "fields": {
+                "addressSpace": {
+                  "type": "AddressSpace",
+                  "id": 1
+                },
+                "address": {
+                  "type": "uint32",
+                  "id": 2
+                }
+              }
+            },
+            "Add": {
+              "fields": {
+                "descriptor": {
+                  "type": "Descriptor",
+                  "id": 1
+                },
+                "name": {
+                  "type": "string",
+                  "id": 2,
+                  "options": {
+                    "max_size": 16
+                  }
+                },
+                "period": {
+                  "type": "float",
+                  "id": 3
+                },
+                "types": {
+                  "keyType": "uint32",
+                  "type": "ws.sensor.Type",
+                  "id": 4,
+                  "options": {
+                    "max_count": 16
+                  }
+                },
+                "settings": {
+                  "type": "ws.config.Settings",
+                  "id": 5
+                }
+              }
+            },
+            "Remove": {
+              "fields": {
+                "descriptor": {
+                  "type": "Descriptor",
+                  "id": 1
+                }
+              }
+            },
+            "Event": {
+              "fields": {
+                "descriptor": {
+                  "type": "Descriptor",
+                  "id": 1
+                },
+                "events": {
+                  "keyType": "uint32",
+                  "type": "ws.sensor.Event",
+                  "id": 2,
+                  "options": {
+                    "max_count": 16
+                  }
+                }
+              }
+            }
+          }
+        },
+        "config": {
+          "nested": {
+            "Value": {
+              "oneofs": {
+                "value": {
+                  "oneof": [
+                    "strValue",
+                    "intValue",
+                    "floatValue",
+                    "boolValue"
+                  ]
+                }
+              },
+              "fields": {
+                "strValue": {
+                  "type": "string",
+                  "id": 1
+                },
+                "intValue": {
+                  "type": "int32",
+                  "id": 2
+                },
+                "floatValue": {
+                  "type": "float",
+                  "id": 3
+                },
+                "boolValue": {
+                  "type": "bool",
+                  "id": 4
+                }
+              }
+            },
+            "Settings": {
+              "fields": {
+                "settings": {
+                  "keyType": "string",
+                  "type": "Value",
+                  "id": 1
+                }
+              }
+            }
+          }
+        },
+        "sensor": {
+          "nested": {
+            "Type": {
+              "values": {
+                "T_UNSPECIFIED": 0,
+                "T_ACCELEROMETER": 1,
+                "T_MAGNETIC_FIELD": 2,
+                "T_ORIENTATION": 3,
+                "T_GYROSCOPE": 4,
+                "T_LIGHT": 5,
+                "T_PRESSURE": 6,
+                "T_PROXIMITY": 8,
+                "T_GRAVITY": 9,
+                "T_LINEAR_ACCELERATION": 10,
+                "T_ROTATION_VECTOR": 11,
+                "T_RELATIVE_HUMIDITY": 12,
+                "T_AMBIENT_TEMPERATURE": 13,
+                "T_OBJECT_TEMPERATURE": 14,
+                "T_VOLTAGE": 15,
+                "T_CURRENT": 16,
+                "T_COLOR": 17,
+                "T_RAW": 18,
+                "T_PM10_STD": 19,
+                "T_PM25_STD": 20,
+                "T_PM100_STD": 21,
+                "T_PM10_ENV": 22,
+                "T_PM25_ENV": 23,
+                "T_PM100_ENV": 24,
+                "T_CO2": 25,
+                "T_GAS_RESISTANCE": 26,
+                "T_ALTITUDE": 27,
+                "T_LUX": 28,
+                "T_ECO2": 29,
+                "T_UNITLESS_PERCENT": 30,
+                "T_AMBIENT_TEMPERATURE_FAHRENHEIT": 31,
+                "T_OBJECT_TEMPERATURE_FAHRENHEIT": 32,
+                "T_VOC_INDEX": 33,
+                "T_NOX_INDEX": 34,
+                "T_TVOC": 35,
+                "T_BYTES": 36,
+                "T_BOOLEAN": 37
+              }
+            },
+            "Event": {
+              "oneofs": {
+                "value": {
+                  "oneof": [
+                    "floatValue",
+                    "bytesValue",
+                    "vectorValue",
+                    "orientationValue",
+                    "colorValue",
+                    "boolValue"
+                  ]
+                }
+              },
+              "fields": {
+                "type": {
+                  "type": "Type",
+                  "id": 1
+                },
+                "floatValue": {
+                  "type": "float",
+                  "id": 2
+                },
+                "bytesValue": {
+                  "type": "bytes",
+                  "id": 3
+                },
+                "vectorValue": {
+                  "type": "Event3DVector",
+                  "id": 4
+                },
+                "orientationValue": {
+                  "type": "EventOrientation",
+                  "id": 5
+                },
+                "colorValue": {
+                  "type": "EventColor",
+                  "id": 6
+                },
+                "boolValue": {
+                  "type": "bool",
+                  "id": 7
+                }
+              },
+              "nested": {
+                "EventColor": {
+                  "fields": {
+                    "r": {
+                      "type": "float",
+                      "id": 1
+                    },
+                    "g": {
+                      "type": "float",
+                      "id": 2
+                    },
+                    "b": {
+                      "type": "float",
+                      "id": 3
+                    },
+                    "a": {
+                      "type": "float",
+                      "id": 4
+                    }
+                  }
+                },
+                "Event3DVector": {
+                  "fields": {
+                    "x": {
+                      "type": "float",
+                      "id": 1
+                    },
+                    "y": {
+                      "type": "float",
+                      "id": 2
+                    },
+                    "z": {
+                      "type": "float",
+                      "id": 3
+                    }
+                  }
+                },
+                "EventOrientation": {
+                  "fields": {
+                    "roll": {
+                      "type": "float",
+                      "id": 1
+                    },
+                    "pitch": {
+                      "type": "float",
+                      "id": 2
+                    },
+                    "heading": {
+                      "type": "float",
+                      "id": 3
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "spi": {
+          "nested": {
+            "Descriptor": {
+              "fields": {
+                "bus": {
+                  "type": "int32",
+                  "id": 1
+                },
+                "pinMosi": {
+                  "type": "string",
+                  "id": 2,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinSck": {
+                  "type": "string",
+                  "id": 3,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinMiso": {
+                  "type": "string",
+                  "id": 4,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinCs": {
+                  "type": "string",
+                  "id": 5,
+                  "options": {
+                    "max_size": 6
+                  }
+                }
+              }
+            }
+          }
+        },
+        "uart": {
+          "nested": {
+            "B2D": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "add",
+                    "remove",
+                    "write"
+                  ]
+                }
+              },
+              "fields": {
+                "add": {
+                  "type": "Add",
+                  "id": 1
+                },
+                "remove": {
+                  "type": "Remove",
+                  "id": 2
+                },
+                "write": {
+                  "type": "Write",
+                  "id": 3
+                }
+              }
+            },
+            "D2B": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "event"
+                  ]
+                }
+              },
+              "fields": {
+                "event": {
+                  "type": "Event",
+                  "id": 1
+                }
+              }
+            },
+            "PacketFormat": {
+              "values": {
+                "PF_UNSPECIFIED": 0,
+                "PF_8N1": 1,
+                "PF_5N1": 2,
+                "PF_6N1": 3,
+                "PF_7N1": 4,
+                "PF_5N2": 5,
+                "PF_6N2": 6,
+                "PF_7N2": 7,
+                "PF_8N2": 8,
+                "PF_5E1": 9,
+                "PF_6E1": 10,
+                "PF_7E1": 11,
+                "PF_8E1": 12,
+                "PF_5E2": 13,
+                "PF_6E2": 14,
+                "PF_7E2": 15,
+                "PF_8E2": 16,
+                "PF_5O1": 17,
+                "PF_6O1": 18,
+                "PF_7O1": 19,
+                "PF_8O1": 20,
+                "PF_5O2": 21,
+                "PF_6O2": 22,
+                "PF_7O2": 23,
+                "PF_8O2": 24
+              }
+            },
+            "GenericDeviceLineEnding": {
+              "values": {
+                "GDLE_UNSPECIFIED": 0,
+                "GDLE_LF": 1,
+                "GDLE_CRLF": 2,
+                "GDLE_TIMEOUT_100MS": 3,
+                "GDLE_TIMEOUT_1000MS": 4
+              }
+            },
+            "SerialConfig": {
+              "fields": {
+                "name": {
+                  "type": "string",
+                  "id": 1
+                },
+                "baudRate": {
+                  "type": "uint32",
+                  "id": 2
+                },
+                "format": {
+                  "type": "PacketFormat",
+                  "id": 3
+                },
+                "timeout": {
+                  "type": "float",
+                  "id": 4
+                },
+                "useSwSerial": {
+                  "type": "bool",
+                  "id": 5
+                },
+                "swSerialInvert": {
+                  "type": "bool",
+                  "id": 6
+                }
+              }
+            },
+            "GenericInputConfig": {
+              "fields": {
+                "name": {
+                  "type": "string",
+                  "id": 1
+                },
+                "lineEnding": {
+                  "type": "GenericDeviceLineEnding",
+                  "id": 2
+                },
+                "period": {
+                  "type": "int32",
+                  "id": 3
+                },
+                "types": {
+                  "rule": "repeated",
+                  "type": "ws.sensor.Type",
+                  "id": 4,
+                  "options": {
+                    "max_count": 15
+                  }
+                }
+              }
+            },
+            "TrinamicDynamixelConfig": {
+              "fields": {
+                "id": {
+                  "type": "uint32",
+                  "id": 1
+                }
+              }
+            },
+            "PM25AQIConfig": {
+              "fields": {
+                "isPm1006": {
+                  "type": "bool",
+                  "id": 1
+                },
+                "period": {
+                  "type": "int32",
+                  "id": 2
+                },
+                "types": {
+                  "rule": "repeated",
+                  "type": "ws.sensor.Type",
+                  "id": 3,
+                  "options": {
+                    "max_count": 15
+                  }
+                }
+              }
+            },
+            "DeviceConfig": {
+              "oneofs": {
+                "config": {
+                  "oneof": [
+                    "genericInput",
+                    "trinamicDynamixel",
+                    "pm25aqi"
+                  ]
+                }
+              },
+              "fields": {
+                "genericInput": {
+                  "type": "GenericInputConfig",
+                  "id": 1
+                },
+                "trinamicDynamixel": {
+                  "type": "TrinamicDynamixelConfig",
+                  "id": 2
+                },
+                "pm25aqi": {
+                  "type": "PM25AQIConfig",
+                  "id": 3
+                }
+              }
+            },
+            "Descriptor": {
+              "fields": {
+                "pinRx": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 32
+                  }
+                },
+                "pinTx": {
+                  "type": "string",
+                  "id": 2,
+                  "options": {
+                    "max_size": 32
+                  }
+                }
+              }
+            },
+            "Add": {
+              "fields": {
+                "name": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 32
+                  }
+                },
+                "descriptor": {
+                  "type": "Descriptor",
+                  "id": 2
+                },
+                "cfgSerial": {
+                  "type": "SerialConfig",
+                  "id": 3
+                },
+                "cfgDevice": {
+                  "type": "DeviceConfig",
+                  "id": 4
+                },
+                "write": {
+                  "type": "Write",
+                  "id": 5
+                }
+              }
+            },
+            "Remove": {
+              "fields": {
+                "descriptor": {
+                  "type": "Descriptor",
+                  "id": 1
+                }
+              }
+            },
+            "Write": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "bytesData",
+                    "textData"
+                  ]
+                }
+              },
+              "fields": {
+                "descriptor": {
+                  "type": "Descriptor",
+                  "id": 1
+                },
+                "bytesData": {
+                  "type": "bytes",
+                  "id": 2
+                },
+                "textData": {
+                  "type": "string",
+                  "id": 3
+                }
+              }
+            },
+            "Event": {
+              "fields": {
+                "descriptor": {
+                  "type": "Descriptor",
+                  "id": 1
+                },
+                "events": {
+                  "rule": "repeated",
+                  "type": "ws.sensor.Event",
+                  "id": 2,
+                  "options": {
+                    "max_count": 15
+                  }
+                }
+              }
+            }
+          }
+        },
+        "expander": {
+          "nested": {
+            "B2D": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "add",
+                    "remove"
+                  ]
+                }
+              },
+              "fields": {
+                "add": {
+                  "type": "Add",
+                  "id": 1
+                },
+                "remove": {
+                  "type": "Remove",
+                  "id": 2
+                }
+              }
+            },
+            "Add": {
+              "fields": {
+                "cfgI2c": {
+                  "type": "i2c.Add",
+                  "id": 1
+                }
+              }
+            },
+            "Remove": {
+              "fields": {
+                "cfgI2c": {
+                  "type": "i2c.Remove",
+                  "id": 1
+                }
+              }
+            }
+          }
+        },
+        "checkin": {
+          "nested": {
+            "B2D": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "response"
+                  ]
+                }
+              },
+              "fields": {
+                "response": {
+                  "type": "Response",
+                  "id": 1
+                }
+              },
+              "options": {
+                "submsg_callback": true
+              }
+            },
+            "D2B": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "request",
+                    "complete"
+                  ]
+                }
+              },
+              "fields": {
+                "request": {
+                  "type": "Request",
+                  "id": 1
+                },
+                "complete": {
+                  "type": "Complete",
+                  "id": 2
+                }
+              }
+            },
+            "Request": {
+              "fields": {
+                "hardwareUid": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 64
+                  }
+                },
+                "firmwareVersion": {
+                  "type": "string",
+                  "id": 2,
+                  "options": {
+                    "max_size": 25
+                  }
+                }
+              }
+            },
+            "Response": {
+              "fields": {
+                "response": {
+                  "type": "Response",
+                  "id": 1
+                },
+                "totalGpioPins": {
+                  "type": "int32",
+                  "id": 2
+                },
+                "totalAnalogPins": {
+                  "type": "int32",
+                  "id": 3
+                },
+                "referenceVoltage": {
+                  "type": "float",
+                  "id": 4
+                },
+                "componentAdds": {
+                  "type": "ComponentAdds",
+                  "id": 5
+                },
+                "sleepEnabled": {
+                  "type": "bool",
+                  "id": 6
+                },
+                "sleepConfig": {
+                  "type": "ws.sleep.SleepConfig",
+                  "id": 7
+                }
+              },
+              "nested": {
+                "Response": {
+                  "values": {
+                    "R_UNSPECIFIED": 0,
+                    "R_OK": 1,
+                    "R_BOARD_NOT_FOUND": 2
+                  }
+                }
+              }
+            },
+            "ComponentAdds": {
+              "fields": {
+                "digitalioAdds": {
+                  "rule": "repeated",
+                  "type": "ws.digitalio.Add",
+                  "id": 1
+                },
+                "analoginAdds": {
+                  "rule": "repeated",
+                  "type": "ws.analogin.Add",
+                  "id": 2
+                },
+                "servoAdds": {
+                  "rule": "repeated",
+                  "type": "ws.servo.Add",
+                  "id": 3
+                },
+                "pwmAdds": {
+                  "rule": "repeated",
+                  "type": "ws.pwm.Add",
+                  "id": 4
+                },
+                "pixelsAdds": {
+                  "rule": "repeated",
+                  "type": "ws.pixels.Add",
+                  "id": 5
+                },
+                "ds18x20Adds": {
+                  "rule": "repeated",
+                  "type": "ws.ds18x20.Add",
+                  "id": 6
+                },
+                "uartAdds": {
+                  "rule": "repeated",
+                  "type": "ws.uart.Add",
+                  "id": 7
+                },
+                "i2cAdds": {
+                  "rule": "repeated",
+                  "type": "ws.i2c.Add",
+                  "id": 8
+                },
+                "displayAdds": {
+                  "rule": "repeated",
+                  "type": "ws.display.Add",
+                  "id": 9
+                },
+                "expanderAdds": {
+                  "rule": "repeated",
+                  "type": "ws.expander.Add",
+                  "id": 10
+                },
+                "telemetryAdds": {
+                  "rule": "repeated",
+                  "type": "ws.telemetry.Add",
+                  "id": 11
+                }
+              }
+            },
+            "Complete": {
+              "fields": {}
+            }
+          }
+        },
+        "analogin": {
+          "nested": {
+            "B2D": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "add",
+                    "remove"
+                  ]
+                }
+              },
+              "fields": {
+                "add": {
+                  "type": "Add",
+                  "id": 1
+                },
+                "remove": {
+                  "type": "Remove",
+                  "id": 2
+                }
+              }
+            },
+            "D2B": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "event"
+                  ]
+                }
+              },
+              "fields": {
+                "event": {
+                  "type": "Event",
+                  "id": 1
+                }
+              }
+            },
+            "SampleMode": {
+              "values": {
+                "SM_UNSPECIFIED": 0,
+                "SM_TIMER": 1,
+                "SM_EVENT": 2
+              }
+            },
+            "Add": {
+              "fields": {
+                "pinName": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 64
+                  }
+                },
+                "period": {
+                  "type": "float",
+                  "id": 2
+                },
+                "readMode": {
+                  "type": "ws.sensor.Type",
+                  "id": 3
+                },
+                "sampleMode": {
+                  "type": "SampleMode",
+                  "id": 4
+                },
+                "refVoltage": {
+                  "type": "float",
+                  "id": 5
+                }
+              }
+            },
+            "Remove": {
+              "fields": {
+                "pinName": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 64
+                  }
+                }
+              }
+            },
+            "Event": {
+              "fields": {
+                "pinName": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 64
+                  }
+                },
+                "value": {
+                  "type": "ws.sensor.Event",
+                  "id": 2
+                }
+              }
+            }
+          }
+        },
+        "digitalio": {
+          "nested": {
+            "B2D": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "add",
+                    "remove",
+                    "write"
+                  ]
+                }
+              },
+              "fields": {
+                "add": {
+                  "type": "Add",
+                  "id": 1
+                },
+                "remove": {
+                  "type": "Remove",
+                  "id": 2
+                },
+                "write": {
+                  "type": "Write",
+                  "id": 3
+                }
+              }
+            },
+            "D2B": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "event"
+                  ]
+                }
+              },
+              "fields": {
+                "event": {
+                  "type": "Event",
+                  "id": 1
+                }
+              }
+            },
+            "SampleMode": {
+              "values": {
+                "SM_UNSPECIFIED": 0,
+                "SM_TIMER": 1,
+                "SM_EVENT": 2
+              }
+            },
+            "Direction": {
+              "values": {
+                "D_UNSPECIFIED": 0,
+                "D_INPUT": 1,
+                "D_INPUT_PULL_UP": 2,
+                "D_OUTPUT": 3
+              }
+            },
+            "Add": {
+              "fields": {
+                "pinName": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 64
+                  }
+                },
+                "gpioDirection": {
+                  "type": "Direction",
+                  "id": 2
+                },
+                "sampleMode": {
+                  "type": "SampleMode",
+                  "id": 3
+                },
+                "period": {
+                  "type": "float",
+                  "id": 4
+                },
+                "write": {
+                  "type": "Write",
+                  "id": 5
+                },
+                "isInverted": {
+                  "type": "bool",
+                  "id": 6
+                }
+              }
+            },
+            "Remove": {
+              "fields": {
+                "pinName": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 64
+                  }
+                }
+              }
+            },
+            "Event": {
+              "fields": {
+                "pinName": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 64
+                  }
+                },
+                "value": {
+                  "type": "ws.sensor.Event",
+                  "id": 2
+                }
+              }
+            },
+            "Write": {
+              "fields": {
+                "pinName": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 64
+                  }
+                },
+                "value": {
+                  "type": "ws.sensor.Event",
+                  "id": 2
+                }
+              }
+            }
+          }
+        },
+        "ds18x20": {
+          "nested": {
+            "B2D": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "add",
+                    "remove"
+                  ]
+                }
+              },
+              "fields": {
+                "add": {
+                  "type": "Add",
+                  "id": 1
+                },
+                "remove": {
+                  "type": "Remove",
+                  "id": 2
+                }
+              }
+            },
+            "D2B": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "event"
+                  ]
+                }
+              },
+              "fields": {
+                "event": {
+                  "type": "Event",
+                  "id": 1
+                }
+              }
+            },
+            "Add": {
+              "fields": {
+                "onewirePin": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 5
+                  }
+                },
+                "sensorResolution": {
+                  "type": "int32",
+                  "id": 2
+                },
+                "period": {
+                  "type": "float",
+                  "id": 3
+                },
+                "types": {
+                  "rule": "repeated",
+                  "type": "ws.sensor.Type",
+                  "id": 4,
+                  "options": {
+                    "max_count": 2
+                  }
+                }
+              }
+            },
+            "Remove": {
+              "fields": {
+                "onewirePin": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 5
+                  }
+                }
+              }
+            },
+            "Event": {
+              "fields": {
+                "onewirePin": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 5
+                  }
+                },
+                "events": {
+                  "rule": "repeated",
+                  "type": "ws.sensor.Event",
+                  "id": 2,
+                  "options": {
+                    "max_count": 2
+                  }
+                }
+              }
+            }
+          }
+        },
+        "pixels": {
+          "nested": {
+            "B2D": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "add",
+                    "remove",
+                    "write"
+                  ]
+                }
+              },
+              "fields": {
+                "add": {
+                  "type": "Add",
+                  "id": 1
+                },
+                "remove": {
+                  "type": "Remove",
+                  "id": 2
+                },
+                "write": {
+                  "type": "Write",
+                  "id": 3
+                }
+              }
+            },
+            "Type": {
+              "values": {
+                "T_UNSPECIFIED": 0,
+                "T_NEOPIXEL": 1,
+                "T_DOTSTAR": 2
+              }
+            },
+            "Order": {
+              "values": {
+                "O_UNSPECIFIED": 0,
+                "O_GRB": 1,
+                "O_GRBW": 2,
+                "O_RGB": 3,
+                "O_RGBW": 4,
+                "O_BRG": 5,
+                "O_RBG": 6,
+                "O_GBR": 7,
+                "O_BGR": 8
+              }
+            },
+            "Add": {
+              "fields": {
+                "type": {
+                  "type": "Type",
+                  "id": 1
+                },
+                "num": {
+                  "type": "uint32",
+                  "id": 2
+                },
+                "ordering": {
+                  "type": "Order",
+                  "id": 3
+                },
+                "brightness": {
+                  "type": "uint32",
+                  "id": 4
+                },
+                "pinData": {
+                  "type": "string",
+                  "id": 5,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinDotstarClock": {
+                  "type": "string",
+                  "id": 6,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "write": {
+                  "type": "Write",
+                  "id": 7
+                }
+              }
+            },
+            "Remove": {
+              "fields": {
+                "pinData": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 6
+                  }
+                }
+              }
+            },
+            "Write": {
+              "fields": {
+                "pinData": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "color": {
+                  "type": "uint32",
+                  "id": 2
+                }
+              }
+            }
+          }
+        },
+        "pwm": {
+          "nested": {
+            "B2D": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "add",
+                    "remove",
+                    "write"
+                  ]
+                }
+              },
+              "fields": {
+                "add": {
+                  "type": "Add",
+                  "id": 1
+                },
+                "remove": {
+                  "type": "Remove",
+                  "id": 2
+                },
+                "write": {
+                  "type": "Write",
+                  "id": 3
+                }
+              }
+            },
+            "Add": {
+              "fields": {
+                "pin": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 16
+                  }
+                },
+                "frequency": {
+                  "type": "int32",
+                  "id": 2
+                },
+                "resolution": {
+                  "type": "int32",
+                  "id": 3
+                },
+                "isInverted": {
+                  "type": "bool",
+                  "id": 4
+                },
+                "write": {
+                  "type": "Write",
+                  "id": 5
+                }
+              }
+            },
+            "Remove": {
+              "fields": {
+                "pin": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 16
+                  }
+                }
+              }
+            },
+            "Write": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "dutyCycle",
+                    "frequency"
+                  ]
+                }
+              },
+              "fields": {
+                "pin": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 16
+                  }
+                },
+                "dutyCycle": {
+                  "type": "int32",
+                  "id": 2
+                },
+                "frequency": {
+                  "type": "int32",
+                  "id": 3
+                }
+              }
+            }
+          }
+        },
+        "servo": {
+          "nested": {
+            "B2D": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "add",
+                    "remove",
+                    "write"
+                  ]
+                }
+              },
+              "fields": {
+                "add": {
+                  "type": "Add",
+                  "id": 1
+                },
+                "remove": {
+                  "type": "Remove",
+                  "id": 2
+                },
+                "write": {
+                  "type": "Write",
+                  "id": 3
+                }
+              }
+            },
+            "Add": {
+              "fields": {
+                "servoPin": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "freq": {
+                  "type": "int32",
+                  "id": 2
+                },
+                "minPulseWidth": {
+                  "type": "int32",
+                  "id": 3
+                },
+                "maxPulseWidth": {
+                  "type": "int32",
+                  "id": 4
+                },
+                "write": {
+                  "type": "Write",
+                  "id": 5
+                }
+              }
+            },
+            "Remove": {
+              "fields": {
+                "servoPin": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 6
+                  }
+                }
+              }
+            },
+            "Write": {
+              "fields": {
+                "servoPin": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pulseWidth": {
+                  "type": "int32",
+                  "id": 2
+                }
+              }
+            }
+          }
+        },
+        "sleep": {
+          "nested": {
+            "SleepMode": {
+              "values": {
+                "S_UNSPECIFIED": 0,
+                "S_LIGHT": 1,
+                "S_DEEP": 2
+              }
+            },
+            "B2D": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "sleepConfig"
+                  ]
+                }
+              },
+              "fields": {
+                "sleepConfig": {
+                  "type": "SleepConfig",
+                  "id": 1
+                }
+              }
+            },
+            "D2B": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "goodnight"
+                  ]
+                }
+              },
+              "fields": {
+                "goodnight": {
+                  "type": "Goodnight",
+                  "id": 1
+                }
+              }
+            },
+            "Goodnight": {
+              "fields": {}
+            },
+            "TimerConfig": {
+              "fields": {
+                "duration": {
+                  "type": "uint32",
+                  "id": 1
+                }
+              }
+            },
+            "Ext0Config": {
+              "fields": {
+                "pinName": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 32
+                  }
+                },
+                "level": {
+                  "type": "bool",
+                  "id": 2
+                },
+                "pull": {
+                  "type": "bool",
+                  "id": 3
+                }
+              }
+            },
+            "SleepConfig": {
+              "oneofs": {
+                "config": {
+                  "oneof": [
+                    "timer",
+                    "ext0"
+                  ]
+                }
+              },
+              "fields": {
+                "mode": {
+                  "type": "SleepMode",
+                  "id": 1
+                },
+                "timer": {
+                  "type": "TimerConfig",
+                  "id": 2
+                },
+                "ext0": {
+                  "type": "Ext0Config",
+                  "id": 3
+                }
+              }
+            }
+          }
+        },
+        "display": {
+          "nested": {
+            "B2D": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "add",
+                    "remove",
+                    "write"
+                  ]
+                }
+              },
+              "fields": {
+                "add": {
+                  "type": "Add",
+                  "id": 1
+                },
+                "remove": {
+                  "type": "Remove",
+                  "id": 2
+                },
+                "write": {
+                  "type": "Write",
+                  "id": 3
+                }
+              }
+            },
+            "D2B": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "writeComplete"
+                  ]
+                }
+              },
+              "fields": {
+                "writeComplete": {
+                  "type": "WriteComplete",
+                  "id": 1
+                }
+              }
+            },
+            "DisplayClass": {
+              "values": {
+                "DISPLAY_CLASS_UNSPECIFIED": 0,
+                "DISPLAY_CLASS_EPD": 1,
+                "DISPLAY_CLASS_TFT": 2,
+                "DISPLAY_CLASS_OLED": 3,
+                "DISPLAY_CLASS_LED_BACKPACK": 4,
+                "DISPLAY_CLASS_CHAR_LCD": 5
+              }
+            },
+            "EPDMode": {
+              "values": {
+                "EPD_MODE_UNSPECIFIED": 0,
+                "EPD_MODE_MONO": 1,
+                "EPD_MODE_TRICOLOR": 2,
+                "EPD_MODE_GRAYSCALE4": 3,
+                "EPD_MODE_MONO_PARTIAL": 4,
+                "EPD_MODE_QUADCOLOR": 5
+              }
+            },
+            "LedBackpackAlignment": {
+              "values": {
+                "LBA_UNSPECIFIED": 0,
+                "LBA_LEFT": 1,
+                "LBA_RIGHT": 2
+              }
+            },
+            "DisplayProperties": {
+              "fields": {
+                "width": {
+                  "type": "int32",
+                  "id": 1
+                },
+                "height": {
+                  "type": "int32",
+                  "id": 2
+                },
+                "rotation": {
+                  "type": "int32",
+                  "id": 3
+                },
+                "textSize": {
+                  "type": "int32",
+                  "id": 4
+                },
+                "statusBar": {
+                  "type": "bool",
+                  "id": 5,
+                  "options": {
+                    "initializer": "\"true\""
+                  }
+                }
+              }
+            },
+            "EpdSpiDescriptor": {
+              "fields": {
+                "spi": {
+                  "type": "ws.spi.Descriptor",
+                  "id": 1
+                },
+                "pinDc": {
+                  "type": "string",
+                  "id": 2,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinRst": {
+                  "type": "string",
+                  "id": 3,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinSramCs": {
+                  "type": "string",
+                  "id": 4,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinBusy": {
+                  "type": "string",
+                  "id": 5,
+                  "options": {
+                    "max_size": 6
+                  }
+                }
+              }
+            },
+            "EPDConfig": {
+              "fields": {
+                "mode": {
+                  "type": "EPDMode",
+                  "id": 1
+                },
+                "properties": {
+                  "type": "DisplayProperties",
+                  "id": 2
+                }
+              }
+            },
+            "LedBackpackConfig": {
+              "fields": {
+                "brightness": {
+                  "type": "int32",
+                  "id": 1
+                },
+                "alignment": {
+                  "type": "LedBackpackAlignment",
+                  "id": 2
+                }
+              }
+            },
+            "CharLcdConfig": {
+              "fields": {
+                "rows": {
+                  "type": "uint32",
+                  "id": 1
+                },
+                "columns": {
+                  "type": "uint32",
+                  "id": 2
+                }
+              }
+            },
+            "TftSpiDescriptor": {
+              "fields": {
+                "spi": {
+                  "type": "ws.spi.Descriptor",
+                  "id": 1
+                },
+                "pinDc": {
+                  "type": "string",
+                  "id": 2,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinRst": {
+                  "type": "string",
+                  "id": 3,
+                  "options": {
+                    "max_size": 6
+                  }
+                }
+              }
+            },
+            "TtlRgb666PinDescriptor": {
+              "fields": {
+                "pinR0": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinR1": {
+                  "type": "string",
+                  "id": 2,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinR2": {
+                  "type": "string",
+                  "id": 3,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinG0": {
+                  "type": "string",
+                  "id": 4,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinG1": {
+                  "type": "string",
+                  "id": 5,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinG2": {
+                  "type": "string",
+                  "id": 6,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinB0": {
+                  "type": "string",
+                  "id": 7,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinB1": {
+                  "type": "string",
+                  "id": 8,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinB2": {
+                  "type": "string",
+                  "id": 9,
+                  "options": {
+                    "max_size": 6
+                  }
+                }
+              }
+            },
+            "I8080PinDescriptor": {
+              "fields": {
+                "pinD0": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinD1": {
+                  "type": "string",
+                  "id": 2,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinD2": {
+                  "type": "string",
+                  "id": 3,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinD3": {
+                  "type": "string",
+                  "id": 4,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinD4": {
+                  "type": "string",
+                  "id": 5,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinD5": {
+                  "type": "string",
+                  "id": 6,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinD6": {
+                  "type": "string",
+                  "id": 7,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinD7": {
+                  "type": "string",
+                  "id": 8,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinCs": {
+                  "type": "string",
+                  "id": 9,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinDc": {
+                  "type": "string",
+                  "id": 10,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinRst": {
+                  "type": "string",
+                  "id": 11,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinWrite": {
+                  "type": "string",
+                  "id": 12,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "pinRead": {
+                  "type": "string",
+                  "id": 13,
+                  "options": {
+                    "max_size": 6
+                  }
+                }
+              }
+            },
+            "DsiInterfaceDescriptor": {
+              "fields": {
+                "bus": {
+                  "type": "uint32",
+                  "id": 1
+                },
+                "pinRst": {
+                  "type": "string",
+                  "id": 2,
+                  "options": {
+                    "max_size": 6
+                  }
+                }
+              }
+            },
+            "BacklightConfig": {
+              "oneofs": {
+                "backlightAdd": {
+                  "oneof": [
+                    "backlightDigital",
+                    "backlightPwm"
+                  ]
+                }
+              },
+              "fields": {
+                "backlightDigital": {
+                  "type": "ws.digitalio.Add",
+                  "id": 1
+                },
+                "backlightPwm": {
+                  "type": "ws.pwm.Add",
+                  "id": 2
+                }
+              }
+            },
+            "InterfaceDescriptor": {
+              "oneofs": {
+                "descriptor": {
+                  "oneof": [
+                    "spiEpd",
+                    "spiTft",
+                    "i2c",
+                    "ttlRgb666",
+                    "i8080",
+                    "dsi"
+                  ]
+                }
+              },
+              "fields": {
+                "spiEpd": {
+                  "type": "EpdSpiDescriptor",
+                  "id": 2
+                },
+                "spiTft": {
+                  "type": "TftSpiDescriptor",
+                  "id": 3
+                },
+                "i2c": {
+                  "type": "ws.i2c.Descriptor",
+                  "id": 4
+                },
+                "ttlRgb666": {
+                  "type": "TtlRgb666PinDescriptor",
+                  "id": 5
+                },
+                "i8080": {
+                  "type": "I8080PinDescriptor",
+                  "id": 6
+                },
+                "dsi": {
+                  "type": "DsiInterfaceDescriptor",
+                  "id": 7
+                }
+              }
+            },
+            "Add": {
+              "oneofs": {
+                "config": {
+                  "oneof": [
+                    "configEpd",
+                    "configLed",
+                    "configCharLcd",
+                    "configDisplay"
+                  ]
+                }
+              },
+              "fields": {
+                "name": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 64
+                  }
+                },
+                "type": {
+                  "type": "DisplayClass",
+                  "id": 2
+                },
+                "driver": {
+                  "type": "string",
+                  "id": 3,
+                  "options": {
+                    "max_size": 32
+                  }
+                },
+                "panel": {
+                  "type": "string",
+                  "id": 4,
+                  "options": {
+                    "max_size": 32
+                  }
+                },
+                "interfaceType": {
+                  "type": "InterfaceDescriptor",
+                  "id": 5
+                },
+                "configEpd": {
+                  "type": "EPDConfig",
+                  "id": 6
+                },
+                "configLed": {
+                  "type": "LedBackpackConfig",
+                  "id": 7
+                },
+                "configCharLcd": {
+                  "type": "CharLcdConfig",
+                  "id": 8
+                },
+                "configDisplay": {
+                  "type": "DisplayProperties",
+                  "id": 9
+                },
+                "write": {
+                  "type": "Write",
+                  "id": 10
+                },
+                "backlight": {
+                  "type": "BacklightConfig",
+                  "id": 11
+                },
+                "power": {
+                  "type": "ws.digitalio.Add",
+                  "id": 12
+                }
+              }
+            },
+            "Remove": {
+              "fields": {
+                "name": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 64
+                  }
+                },
+                "descriptor": {
+                  "type": "InterfaceDescriptor",
+                  "id": 3
+                }
+              }
+            },
+            "Write": {
+              "fields": {
+                "name": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 64
+                  }
+                },
+                "descriptor": {
+                  "type": "InterfaceDescriptor",
+                  "id": 2
+                },
+                "message": {
+                  "type": "string",
+                  "id": 3,
+                  "options": {
+                    "max_size": 1024
+                  }
+                },
+                "image": {
+                  "type": "Canvas",
+                  "id": 4
+                }
+              }
+            },
+            "Canvas": {
+              "fields": {
+                "checksum": {
+                  "type": "uint32",
+                  "id": 1
+                },
+                "size": {
+                  "type": "uint32",
+                  "id": 2
+                },
+                "chunkId": {
+                  "type": "uint32",
+                  "id": 3
+                },
+                "chunkTotal": {
+                  "type": "uint32",
+                  "id": 4
+                },
+                "chunkData": {
+                  "type": "bytes",
+                  "id": 5
+                }
+              }
+            },
+            "WriteComplete": {
+              "fields": {}
+            }
+          }
+        },
+        "telemetry": {
+          "nested": {
+            "B2D": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "add",
+                    "remove"
+                  ]
+                }
+              },
+              "fields": {
+                "add": {
+                  "type": "Add",
+                  "id": 1
+                },
+                "remove": {
+                  "type": "Remove",
+                  "id": 2
+                }
+              }
+            },
+            "D2B": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "event"
+                  ]
+                }
+              },
+              "fields": {
+                "event": {
+                  "type": "Event",
+                  "id": 1
+                }
+              }
+            },
+            "Add": {
+              "fields": {
+                "name": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 24
+                  }
+                },
+                "period": {
+                  "type": "float",
+                  "id": 2
+                }
+              }
+            },
+            "Remove": {
+              "fields": {
+                "name": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 24
+                  }
+                }
+              }
+            },
+            "Event": {
+              "fields": {
+                "name": {
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 24
+                  }
+                },
+                "value": {
+                  "type": "ws.sensor.Event",
+                  "id": 2
+                }
+              }
+            }
+          }
+        },
+        "gps": {
+          "nested": {
+            "B2D": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "add",
+                    "remove"
+                  ]
+                }
+              },
+              "fields": {
+                "add": {
+                  "type": "Add",
+                  "id": 1
+                },
+                "remove": {
+                  "type": "Remove",
+                  "id": 2
+                }
+              }
+            },
+            "D2B": {
+              "oneofs": {
+                "payload": {
+                  "oneof": [
+                    "event"
+                  ]
+                }
+              },
+              "fields": {
+                "event": {
+                  "type": "Event",
+                  "id": 1
+                }
+              }
+            },
+            "Add": {
+              "fields": {
+                "addI2c": {
+                  "type": "i2c.Add",
+                  "id": 1
+                },
+                "addUart": {
+                  "type": "uart.Add",
+                  "id": 2
+                },
+                "config": {
+                  "type": "Config",
+                  "id": 3
+                }
+              }
+            },
+            "Remove": {
+              "fields": {
+                "removeI2c": {
+                  "type": "i2c.Remove",
+                  "id": 1
+                },
+                "removeUart": {
+                  "type": "uart.Remove",
+                  "id": 2
+                }
+              }
+            },
+            "Config": {
+              "fields": {
+                "commandsPmtks": {
+                  "rule": "repeated",
+                  "type": "string",
+                  "id": 1,
+                  "options": {
+                    "max_size": 90,
+                    "max_count": 8
+                  }
+                },
+                "commandsUbxes": {
+                  "rule": "repeated",
+                  "type": "bytes",
+                  "id": 2,
+                  "options": {
+                    "max_size": 128,
+                    "max_count": 8
+                  }
+                },
+                "period": {
+                  "type": "int32",
+                  "id": 3
+                }
+              }
+            },
+            "DateTime": {
+              "fields": {
+                "hour": {
+                  "type": "int32",
+                  "id": 1
+                },
+                "minute": {
+                  "type": "int32",
+                  "id": 2
+                },
+                "seconds": {
+                  "type": "int32",
+                  "id": 3
+                },
+                "milliseconds": {
+                  "type": "int32",
+                  "id": 4
+                },
+                "day": {
+                  "type": "int32",
+                  "id": 5
+                },
+                "month": {
+                  "type": "int32",
+                  "id": 6
+                },
+                "year": {
+                  "type": "int32",
+                  "id": 7
+                }
+              }
+            },
+            "RMCResponse": {
+              "fields": {
+                "datetime": {
+                  "type": "DateTime",
+                  "id": 1
+                },
+                "fixStatus": {
+                  "type": "string",
+                  "id": 2,
+                  "options": {
+                    "max_size": 2
+                  }
+                },
+                "lat": {
+                  "type": "string",
+                  "id": 3,
+                  "options": {
+                    "max_size": 12
+                  }
+                },
+                "latDir": {
+                  "type": "string",
+                  "id": 4,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "lon": {
+                  "type": "string",
+                  "id": 5,
+                  "options": {
+                    "max_size": 12
+                  }
+                },
+                "lonDir": {
+                  "type": "string",
+                  "id": 6,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "speed": {
+                  "type": "string",
+                  "id": 7,
+                  "options": {
+                    "max_size": 8
+                  }
+                },
+                "angle": {
+                  "type": "string",
+                  "id": 8,
+                  "options": {
+                    "max_size": 7
+                  }
+                }
+              }
+            },
+            "GPGGAResponse": {
+              "fields": {
+                "datetime": {
+                  "type": "DateTime",
+                  "id": 1
+                },
+                "lat": {
+                  "type": "string",
+                  "id": 2,
+                  "options": {
+                    "max_size": 12
+                  }
+                },
+                "latDir": {
+                  "type": "string",
+                  "id": 3,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "lon": {
+                  "type": "string",
+                  "id": 4,
+                  "options": {
+                    "max_size": 12
+                  }
+                },
+                "lonDir": {
+                  "type": "string",
+                  "id": 5,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "fixQuality": {
+                  "type": "int32",
+                  "id": 6
+                },
+                "numSatellites": {
+                  "type": "int32",
+                  "id": 7
+                },
+                "hdop": {
+                  "type": "string",
+                  "id": 8,
+                  "options": {
+                    "max_size": 6
+                  }
+                },
+                "altitude": {
+                  "type": "string",
+                  "id": 9,
+                  "options": {
+                    "max_size": 8
+                  }
+                },
+                "geoidHeight": {
+                  "type": "string",
+                  "id": 10,
+                  "options": {
+                    "max_size": 10
+                  }
+                }
+              }
+            },
+            "Event": {
+              "fields": {
+                "rmcResponses": {
+                  "rule": "repeated",
+                  "type": "RMCResponse",
+                  "id": 1,
+                  "options": {
+                    "max_count": 10
+                  }
+                },
+                "ggaResponses": {
+                  "rule": "repeated",
+                  "type": "GPGGAResponse",
+                  "id": 2,
+                  "options": {
+                    "max_count": 10
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

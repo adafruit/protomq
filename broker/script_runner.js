@@ -263,13 +263,12 @@ export class ScriptExecutor {
     if (step.response) {
       console.log(`[Script: ${this.script.name}] Sending response for "${step.name}" on ${this._b2dTopic}`)
       const encoded = BrokerToDevice.encode(BrokerToDevice.fromObject(step.response)).finish()
-      const publishPacket = { topic: this._b2dTopic, payload: encoded }
+      const publishPacket = { topic: this._b2dTopic, payload: encoded, qos: 1 }
 
       // checkin.complete should map to transport completion (PUBACK), not
       // merely enqueueing the checkin response publish.
       if (step.response.checkin?.response || step.response.checkinResponse) {
-        // QoS 1 is required so MQTT PUBACK can drive checkin.complete.
-        publishPacket.qos = 1
+        // Published at QoS 1 (above) so the MQTT PUBACK can drive checkin.complete.
         const { hasAckCapableSubscriber } = this._logB2dSubscriptionQos()
 
         if (hasAckCapableSubscriber) {
@@ -288,13 +287,21 @@ export class ScriptExecutor {
         }
       }
 
-      this.broker.publish(publishPacket)
+      // Defer the publish out of the current tick: when this step is triggered
+      // by an incoming D2B packet, _executeStep runs inside the broker's fan-out
+      // of that packet. Publishing synchronously here is a re-entrant publish
+      // that clobbers the triggering packet's still-pending delivery to other
+      // subscribers (e.g. the web UI never sees the checkin request). Ack
+      // bookkeeping above already ran, so deferring only the network publish is
+      // safe. Harmless when called from a timer (already off the fan-out stack).
+      const packetToPublish = publishPacket
+      setImmediate(() => this.broker.publish(packetToPublish))
     }
 
     if (step.send) {
       console.log(`[Script: ${this.script.name}] Sending payload for "${step.name}" on ${this._b2dTopic}`)
       const encoded = BrokerToDevice.encode(BrokerToDevice.fromObject(step.send)).finish()
-      this.broker.publish({ topic: this._b2dTopic, payload: encoded })
+      setImmediate(() => this.broker.publish({ topic: this._b2dTopic, payload: encoded, qos: 1 }))
     }
 
     // Mark step complete

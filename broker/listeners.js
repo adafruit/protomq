@@ -75,7 +75,7 @@ const
       return { id, subscriptions: Object.keys(subscriptions) }
     })
     // publish client data on magic topic
-    broker.publish({ topic: "state/clients", payload: JSON.stringify(clients) })
+    broker.publish({ topic: "state/clients", payload: JSON.stringify(clients), qos: 1 })
   },
   REACTIVE_EMITTERS = {
     client: emitState,

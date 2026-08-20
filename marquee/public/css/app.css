@@ -41,6 +41,44 @@
 .chrome .sep { opacity: 0.4; }
 .chrome .chrome-note { font-size: 12px; opacity: 0.65; }
 
+/* The clapperboard at chrome scale: 28px against Showtime's 64. Deliberately the same two
+   parts — stripes, then a captioned readout — rather than a simplification of them, because
+   shrinking it whole is what makes it read as the sleep bar in miniature instead of as one
+   more status field. The stripe bands scale with the face: 16px/32px over 140px becomes
+   5px/10px over 30px, so the diagonal keeps its pitch rather than becoming two wide wedges. */
+.chrome-clapper {
+  display: flex;
+  align-items: stretch;
+  flex: none;
+  height: 28px;
+  border: 1px solid var(--color-chrome-hairline);
+}
+.chrome-clapper .stripes {
+  width: 30px;
+  border-right: 1px solid var(--color-chrome-text);
+  background: repeating-linear-gradient(115deg,
+    var(--color-chrome-text) 0 5px,
+    var(--color-accent-500) 5px 10px);
+}
+.chrome-clapper .readout { display: flex; align-items: center; gap: 8px; padding: 0 10px; }
+.chrome-clapper .cap {
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+/* Tabular figures for the same reason the big one has them: a countdown whose digits change
+   width jitters the whole bar once a second. */
+.chrome-clapper .time {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 16px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
 /* The device pill is the only LIVE thing in the chrome — everything else up here is
    a label — so it is sized to be read at a glance rather than to match the crumbs.
    It also drops the uppercasing every other pill gets: its states are words with an

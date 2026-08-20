@@ -27,6 +27,16 @@
     <span class="crumb crumb-current">Marquee</span>
     <span class="spacer"></span>
     <span class="chrome-note" id="chromeNote">Draft · not saved</span>
+    <!-- The sleep clock in miniature, beside the state it belongs to. Written by a8.js's
+         setClock() at the same moment as the full-size one on Showtime, so the two cannot
+         drift; hidden in Act I, where there is no cycle to watch yet. -->
+    <div class="chrome-clapper" id="chromeClapper" hidden>
+      <span class="stripes"></span>
+      <span class="readout">
+        <span class="cap" id="chromeClapperCap">Sleeping for</span>
+        <span class="time" id="chromeClapperTime">--:--</span>
+      </span>
+    </div>
     <span class="pill pill-asleep" id="devicePill" hidden><span class="dot"></span><span data-role="text">Sleeping 💤</span></span>
     <button type="button" class="btn btn-sm btn-ghost" id="btnSettings" style="color:var(--color-chrome-text)">Settings</button>
   </header>

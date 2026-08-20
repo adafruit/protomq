@@ -100,6 +100,33 @@ export async function readFeedValue(feedKey) {
 }
 
 /**
+ * The newest datum as a POINT — value, id and timestamp — from `/data/last`.
+ *
+ * The one endpoint that answers when a feed has no history. IO only retains data points
+ * for feeds with history ON, and history caps a datum at 1 KB — which a panel BMP is
+ * twenty times over, so the image feed can never have it. `/data` on such a feed returns
+ * an empty array while `/data/last` still returns the current value, and reading only the
+ * former is what left "On the panel now" claiming nothing had ever been published to a feed
+ * the board was actively drawing from.
+ *
+ * One datum is all there is in that configuration: enough to say what is on the feed, never
+ * enough to say what was on it before.
+ */
+export async function readFeedLast(feedKey) {
+  const user = val('ioUser'), key = val('ioKey');
+  if (!user || !key || !feedKey) return null;
+  try {
+    const res = await fetch(
+      `https://${ioHost()}/api/v2/${encodeURIComponent(user)}/feeds/${encodeURIComponent(feedKey)}/data/last`,
+      { headers: { 'X-AIO-Key': key } });
+    if (!res.ok) return null;
+    const d = await res.json().catch(() => null);
+    if (!d || d.value == null) return null;
+    return { id: d.id, value: String(d.value), createdAt: Date.parse(d.created_at) };
+  } catch { return null; }
+}
+
+/**
  * Read the newest data POINTS of a feed, not just their values.
  *
  * readFeedValue above is enough for an element binding, which only ever asks "what

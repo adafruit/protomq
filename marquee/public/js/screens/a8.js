@@ -18,10 +18,10 @@ import { selected, select } from '../selection.js';
 import { serialize, onDocChange } from '../doc.js';
 import { getState, countQueuedChanges, subscribe } from '../state.js';
 import { onDeviceEvent, catchUpStatus } from '../device.js';
-import { readFeedData } from '../feeds.js';
+import { readFeedData, readFeedLast } from '../feeds.js';
 import { displayState } from '../cycle.js';
 import { refreshIntervalLabel } from '../config.js';
-import { navigate, currentScreen, syncNav } from '../router.js';
+import { navigate, currentScreen, currentAct, syncNav } from '../router.js';
 import { $, val, show, fmtClock, fmtInterval, fmtLocalTime, fmtLocalSeconds } from '../util.js';
 
 /** Panel previews are drawn about 1.7× so a 296×128 lands near the design's
@@ -81,6 +81,52 @@ const TAKE_HISTORY = 3;
 
 let takes = { panel: null, next: null, state: 'unknown' };
 let takesFetch = null;
+let takesAgain = false;
+
+/**
+ * The newest take we have ever concluded the board had drawn.
+ *
+ * Carried forward because on a history-off feed — which the image feed always is — there is
+ * only ever ONE datum. Publish a new take and the previous one is gone from IO entirely, so
+ * the panel that is still physically on the glass has no record left anywhere but here.
+ * Without this the left panel goes blank the instant you queue something, which is the
+ * moment the before/after pair matters most.
+ *
+ * PERSISTED, unlike `published` in state.js, and the difference is what makes it safe. That
+ * one is a local snapshot of what this editor rendered — a claim with no evidence behind it
+ * once the session ends. This is a feed datum with IO's own server timestamp on it, and the
+ * board redraws whatever is on the feed, so it stays true for as long as nothing newer is
+ * published. When something newer IS published and drawn, the ordinary cut below replaces
+ * this on the first fetch; the cache never wins against evidence, it only fills the gap
+ * where there is none.
+ *
+ * The gap is real and unavoidable otherwise: reload while a take is pending and the drawn
+ * image exists nowhere — IO discarded it (no history), and memory went with the tab.
+ */
+const DRAWN_KEY = 'marquee.panelNow';
+
+let lastDrawn = null;
+
+/** Keyed by feed, so pointing the editor at another board does not show the last one's
+ *  panel. Written on every confirmed draw; a full-panel data URL is ~21 KB for a 2.13"
+ *  and ~340 KB at the 7.5" ceiling, both comfortably inside a 5 MB origin quota. */
+function saveDrawn(feed) {
+  try {
+    localStorage.setItem(DRAWN_KEY, JSON.stringify({ feed, ...lastDrawn }));
+  } catch { /* storage disabled, or the quota said no — the panel just falls back */ }
+}
+
+function loadDrawn(feed) {
+  try {
+    const c = JSON.parse(localStorage.getItem(DRAWN_KEY) || 'null');
+    if (c && c.feed === feed && c.src) lastDrawn = { src: c.src, at: c.at };
+  } catch { /* corrupt entry: no cache, which is the pre-cache behaviour */ }
+}
+
+function forgetDrawn() {
+  lastDrawn = null;
+  try { localStorage.removeItem(DRAWN_KEY); } catch { /* nothing to do */ }
+}
 
 const TAKES_EMPTY = {
   unknown: 'Reading the feed…',
@@ -103,10 +149,26 @@ const takeFrom = (d) => ({
  * they would otherwise race for the same data — over a payload that is a whole BMP each.
  */
 function fetchTakes() {
-  if (takesFetch) return takesFetch;
+  // A caller arriving mid-flight gets a REFETCH, not the in-flight promise. Sharing the
+  // running request would hand it a read taken before the thing that triggered it — a
+  // `pushed` landing during the previous poll would be answered with the feed as it was
+  // before the push, and the pending take would not appear until something else asked.
+  if (takesFetch) { takesAgain = true; return takesFetch; }
   takesFetch = (async () => {
     const feed = val('ioFeed');
-    const data = feed ? await readFeedData(feed, { limit: TAKE_HISTORY }) : null;
+    // Before the read, so a reload has something to show while the request is in flight and
+    // still has it afterwards if the only datum on the feed turns out to be pending.
+    if (!lastDrawn) loadDrawn(feed);
+    let data = feed ? await readFeedData(feed, { limit: TAKE_HISTORY }) : null;
+    // Empty is the NORMAL answer here, not an edge case: a panel BMP is ~20 KB against
+    // IO's 1 KB history limit, so the image feed can never have history on, so it retains
+    // no data points and `/data` is always []. `/data/last` still has the current value.
+    // Asking for history first is still right — where it exists it is the only way to show
+    // the previous take beside the pending one — but this is what most setups will hit.
+    if (data && !data.length) {
+      const last = await readFeedLast(feed);
+      if (last) data = [last];
+    }
     if (!data) takes = { panel: null, next: null, state: 'unreadable' };
     else if (!data.length) takes = { panel: null, next: null, state: 'empty' };
     else {
@@ -122,15 +184,26 @@ function fetchTakes() {
       // have pulled. -1 (nothing old enough) means nothing here has been drawn yet.
       const drawn = fetched ? data.findIndex((d) => d.createdAt < fetched) : 1;
       const panel = drawn >= 0 ? data[drawn] : undefined;
+      if (panel) { lastDrawn = takeFrom(panel); saveDrawn(feed); }
+      // Falling back to the carried copy, not to nothing: the board is still displaying
+      // whatever it last drew, and IO having discarded the datum does not change that.
       takes = {
-        panel: panel ? takeFrom(panel) : null,
+        panel: lastDrawn,
         next: drawn === 0 ? null : takeFrom(data[0]),
-        state: panel ? 'ok' : 'undrawn',
+        state: lastDrawn ? 'ok' : 'undrawn',
       };
     }
-    renderWritten();
-    renderNext();
-  })().finally(() => { takesFetch = null; });
+    // Rendering is screen-local; CAPTURING is not. This runs on every screen, because the
+    // moment worth catching — the newest datum becoming the drawn one — happens while the
+    // user is usually in the editor, and on a history-off feed that datum is gone as soon as
+    // the next take is published. Only the drawing is deferred: renderNext() takes the stage
+    // through captureClean(), which deselects and reselects, and doing that under someone's
+    // cursor on A7 would flicker their selection for a panel they cannot see.
+    if (currentScreen() === 'a8') { renderWritten(); renderNext(); }
+  })().finally(() => {
+    takesFetch = null;
+    if (takesAgain) { takesAgain = false; fetchTakes(); }
+  });
   return takesFetch;
 }
 
@@ -227,20 +300,36 @@ function setMessage(headline, sub) {
 }
 
 /**
- * The clapperboard readout, which is only on screen when it has something to count.
+ * Both clapperboard readouts — the full-size one on Showtime and the miniature in the chrome
+ * — written in one call, which is the only way they cannot drift. There is no mirroring step
+ * and no second source: one function decides the caption and the figure, and paints them
+ * wherever they appear.
  *
- * `null` seconds hides the whole board rather than parking it on `--:--`. A clapperboard
- * showing no time is set dressing that has stopped saying anything, and it is most of the
- * bar's width — during a take, where the honest answer is "this cannot be predicted", the
- * space belongs to the headline that says so. So: the countdown appears when the board
- * reports a sleep, and leaves when the board wakes.
+ * `null` seconds HIDES both rather than parking them on `--:--`. A clapperboard showing no
+ * time is set dressing that has stopped saying anything, and on Showtime it is most of the
+ * bar's width — during a take, where the honest answer is "this cannot be predicted", that
+ * space belongs to the headline saying so.
+ *
+ * The chrome copy is the STAND-IN for the other one: it exists so the clock is readable from
+ * screens that do not have the sleep bar on them. So it appears everywhere except Showtime,
+ * where the full-size board is right there and a second copy in the header would be the same
+ * clock twice in one view.
  */
 function setClock(cap, secs) {
   const has = secs != null && secs >= 0;
+  const text = has ? fmtClock(secs) : '--:--';
+
+  // The chrome copy ships with the `hidden` ATTRIBUTE set, so the first paint has no clock
+  // in the bar; show() works on a class. Clearing it here hands control to show() for good.
+  $('chromeClapper').hidden = false;
   show($('clapper'), has);
+  show($('chromeClapper'), has && currentAct() < 3);
   if (!has) return;
-  $('clapperCap').textContent = cap;
-  $('clapperTime').textContent = fmtClock(secs);
+
+  for (const id of ['clapper', 'chromeClapper']) {
+    $(`${id}Cap`).textContent = cap;
+    $(`${id}Time`).textContent = text;
+  }
 }
 
 /**
@@ -367,22 +456,22 @@ function renderCycle() {
 }
 
 /**
- * The readout is the only thing on this bar that moves without the board saying anything, so
- * it is the only thing that needs a timer — and at mm:ss it needs a per-second one.
+ * The readout is the only thing here that moves without the board saying anything, so it is
+ * the only thing that needs a timer — and at mm:ss it needs a per-second one.
  *
- * Screen-local and self-limiting, which is the difference from the version that caused
- * trouble: it ends itself as soon as Showtime is not the screen being looked at, so there is
- * no way to leave a 1Hz timer running behind a hidden screen by forgetting a stop call, and
- * no chrome element depends on it.
+ * No act guard, because between the two clapperboards there is now one on screen in every
+ * act: the chrome stand-in in I and II, the full-size board in III. A guard would only be
+ * bookkeeping for a condition that is always true, and the version that had one left the
+ * clock frozen at whatever second the user navigated away on.
+ *
+ * The cost is a 1Hz interval for the life of the session, writing at most four text nodes a
+ * second and only when a sleep is being counted.
  */
 let clockTimer = null;
 
 function startClock() {
   clearInterval(clockTimer);
-  clockTimer = setInterval(() => {
-    if (currentScreen() !== 'a8') { clearInterval(clockTimer); clockTimer = null; return; }
-    renderCycle();
-  }, 1000);
+  clockTimer = setInterval(renderCycle, 1000);
 }
 
 // ---------- boot ------------------------------------------------------------
@@ -395,7 +484,6 @@ export function initA8({ onEnter }) {
     renderNext();
     fetchTakes();         // then the feed, which is the actual answer
     renderCycle();
-    startClock();
     // This is the screen that claims to know what the board is doing, so it reads the
     // board's own feed on the way in rather than trusting a poll that may have been
     // throttled while another screen was up.
@@ -410,30 +498,39 @@ export function initA8({ onEnter }) {
   });
 
   subscribe((_st, patch) => {
-    // Ahead of the screen check: this clock is in the chrome and so live on every screen,
-    // so a board that just went to sleep has to reach it now rather than on the next
-    // tick — a second of "next take in" under a Sleeping pill reads as a bug.
+    // Both ahead of the screen check. The clock is in the chrome and so live everywhere; the
+    // feed read has to happen everywhere for the reason in fetchTakes().
     renderCycle();
-    if (currentScreen() !== 'a8') return;
-    // A new `published` retires the pending count the right panel carries, and means the
-    // feed has just gained a datum — so the pair is re-read together, the left from the
-    // feed rather than from the snapshot that moved.
     if (patch.published) fetchTakes();
   });
 
   onDeviceEvent(({ type }) => {
-    // A push, a wake or a reset all change what the two panels should show. The left one is
-    // re-fetched rather than re-rendered: a push puts a new datum on the feed, and a reset
-    // means the local record of it is gone while the feed's is not.
-    if (type === 'pushed' || type === 'woke' || type === 'reset') {
+    // A push, a wake, a sleep or a reset all change what the two panels should show.
+    //
+    // NOT gated on being on Showtime, and that is the whole point. `slept` and `woke` are
+    // when the newest datum stops being pending and becomes what is on the glass — the only
+    // moment it can be captured, because the next push discards it from a history-off feed.
+    // Gating this on the screen meant a user editing on A7 through a whole wake never
+    // recorded what the board drew, and the left panel was blank from then on.
+    // "Reset state" tears down every other record of the board, so the cached panel goes
+    // with it — leaving it behind would have a reset editor still claiming to know what is
+    // on the glass.
+    if (type === 'reset') forgetDrawn();
+    if (type === 'pushed' || type === 'woke' || type === 'slept' || type === 'reset') {
       syncNav();
-      if (currentScreen() === 'a8') {
-        fetchTakes();
-      }
+      fetchTakes();
     }
   });
 
   // No timer to pause or resume: the bar changes only when the board says something, and
   // initDevice() already catches the status feed up when a tab returns to the foreground.
   renderCycle();
+  // The clock is chrome-wide, so it runs with the session rather than with a screen. This
+  // module owns it anyway, because renderCycle() writes the clock and the prose beside it in
+  // one pass and those two must never disagree — moving the clock to the router would be the
+  // same reading in two places again.
+  startClock();
+  // At boot, on whatever screen: a tab reloaded while the board sleeps has one chance to see
+  // the take on the glass before the next push replaces it on the feed.
+  fetchTakes();
 }

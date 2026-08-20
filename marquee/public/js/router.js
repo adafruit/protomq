@@ -32,6 +32,10 @@ export function onEnter(screen, fn) {
 
 export function currentScreen() { return current; }
 
+/** Which act the current screen belongs to. The chrome reads it to decide what belongs up
+ *  there: the device pill from Act I, the cycle clock only once there is a device to watch. */
+export function currentAct() { return SCREEN_ACT[current] || 1; }
+
 export function navigate(screen) {
   if (!SCREEN_ACT[screen]) return;
   current = screen;

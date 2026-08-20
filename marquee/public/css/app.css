@@ -717,7 +717,16 @@
   border: 1px solid var(--panel-bezel);
   box-shadow: var(--shadow-glass);
 }
-.take .glass img { image-rendering: pixelated; }
+/* SMOOTHED, not pixelated, and this is the one place in the interface where that is the
+   more honest choice. previewScale() draws these panels at up to 2x — a 250x122 lands on
+   exactly 2.0 — and `pixelated` at 2x turns every dither dot into a 2x2 block, which is
+   literally twice the dot size the panel has. The result reads as far harsher than the
+   hardware: on real glass at ~110ppi the eye blends adjacent black and white dots into grey
+   at any normal viewing distance, and a bilinear upscale does the same thing on screen.
+   Faithful to the bitmap and faithful to the panel are different goals here, and this pair
+   exists to answer "what will it look like". The preview modal keeps `pixelated`, because
+   that one is for inspecting pixels on purpose. */
+.take .glass img { image-rendering: auto; }
 .take .glass .placeholder { font-size: 12px; color: var(--color-neutral-600); text-align: center; padding: 40px 20px; }
 /* Written = inert. Rendered at 75% so it reads as already-on-the-glass. */
 .take[data-role="written"] .glass { opacity: 0.75; }

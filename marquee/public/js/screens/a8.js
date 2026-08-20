@@ -24,11 +24,49 @@ import { refreshIntervalLabel } from '../config.js';
 import { navigate, currentScreen, currentAct, syncNav } from '../router.js';
 import { $, val, show, fmtClock, fmtInterval, fmtLocalTime, fmtLocalSeconds } from '../util.js';
 
-/** Panel previews are drawn about 1.7× so a 296×128 lands near the design's
- *  504×222, but clamped so an 800×480 still fits two-up on one screen. */
+/**
+ * How large to draw a panel preview. NEVER above 1:1.
+ *
+ * The design called for about 1.7×, so a 296×128 landed near its 504×222 plate, and for a
+ * mock-up that is right — it is a picture of a dashboard. For a real dithered render it is
+ * not: a small panel hit the old 2× ceiling exactly, and every dither dot came out twice the
+ * size the hardware makes it. Smoothing the upscale helped and did not settle it, because
+ * the dots were still physically too big to blend the way they do on glass.
+ *
+ * Life-size fixed the dither and made the panel too small to work against, so the size is
+ * back and the dither is handled where the problem actually is — see viewingBlur(). The two
+ * are one decision and are tuned together.
+ *
+ * The lower clamp is why an 800×480 still fits two-up on one screen; those panels were always
+ * below 1:1 and never looked wrong.
+ */
 function previewScale() {
   const { w, h } = logicalDims();
   return Math.max(0.5, Math.min(2, 520 / w, 250 / h));
+}
+
+/**
+ * How much to soften a preview drawn larger than 1:1, in screen pixels.
+ *
+ * Upscaling a dithered bitmap is the whole difficulty of this pair. `pixelated` at 2× draws
+ * every dither dot at twice the size the hardware makes it, and it reads as noise. Plain
+ * bilinear smoothing is barely better, because it only ever averages across one pixel — the
+ * dots survive as blobs rather than blending.
+ *
+ * What the device gives you is OPTICAL blending: at arm's length the eye integrates over
+ * roughly a panel pixel and adjacent black and white dots become grey. That is a blur of
+ * about half a panel pixel, so the radius has to scale with how large the panel is drawn —
+ * a fixed radius would be right at one zoom and wrong at every other.
+ *
+ * BLUR_PANEL_PX is the knob. Higher blends more of the dither and costs edge definition on
+ * text; 0 gives the old harsh upscale back. Nothing below 1:1 is touched, because
+ * downscaling already averages neighbouring dots for free — which is why the 4.2" and 7.5"
+ * panels never had this problem.
+ */
+const BLUR_PANEL_PX = 0.45;
+
+function viewingBlur(scale) {
+  return scale > 1 ? BLUR_PANEL_PX * scale : 0;
 }
 
 /**
@@ -49,6 +87,8 @@ function sizeGlass(el, img) {
   if (img) {
     img.style.width = Math.round(w * s) + 'px';
     img.style.height = Math.round(h * s) + 'px';
+    const blur = viewingBlur(s);
+    img.style.filter = blur ? `blur(${blur.toFixed(2)}px)` : '';
   }
   el.style.minWidth = Math.round(w * s + chromeX) + 'px';
   el.style.minHeight = Math.round(h * s + chromeY) + 'px';

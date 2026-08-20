@@ -6,7 +6,7 @@
     "rotation": 270,
     "type": "tricolor",
     "dither": "FloydSteinberg",
-    "diffusion": 85,
+    "diffusion": 77,
     "orderedMap": 8
   },
   "elements": [
@@ -55,34 +55,22 @@
       "gaugeValue": 80
     },
     {
-      "etype": "gauge",
-      "x": 128,
-      "y": 56,
-      "w": 48,
-      "ink": "#2F2429",
-      "title": "",
-      "min": 0,
-      "max": 100,
-      "ringWidth": 12,
-      "gaugeLabel": "Value",
-      "lowWarn": "",
-      "highWarn": "",
-      "decimals": 2,
-      "showIcon": false,
-      "icon": "temperature-half",
-      "warnColor": "#2F2429",
-      "alarmColor": "#2F2429",
-      "feedKey": "",
-      "feedName": "",
-      "gaugeValue": 80
+      "etype": "label",
+      "x": 88,
+      "y": 8,
+      "fill": "#D72627",
+      "text": "Label",
+      "fontSize": 44,
+      "fontFamily": "monospace",
+      "align": "left"
     },
     {
       "etype": "label",
-      "x": 144,
-      "y": 16,
+      "x": 80,
+      "y": 80,
       "fill": "#2F2429",
-      "text": "Label",
-      "fontSize": 20,
+      "text": "Label2",
+      "fontSize": 44,
       "fontFamily": "monospace",
       "align": "left"
     }

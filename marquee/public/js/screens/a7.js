@@ -161,33 +161,57 @@ function syncPathCopy() {
   syncSleepChip();
 }
 
-// ---------- the sleep popover -----------------------------------------------
+// ---------- the popovers ------------------------------------------------------
 
 /**
+ * Two of them on this screen — sleep in the action bar, dither under the canvas —
+ * and they are the same object: a chip that states a setting, and a panel that
+ * edits it.
+ *
  * A popover, not a modal: the canvas behind it stays live and the page does not
  * lock. So it closes on the two gestures that mean "I am done here" — a click
  * outside it and Escape — and hands focus back to the chip on the way out, or a
  * keyboard user is dropped at the top of the document every time they set an
  * interval.
  */
-function sleepPopOpen() {
-  return !$('sleepPop')?.classList.contains('hidden');
+function popover(popId, chipId) {
+  const isOpen = () => !$(popId)?.classList.contains('hidden');
+
+  function set(open, { restoreFocus = true } = {}) {
+    const pop = $(popId);
+    const chip = $(chipId);
+    if (!pop || !chip) return;
+    const was = isOpen();
+    show(pop, open);
+    chip.setAttribute('aria-expanded', String(open));
+    // The first VISIBLE control: on the broker path the sleep panel's "Wake on" is
+    // hidden, and focusing a display:none element is a silent no-op that would leave
+    // the panel opened onto nothing for a keyboard user.
+    if (open) {
+      [...pop.querySelectorAll('select, input, button')].find((el) => el.offsetParent)?.focus();
+    // Only when the popover was actually open: calling this on a stray outside click
+    // would steal focus from whatever the user just clicked on the canvas.
+    } else if (was && restoreFocus) chip.focus();
+  }
+
+  return { chipId, popId, isOpen, set };
 }
 
-function setSleepPop(open, { restoreFocus = true } = {}) {
-  const pop = $('sleepPop');
-  const chip = $('sleepChip');
-  if (!pop || !chip) return;
-  const was = sleepPopOpen();
-  show(pop, open);
-  chip.setAttribute('aria-expanded', String(open));
-  // The first VISIBLE select: on the broker path "Wake on" is hidden, and focusing a
-  // display:none element is a silent no-op that would leave the panel opened onto
-  // nothing for a keyboard user.
-  if (open) [...pop.querySelectorAll('select')].find((s) => s.offsetParent)?.focus();
-  // Only when the popover was actually open: calling this on a stray outside click
-  // would steal focus from whatever the user just clicked on the canvas.
-  else if (was && restoreFocus) chip.focus();
+const POPOVERS = [popover('sleepPop', 'sleepChip'), popover('ditherPop', 'ditherChip')];
+
+/**
+ * Opening one closes the other. They sit at opposite ends of the screen and both
+ * hang over the canvas, so two at once is two panels covering the artwork the
+ * dither panel exists to let you look at.
+ */
+function togglePopover(target) {
+  const open = !target.isOpen();
+  POPOVERS.forEach((p) => { if (p !== target && p.isOpen()) p.set(false, { restoreFocus: false }); });
+  target.set(open);
+}
+
+function closeAllPopovers(opts) {
+  POPOVERS.forEach((p) => { if (p.isOpen()) p.set(false, opts); });
 }
 
 export function initA7({ onEnter }) {
@@ -243,23 +267,25 @@ export function initA7({ onEnter }) {
   // main.js owns persisting this one; the chip only needs to hear that it moved.
   $('wakeAlarm').addEventListener('change', syncSleepChip);
 
-  // ---- the sleep popover ----
-  $('sleepChip').addEventListener('click', () => setSleepPop(!sleepPopOpen()));
+  // ---- the popovers ----
+  POPOVERS.forEach((p) => $(p.chipId).addEventListener('click', () => togglePopover(p)));
 
   // Pointerdown rather than click, so the popover is already gone by the time a
   // press lands on the canvas — closing on click would let the same gesture both
   // dismiss the panel and start a drag under it.
   document.addEventListener('pointerdown', (e) => {
-    if (!sleepPopOpen()) return;
-    if (e.target.closest('#sleepPop, #sleepChip')) return;
-    setSleepPop(false, { restoreFocus: false });
+    POPOVERS.forEach((p) => {
+      if (!p.isOpen()) return;
+      if (e.target.closest(`#${p.popId}, #${p.chipId}`)) return;
+      p.set(false, { restoreFocus: false });
+    });
   });
 
   // Nothing to guard against here: the shared modal handler in util.js only fires
   // when a modal is actually open, and the editor's own key handler drops out on
-  // any focused SELECT — which is where focus is whenever this panel is up.
+  // any focused field — which is where focus is whenever one of these is up.
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && sleepPopOpen()) setSleepPop(false);
+    if (e.key === 'Escape') POPOVERS.forEach((p) => { if (p.isOpen()) p.set(false); });
   });
 
   syncIntervalFromField();
@@ -278,9 +304,9 @@ export function initA7({ onEnter }) {
     // real fit has to happen here rather than at boot.
     fitZoom();
     refreshProps();
-    // Leaving the screen with the panel up hides it with #a7, but does not close
+    // Leaving the screen with a panel up hides it with #a7, but does not close
     // it — so coming back would land on an open popover nobody asked for.
-    setSleepPop(false, { restoreFocus: false });
+    closeAllPopovers({ restoreFocus: false });
     syncIntervalFromField();
     // Re-read the fork on every entry rather than once at boot: the path badge is
     // a route back to A3, so this screen can be re-entered on the other path.

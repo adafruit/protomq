@@ -314,16 +314,21 @@ function renderNext() {
     : pending
       ? `${pending} change${pending === 1 ? '' : 's'} waiting — sent on next wake`
       : 'up to date';
-  // The queue note counts UNPUBLISHED edits either way: a take already on the feed is not
-  // waiting on the user for anything, and saying "1 change queued" about it would invite
-  // a second push of something already sent.
+  // The queue note counts UNPUBLISHED edits: a take already on the feed is not waiting on
+  // the user for anything, and saying "1 change queued" about it would invite a second
+  // push of something already sent.
   //
   // It is a heading in the action bar now rather than a note in the status bar, so it is
   // written as a count rather than as a sentence — "3 CHANGES QUEUED", with the sentence
   // explaining what that means sitting beside it in the bar's helper text.
-  $('queueNote').textContent = pending
-    ? `${pending} change${pending === 1 ? '' : 's'} queued`
-    : takes.next ? 'A take is on the feed' : 'No changes queued';
+  //
+  // Nothing queued, nothing said. The two idle headings this used to carry — "A take is on
+  // the feed" and "No changes queued" — were a caption for the sentence next to them, which
+  // already covers the idle case and covers it better: it says what happens to an edit, not
+  // that there isn't one. So the heading appears only when there is a count to give.
+  const note = $('queueNote');
+  note.textContent = pending ? `${pending} change${pending === 1 ? '' : 's'} queued` : '';
+  show(note, pending > 0);
 }
 
 // ---------- what the board is doing -----------------------------------------
@@ -499,7 +504,7 @@ function renderCycle() {
         // The headline carries the WAKE TIME and nothing else. Both of the sentences that used
         // to sit under it have found better homes: the armed total is the cadence stack on the
         // right of this bar, opposite the countdown running through it, and "anything you edit
-        // is included in the next take" is the helper text of the action bar below — beside the
+        // is included on the next take" is the helper text of the action bar below — beside the
         // button that acts on it, which is where a user reads it at the moment it matters.
         //
         // A time rather than a duration, because the duration is already on the bar twice: once

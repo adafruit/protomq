@@ -8,7 +8,7 @@
  * assumes A5 is visible.
  */
 
-import { display, logicalDims, MODE_LABELS, ditherLabel } from './palette.js';
+import { display, logicalDims, MODE_LABELS, ditherLabel, ditherChipLabel } from './palette.js';
 import { fitZoom, updateDims, suspendDitherPreview, scheduleDitherRefresh } from './stage.js';
 import { remapColorsToPalette } from './elements.js';
 import { refreshProps } from './selection.js';
@@ -317,6 +317,17 @@ function syncDitherControls() {
   show($('orderedRow'), m === 'ordered');
   const hint = $('ditherHint');
   if (hint) hint.textContent = DITHER_HINTS[m] || '';
+  syncDitherChip();
+}
+
+/**
+ * The trigger states the setting at rest, so it has to follow every control
+ * inside the popover — including the slider, which changes the label without
+ * changing the algorithm.
+ */
+function syncDitherChip() {
+  const el = $('ditherChipValue');
+  if (el) el.textContent = ditherChipLabel();
 }
 
 /** The A5 summary plate, the orientation control, the preset chips, the heading. */
@@ -454,19 +465,20 @@ export function initConfig() {
   // geometry isn't what changed.
   $('ditherSeg')?.addEventListener('change', () => {
     display.dither = segValue('ditherSeg') || 'FloydSteinberg';
+    // syncDitherControls() carries the trigger's label with it; the readout beside
+    // it names geometry only, so nothing here touches updateDims().
     syncDitherControls();
-    updateDims();
     scheduleDitherRefresh();
   });
   $('diffusion')?.addEventListener('input', (e) => {
     display.diffusion = +e.target.value;
     $('diffusionLabel').textContent = e.target.value + '%';
-    updateDims();
+    syncDitherChip();
     scheduleDitherRefresh(350);  // the slider fires continuously — let it settle
   });
   $('orderedMap')?.addEventListener('change', (e) => {
     display.orderedMap = +e.target.value;
-    updateDims();
+    syncDitherChip();
     scheduleDitherRefresh();
   });
 

@@ -524,11 +524,25 @@
   box-shadow: var(--shadow-glass);
 }
 
+/* The meta strip under the panel: a readout and one control. The uppercase,
+   part-transparent treatment belongs to the READOUT rather than to the strip —
+   the dither trigger sits in the same row and must not inherit either. */
 .canvas-status {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   flex: none;
+  max-width: 100%;
+}
+.canvas-readout {
+  display: flex;
+  align-items: center;
+  /* Wraps rather than pushing the strip wider than the panel — and wrapping the
+     readout is the right sacrifice, since the trigger is the only thing here you
+     can press and it stays on the first line. */
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -542,6 +556,41 @@
   text-transform: none;
   background: var(--color-bg);
 }
+
+/* ---- A7 · the dither trigger and its popover ----------------------------- */
+/* Dither applies to the whole panel, so it is the display's setting and not the
+   selection's — it belongs under the panel, beside the readout that also
+   describes the whole panel. Outlined in accent because it is the one thing in
+   the strip you can press, and the readout next to it is plain muted text. */
+
+/* Stretched, with the chip pinned to its top: one line, the chip and the readout
+   read as centred together; if the readout wraps, the chip stays on the first
+   line rather than drifting down between the two. */
+.dither-anchor {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-start;
+  align-self: stretch;
+  flex: none;
+}
+.dither-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  /* .btn is heading font; the label is a value, like the sleep chip's. */
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 12px;
+  letter-spacing: 0;
+  white-space: nowrap;
+  border-color: var(--color-accent);
+  color: var(--color-accent-800);
+}
+.dither-chip:hover:not(:disabled) { background: var(--color-accent-100); }
+.dither-chip .caret { opacity: 0.5; }
+/* Held open while the popover is — same reason as the sleep chip. */
+.dither-chip[aria-expanded="true"] { background: var(--color-accent-100); }
 
 /* Inspector rows. refreshProps() renders into #propBody. */
 #propBody { display: flex; flex-direction: column; gap: 8px; }
@@ -667,14 +716,13 @@
    looking pressed. */
 .sleep-chip[aria-expanded="true"] { background: var(--color-accent-100); }
 
-/* Anchored to the BAR's left padding, not to the chip. Hung off the chip it would
-   walk sideways every time the value inside it changed length — "Timer · every
-   minute" against "Timer or button · every 45 minutes" is a 90px swing, and a panel
-   that moves when you change the setting inside it reads as a glitch. */
-.sleep-pop {
+/* One shell for both of A7's dropdowns. Two panels a click apart on the same
+   screen should not be two different objects, so the frame, the column width and
+   the internal rhythm are declared once and only the anchoring differs. */
+.sleep-pop,
+.dither-pop {
   position: absolute;
   top: calc(100% + 6px);
-  left: 26px;
   width: 290px;
   display: flex;
   flex-direction: column;
@@ -683,9 +731,18 @@
   background: var(--color-bg);
   z-index: 2;
 }
-.sleep-pop .pop-label { font-size: 11px; opacity: 0.7; }
-.sleep-pop .input { padding: 7px 9px; font-size: 12.5px; }
-.sleep-pop .pop-note { font-size: 11.5px; opacity: 0.7; text-wrap: pretty; }
+/* Anchored to the BAR's left padding, not to the chip. Hung off the chip it would
+   walk sideways every time the value inside it changed length — "Timer · every
+   minute" against "Timer or button · every 45 minutes" is a 90px swing, and a panel
+   that moves when you change the setting inside it reads as a glitch. */
+.sleep-pop { left: 26px; }
+/* The dither chip is at the right end of a centred strip, so the panel hangs from
+   its right edge — that keeps it under the canvas rather than off the side of it. */
+.dither-pop { right: 0; }
+.pop-label { flex: none; font-size: 11px; opacity: 0.7; }
+.pop-note { font-size: 11.5px; opacity: 0.7; text-wrap: pretty; }
+.sleep-pop .input,
+.dither-pop .input { padding: 7px 9px; font-size: 12.5px; }
 
 /* The one primary in the bar, and the same geometry on both screens — an A8 user
    coming back to A7 should find the commit in the same place at the same weight. */

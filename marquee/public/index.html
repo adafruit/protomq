@@ -462,7 +462,9 @@
           <p class="pop-note" id="pushCue">The dashboard is written, then the display sleeps.</p>
         </div>
 
-        <span class="action-note">Written once, then the panel sleeps.</span>
+        <!-- No note beside the button here: the sentence that explains what the push
+             does is #pushCue, inside the sleep panel above, where it is read at the
+             moment the decision is being made rather than permanently. -->
         <button type="button" class="btn btn-primary blueprint btn-commit" id="sendBmpSleep">Push to display<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i></button>
       </div>
 
@@ -512,13 +514,61 @@
             <div id="stage-holder"></div>
           </div>
 
+          <!-- The meta strip: what the panel is, and the one render setting that
+               applies to all of it. Dither is a property of the DISPLAY, not of a
+               block — in the selection rail it was unreachable with nothing
+               selected and mis-scoped with something selected, so it sits under
+               the panel it acts on, stated at rest and edited behind a click. -->
           <div class="canvas-status">
-            <span id="dims"></span>
-            <span>·</span>
-            <button type="button" class="btn btn-sm zoom-btn" id="zoomOut" aria-label="Zoom out">−</button>
-            <span id="zoomLabel">100%</span>
-            <button type="button" class="btn btn-sm zoom-btn" id="zoomIn" aria-label="Zoom in">+</button>
-            <button type="button" class="btn btn-sm zoom-btn" id="zoomFit">Fit</button>
+            <span class="canvas-readout">
+              <span id="dims"></span>
+              <span>·</span>
+              <button type="button" class="btn btn-sm zoom-btn" id="zoomOut" aria-label="Zoom out">−</button>
+              <span id="zoomLabel">100%</span>
+              <button type="button" class="btn btn-sm zoom-btn" id="zoomIn" aria-label="Zoom in">+</button>
+              <button type="button" class="btn btn-sm zoom-btn" id="zoomFit">Fit</button>
+            </span>
+
+            <!-- Anchored to the trigger rather than to the strip: the strip is
+                 centre-aligned under the panel, so a panel hung off its edge would
+                 sit somewhere different for every dither label length. -->
+            <span class="dither-anchor">
+              <button type="button" class="btn dither-chip" id="ditherChip"
+                      aria-haspopup="dialog" aria-expanded="false" aria-controls="ditherPop">
+                <span class="value" id="ditherChipValue">Floyd–Steinberg 85%</span>
+                <span class="caret" aria-hidden="true">▾</span>
+              </button>
+
+              <!-- Dithering lives with the scene, not with the wiring: the device is
+                   handed a BMP that has already been dithered by the render backend,
+                   so this is an authoring decision about how the artwork survives a
+                   1-bit panel — made while looking at the artwork. -->
+              <div class="dither-pop blueprint elev-md hidden" id="ditherPop" role="dialog"
+                   aria-label="Dither" aria-modal="false">
+                <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+                <span class="label">Dither</span>
+                <div class="seg seg-tight" id="ditherSeg">
+                  <label class="seg-opt"><input type="radio" name="dmode" value="FloydSteinberg" checked>Floyd–Steinberg</label>
+                  <label class="seg-opt"><input type="radio" name="dmode" value="ordered">Ordered</label>
+                  <label class="seg-opt"><input type="radio" name="dmode" value="none">None</label>
+                </div>
+                <div class="prop-row" id="diffusionRow">
+                  <span class="pop-label">Diffusion</span>
+                  <input type="range" id="diffusion" min="0" max="100" value="85" aria-label="Diffusion amount" style="flex:1">
+                  <span class="mono" id="diffusionLabel" style="font-size:11px; width:34px; text-align:right">85%</span>
+                </div>
+                <div class="prop-row hidden" id="orderedRow">
+                  <span class="pop-label">Map</span>
+                  <select class="input" id="orderedMap" style="flex:1">
+                    <option value="8">o8×8</option>
+                    <option value="4">o4×4</option>
+                    <option value="2">o2×2</option>
+                  </select>
+                </div>
+                <button type="button" class="btn btn-block" id="btnDitherPreview">See it dithered</button>
+                <p class="pop-note" id="ditherHint"></p>
+              </div>
+            </span>
           </div>
 
           <section id="canvasJsonPanel" class="blueprint" aria-label="Canvas layout JSON (auto-saved)">
@@ -537,33 +587,6 @@
 
         <aside class="inspector">
           <div id="propBody"></div>
-
-          <div class="hr"></div>
-          <!-- Dithering lives with the scene, not with the wiring: the device is
-               handed a BMP that has already been dithered by the render backend,
-               so this is an authoring decision about how the artwork survives a
-               1-bit panel — made while looking at the artwork. -->
-          <span class="label">Dither</span>
-          <div class="seg seg-tight" id="ditherSeg">
-            <label class="seg-opt"><input type="radio" name="dmode" value="FloydSteinberg" checked>Floyd–Steinberg</label>
-            <label class="seg-opt"><input type="radio" name="dmode" value="ordered">Ordered</label>
-            <label class="seg-opt"><input type="radio" name="dmode" value="none">None</label>
-          </div>
-          <div class="prop-row" id="diffusionRow">
-            <span class="label">Diffusion</span>
-            <input type="range" id="diffusion" min="0" max="100" value="85" aria-label="Diffusion amount" style="flex:1">
-            <span class="mono" id="diffusionLabel" style="font-size:11px; width:34px; text-align:right">85%</span>
-          </div>
-          <div class="prop-row hidden" id="orderedRow">
-            <span class="label">Map</span>
-            <select id="orderedMap" style="flex:1">
-              <option value="8">o8×8</option>
-              <option value="4">o4×4</option>
-              <option value="2">o2×2</option>
-            </select>
-          </div>
-          <button type="button" class="btn btn-block" id="btnDitherPreview">See it dithered</button>
-          <p class="hint" id="ditherHint"></p>
 
           <div class="hr"></div>
           <span class="label">Preview</span>
@@ -602,7 +625,7 @@
         </div>
         <div class="message">
           <span class="headline" id="sleepHeadline">Display is sleeping</span>
-          <span class="sub" id="sleepSub">Anything you edit will be included in the next take.</span>
+          <span class="sub" id="sleepSub">Anything you edit will be included on the next take.</span>
           <!-- The board's own record, when there is one: the times IT reported, as
                opposed to the times the editor inferred. Hidden until a device says
                something, so it never pads the banner with an empty claim. -->
@@ -623,8 +646,10 @@
            so the way back into the editor is a committed row of its own rather
            than a button tucked into a status bar. -->
       <div class="action-bar">
-        <span class="action-label" id="queueNote">No changes queued</span>
-        <span class="action-note">Anything you edit will be included in the next take</span>
+        <!-- Empty and hidden at rest: renderNext() fills it only when there is a
+             count to give, so the sentence beside it stands alone the rest of the time. -->
+        <span class="action-label hidden" id="queueNote"></span>
+        <span class="action-note">Anything you edit will be included on the next take</span>
         <button type="button" class="btn btn-primary blueprint btn-commit" id="editDashboard">Edit dashboard<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i></button>
       </div>
 

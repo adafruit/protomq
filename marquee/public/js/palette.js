@@ -126,3 +126,15 @@ export function ditherLabel() {
   if (display.dither === 'ordered') return `ordered o${display.orderedMap}×${display.orderedMap}`;
   return `Floyd–Steinberg ${display.diffusion}%`;
 }
+
+/**
+ * The same value on the face of A7's dither trigger. ditherLabel() is written to
+ * sit inside a line of prose ("… · no dither · shown at 2×"); the chip IS the
+ * control, so it names the option the way the option names itself — "None", not
+ * "no dither", and with no percentage to tune when there is nothing to tune.
+ */
+export function ditherChipLabel() {
+  if (display.dither === 'none') return 'None';
+  if (display.dither === 'ordered') return `Ordered o${display.orderedMap}×${display.orderedMap}`;
+  return `Floyd–Steinberg ${display.diffusion}%`;
+}

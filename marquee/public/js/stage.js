@@ -10,7 +10,7 @@
  */
 
 import { Konva } from './konva.js';
-import { display, logicalDims, PAPER, MODE_LABELS, ditherLabel } from './palette.js';
+import { display, logicalDims, PAPER, MODE_LABELS } from './palette.js';
 import { $, toast } from './util.js';
 import { backendRender, markBackendOffline } from './render.js';
 
@@ -116,12 +116,18 @@ export function fitZoom() {
   applyZoom(Math.max(0.25, Math.floor(z * 20) / 20));
 }
 
+/**
+ * The static half of the meta strip: geometry, orientation, colour space. Dither
+ * used to be tacked on the end, but it is the one value in this line that is a
+ * setting rather than a fact — it now has its own control beside the readout
+ * (#ditherChip), and stating it twice on one line would just be noise.
+ */
 export function updateDims() {
   const { w, h } = logicalDims();
   const el = $('dims');
   if (!el) return;
   const rot = display.rotation ? ` · ${display.rotation}°` : '';
-  el.textContent = `${w} × ${h}${rot} · ${MODE_LABELS[display.type] || display.type}, ${ditherLabel()}`;
+  el.textContent = `${w} × ${h}${rot} · ${MODE_LABELS[display.type] || display.type}`;
 }
 
 // ---------- live dither preview overlay -------------------------------------

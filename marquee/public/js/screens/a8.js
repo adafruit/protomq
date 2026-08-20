@@ -315,11 +315,15 @@ function renderNext() {
       ? `${pending} change${pending === 1 ? '' : 's'} waiting — sent on next wake`
       : 'up to date';
   // The queue note counts UNPUBLISHED edits either way: a take already on the feed is not
-  // waiting on the user for anything, and saying "1 change waiting" about it would invite
+  // waiting on the user for anything, and saying "1 change queued" about it would invite
   // a second push of something already sent.
+  //
+  // It is a heading in the action bar now rather than a note in the status bar, so it is
+  // written as a count rather than as a sentence — "3 CHANGES QUEUED", with the sentence
+  // explaining what that means sitting beside it in the bar's helper text.
   $('queueNote').textContent = pending
-    ? `${pending} change${pending === 1 ? '' : 's'} waiting`
-    : takes.next ? 'A take is on the feed, waiting for the board' : 'No changes waiting';
+    ? `${pending} change${pending === 1 ? '' : 's'} queued`
+    : takes.next ? 'A take is on the feed' : 'No changes queued';
 }
 
 // ---------- what the board is doing -----------------------------------------
@@ -448,10 +452,15 @@ function renderCycle() {
   const st = getState();
   // The board's own record is true in every state, and every branch below returns.
   renderReport(st);
+  // So is the armed window: it is the cadence the board is running, not a reading of
+  // where in the cycle it happens to be, so it stands in every state including offline
+  // — that is what makes it the right thing to park opposite a countdown that blanks.
+  const cadence = $('refreshEvery');
+  if (cadence) cadence.textContent = armedWindowLabel(st);
 
   switch (displayState(st)) {
     case 'offline':
-      setClock('Sleeping for', null);
+      setClock('Next take in', null);
       setMessage('Display is offline',
         'The board stopped checking in. Your edits are safe and will be written when it returns.');
       return;
@@ -464,7 +473,7 @@ function renderCycle() {
       // No figure while a take runs. How long one will take cannot be predicted, and the
       // headline and sub already say what is happening — a clock counting anything here was
       // an invention.
-      setClock('Sleeping for', null);
+      setClock('Next take in', null);
       setMessage("It's Showtime - Display is awake and redrawing 🎨",
         'Each take can take up to 2 minutes depending on panel driver, color mode, and size.');
       return;
@@ -473,23 +482,32 @@ function renderCycle() {
       // The countdown is back, but only where it is evidence: `wakesAt` is the board's own
       // `sleep_time` counted from the moment it said it armed the alarm. Nothing here
       // predicts the take that follows the wake — that is what the redrawing state is for.
-      // The readout counts UP through the sleep and the headline carries what is left, so the
-      // two never disagree about rounding the way a countdown and a minutes phrase would:
-      // one is elapsed, the other remaining.
-      setClock('Sleeping for', sleepRemainingSeconds(st));
+      //
+      // "Next take in" rather than "Sleeping for", and the caption is doing real work now
+      // that the headline beside it reads "Display is sleeping until 9:47 AM": two clocks
+      // captioned with the same word was the bar saying "sleeping" twice and answering the
+      // same question twice. It is also the more useful of the two framings — the wake is
+      // only interesting because a take follows it — and it stays honest, because this
+      // figure is the armed sleep counted down and nothing about the take itself.
+      setClock('Next take in', sleepRemainingSeconds(st));
       if (st.wakeSource === 'pin') {
         setMessage('Display is sleeping until the button is pressed',
           'Anything you edit is included the next time the board is woken.');
       } else if (!st.lastWriteAt) {
         setMessage('Nothing pushed yet', 'Push a dashboard from the editor to start the cycle.');
       } else {
-        // The total, against a readout counting down through it — 02:46 of five minutes. It is
-        // the window the board said it ARMED rather than the one the editor asked for; those
-        // differ whenever a board is still running its own code.py default, which is exactly
-        // when you want to notice.
-        setMessage('Display is sleeping',
-          'Anything you edit on the canvas will be included in the next take. '
-          + `The display is sleeping a total of ${armedWindowLabel(st)}.`);
+        // The headline carries the WAKE TIME and nothing else. Both of the sentences that used
+        // to sit under it have found better homes: the armed total is the cadence stack on the
+        // right of this bar, opposite the countdown running through it, and "anything you edit
+        // is included in the next take" is the helper text of the action bar below — beside the
+        // button that acts on it, which is where a user reads it at the moment it matters.
+        //
+        // A time rather than a duration, because the duration is already on the bar twice: once
+        // ticking down in the clapperboard, once named in the cadence stack. "Until 9:47 AM" is
+        // the one form of it neither of those gives you, and it is the one you can plan against.
+        setMessage(st.wakesAt
+          ? `Display is sleeping until ${fmtLocalTime(new Date(st.wakesAt))}`
+          : 'Display is sleeping', '');
       }
     }
   }

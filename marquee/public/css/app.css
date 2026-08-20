@@ -79,23 +79,21 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* The device pill is the only LIVE thing in the chrome — everything else up here is
-   a label — so it is sized to be read at a glance rather than to match the crumbs.
-   It also drops the uppercasing every other pill gets: its states are words with an
-   emoji, and "SLEEPING 💤" letterspaced at 0.16em reads as a tag rather than as a
-   report of what the board is doing right now. */
-#devicePill {
-  font-size: 12.5px;
-  letter-spacing: 0.04em;
-  text-transform: none;
-  padding: 5px 12px;
-  gap: 8px;
-}
-#devicePill .dot { width: 8px; height: 8px; }
+/* The device pill is the only LIVE thing in the chrome, and it now says so in the
+   house type rather than in a sentence: ON AIR / ASLEEP / OFFLINE at the .pill
+   defaults — 10px heading, 0.16em, a 6px dot, hairline border. It reads as a state
+   lamp beside the breadcrumb instead of as a status field, which is what the two
+   words are. Nothing to declare here; base.css .pill and .chrome .pill already
+   carry it. */
 
 /* ---- step rail ----------------------------------------------------------- */
-/* Three equal cells during Act I (58px), collapsing to 44px once Act I is done.
-   Cells are inert until reached; after Act I they become buttons. */
+/* Three equal cells during Act I (70px), collapsing to 40px once Act I is done.
+   Cells are inert until reached; after Act I they become buttons.
+
+   The collapsed height is the CONTEXT BAR of the shared chrome stack — the band
+   between the 46px app bar and the action bar — so it is set tight on purpose. A7
+   now carries three bands above the canvas rather than two, and 40px is what keeps
+   that stack from eating the editor. */
 
 #stepRail {
   display: flex;
@@ -106,7 +104,7 @@
   border-bottom: 1px solid var(--color-divider);
   transition: height 0.18s ease;
 }
-#stepRail[data-collapsed="true"] { height: 52px; }
+#stepRail[data-collapsed="true"] { height: 40px; }
 
 .step {
   flex: 1;
@@ -133,7 +131,10 @@
   text-transform: uppercase;
   white-space: nowrap;
 }
-.step .step-status { font-size: 11px; opacity: 0.6; }
+/* nowrap for the same reason .step-title has it: collapsed, the rail is 40px and
+   both lines sit on one row, so a status like `✓ MagTag 2.9"` breaks after the
+   check mark and pushes itself out through the bottom edge of the cell. */
+.step .step-status { font-size: 11px; opacity: 0.6; white-space: nowrap; }
 .step[data-state="locked"] { opacity: 0.45; }
 .step[data-state="active"] { border-bottom-color: var(--color-accent); }
 .step[data-state="active"] .numeral { color: var(--color-accent); }
@@ -144,8 +145,11 @@
 
 /* Collapsed rail: title and status sit on ONE line. flex-direction has to be
    reset explicitly — inheriting the column below would stack two lines inside a
-   52px bar and push the status text through the bottom edge. */
-#stepRail[data-collapsed="true"] .step { gap: 10px; }
+   40px bar and push the status text through the bottom edge. The numeral comes
+   down with the bar for the same reason: 22px in 40px leaves no room above or
+   below the cap-height, and the row reads as jammed rather than tight. */
+#stepRail[data-collapsed="true"] .step { gap: 10px; padding: 0 18px; }
+#stepRail[data-collapsed="true"] .numeral { font-size: 18px; }
 #stepRail[data-collapsed="true"] .step-lines {
   flex-direction: row;
   align-items: baseline;
@@ -586,10 +590,112 @@
   line-height: 1;
 }
 
-/* The push block is pinned to the bottom of the inspector: the sleep interval
-   and the push action are one decision, so they sit together. */
-.push-block { margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding-top: 12px; }
-.push-block .cue { font-size: 11.5px; opacity: 0.7; }
+/* ---- the action bar (A7 + A8) -------------------------------------------- */
+/* The third band of the chrome stack, shared by both working screens: app bar,
+   context bar, action bar, canvas. One row, light ground, and exactly one primary
+   button in it, pushed to the right edge.
+ *
+ * It exists because the committing action on each screen — push on A7, back into
+ * the editor on A8 — was previously buried in furniture: A7's push sat at the foot
+ * of a scrolling 260px settings rail, A8's sat inside a dark status bar among
+ * readouts. Both are the only thing to DO on their screen, and neither read that
+ * way. Giving them a band of their own says it once, in the same place, on both. */
+
+.action-bar {
+  position: relative;   /* the anchor for A7's sleep popover */
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: none;
+  padding: 11px 26px;
+  background: var(--color-neutral-100);
+  border-bottom: 1px solid var(--color-divider);
+}
+.action-bar .action-label {
+  flex: none;
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* The sentence that says what the button will do. Quiet, and allowed to be the
+   thing that gives way — it is the only item in the row that can be re-read from
+   the control beside it. */
+.action-bar .action-note {
+  min-width: 0;
+  font-size: 12.5px;
+  opacity: 0.7;
+  text-wrap: pretty;
+}
+
+/* ---- A7 · the sleep chip and its popover --------------------------------- */
+/* The sleep setting is set once and read often, so it is stated at rest and edited
+   behind a click. Outlined in accent rather than filled: it is the only other thing
+   in this bar you can press, and it must not read as a second primary beside PUSH
+   TO DISPLAY. */
+
+.sleep-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  padding: 7px 12px;
+  /* .btn is heading font at heading weight; the chip is a sentence, so only its
+     SLEEP cap keeps that and the value reads as the plain text it is. */
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+  border-color: var(--color-accent);
+  color: var(--color-accent-800);
+}
+.sleep-chip:hover:not(:disabled) { background: var(--color-accent-100); }
+.sleep-chip .cap {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+.sleep-chip .value { white-space: nowrap; }
+.sleep-chip .caret { opacity: 0.5; }
+/* Held open while the popover is: without it the chip drops back to rest the moment
+   focus moves into the first select, and the thing the panel belongs to stops
+   looking pressed. */
+.sleep-chip[aria-expanded="true"] { background: var(--color-accent-100); }
+
+/* Anchored to the BAR's left padding, not to the chip. Hung off the chip it would
+   walk sideways every time the value inside it changed length — "Timer · every
+   minute" against "Timer or button · every 45 minutes" is a 90px swing, and a panel
+   that moves when you change the setting inside it reads as a glitch. */
+.sleep-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 26px;
+  width: 290px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 14px;
+  background: var(--color-bg);
+  z-index: 2;
+}
+.sleep-pop .pop-label { font-size: 11px; opacity: 0.7; }
+.sleep-pop .input { padding: 7px 9px; font-size: 12.5px; }
+.sleep-pop .pop-note { font-size: 11.5px; opacity: 0.7; text-wrap: pretty; }
+
+/* The one primary in the bar, and the same geometry on both screens — an A8 user
+   coming back to A7 should find the commit in the same place at the same weight. */
+.btn-commit {
+  margin-left: auto;
+  flex: none;
+  padding: 10px 26px;
+  font-size: 15px;
+  letter-spacing: 0.1em;
+}
 
 /* The canvas.json readout — an advanced tool, not part of the design. Kept
    because it is how the layout document is inspected while wiring a device. */
@@ -621,12 +727,18 @@
 
 /* ---- A8 · showtime ------------------------------------------------------- */
 
+/* The context bar of A8's chrome stack — A7's act rail in the other key, and set to
+   the same rhythm as the action bar below it (11px 26px) so the three bands read as
+   one stack rather than as a dark banner with things under it.
+ *
+ * STATE ONLY. Every button has left this bar: what is on it is what the board is
+ * doing, what it reported, and the window it armed. */
 .sleep-bar {
   display: flex;
   align-items: center;
   gap: 18px;
   flex: none;
-  padding: 14px 26px;
+  padding: 11px 26px;
   background: var(--color-chrome);
   color: var(--color-chrome-text);
 }
@@ -670,21 +782,39 @@
   letter-spacing: 0.02em;
   opacity: 0.55;
 }
-.sleep-bar .actions { margin-left: auto; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
-.sleep-bar .actions .row { display: flex; align-items: center; gap: 10px; }
+/* Nothing left to say in the default sleeping state — the armed total moved to the
+   cadence stack opposite and "anything you edit…" moved to the action bar — so the
+   sub gives its row back rather than holding an empty 3px gap open. */
+.sleep-bar .message .sub:empty { display: none; }
 
-/* EDIT DASHBOARD is deliberately the loudest thing on the screen. Sleeping must
-   not read as "come back later" — the whole point is that you can keep working.
-   It is the one place a light accent fill appears on the dark bar. */
-.btn-showtime {
-  padding: 13px 30px;
-  font-size: 17px;
-  letter-spacing: 0.1em;
-  background: var(--color-accent-300);
-  border-color: var(--color-accent-300);
-  color: var(--color-accent-900);
+/* The armed window, right-aligned against the countdown running through it. Set as
+   a caption over a figure rather than as a sentence: it is the one number on this
+   bar that does not change while you watch it, and reading it should not cost a
+   sentence. */
+.sleep-bar .cadence {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex: none;
 }
-.btn-showtime:hover:not(:disabled) { background: var(--color-accent-200); border-color: var(--color-accent-200); }
+.sleep-bar .cadence .cap {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+.sleep-bar .cadence .figure {
+  font-family: var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 
 #a8 .takes {
   flex: 1;
@@ -700,6 +830,10 @@
   background-size: 20px 20px;
 }
 .take { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+/* Title and tag on one line: the tag is what names the take's ROLE in the cycle —
+   holding the stage, or coming up — and it is only legible beside the title it
+   qualifies. */
+.take .take-head { display: flex; align-items: center; gap: 10px; }
 .take .take-label {
   font-family: var(--font-heading);
   font-weight: var(--font-heading-weight);

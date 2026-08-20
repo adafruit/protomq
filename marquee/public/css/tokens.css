@@ -107,9 +107,11 @@
   --radius: 0;
   --radius-shell: 12px;
 
-  /* Only two shadows exist: slide-overs, and the recessed-glass inset on a
-     panel preview. */
+  /* Three shadows exist: slide-overs, things that open OVER the page from a
+     control in it (a popover — nearer the surface than a modal, so a shorter
+     throw off the same ramp), and the recessed-glass inset on a panel preview. */
   --shadow-lg: 0 12px 32px color-mix(in srgb, var(--color-neutral-900) 22%, transparent);
+  --shadow-md: 0 6px 18px color-mix(in srgb, var(--color-neutral-900) 18%, transparent);
   --shadow-glass: inset 0 1px 4px rgba(0, 0, 0, 0.15);
 
   /* ---- 3. PANEL (physical, do not re-point at brand colors) -------------- */

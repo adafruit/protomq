@@ -40,7 +40,7 @@ const SETTINGS_KEY = 'marquee.settings';
 const SETTINGS_FIELDS = [
   'ioUser', 'ioKey', 'ioFeed', 'pmUser', 'pmDevice',
   'sleepDuration', 'writeRetryWindow',
-  // Lives in A7's inspector rather than this modal, but it has no backing field
+  // Lives in A7's action bar rather than this modal, but it has no backing field
   // to be a view onto the way #wakeInterval is, so it persists on its own.
   'wakeAlarm',
 ];

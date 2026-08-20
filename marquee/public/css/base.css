@@ -141,6 +141,13 @@ button.pill { cursor: pointer; color: inherit; }
   mix-blend-mode: color;
 }
 
+/* — elevation — */
+/* The one lift that is not a modal: something opened from a control, floating just
+   off the page it belongs to. Paired with .blueprint it is a drawing that has been
+   lifted rather than a new surface. */
+
+.elev-md { box-shadow: var(--shadow-md); }
+
 /* — rules — */
 
 .hr { height: 1px; border: 0; margin: 0; background: var(--color-divider); flex: none; }

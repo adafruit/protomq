@@ -20,11 +20,16 @@
 
   <!-- ── app chrome ───────────────────────────────────────────────────────── -->
   <header class="chrome">
-    <!-- One fixed title, not a breadcrumb: nothing above this level is navigable, and
-         the marquee's own name is already on every screen that can change it. -->
-    <span class="crumb">Adafruit.io</span>
-    <span class="sep">-</span>
-    <span class="crumb crumb-current">Marquee</span>
+    <!-- Three levels, and only the last one is variable: the board this editor is
+         pointed at. Nothing above it is navigable — the trail is here to say WHICH
+         board you are editing, which is the one fact the chrome could not answer
+         while the title sat there alone. Written by router.js from the ProtoMQ
+         device name in Settings. -->
+    <span class="crumb">Adafruit IO</span>
+    <span class="sep">/</span>
+    <span class="crumb">Marquee</span>
+    <span class="sep">/</span>
+    <span class="crumb crumb-current" id="crumbBoard">magtag</span>
     <span class="spacer"></span>
     <span class="chrome-note" id="chromeNote">Draft · not saved</span>
     <!-- The sleep clock in miniature, beside the state it belongs to. Written by a8.js's
@@ -33,11 +38,11 @@
     <div class="chrome-clapper" id="chromeClapper" hidden>
       <span class="stripes"></span>
       <span class="readout">
-        <span class="cap" id="chromeClapperCap">Sleeping for</span>
+        <span class="cap" id="chromeClapperCap">Next take in</span>
         <span class="time" id="chromeClapperTime">--:--</span>
       </span>
     </div>
-    <span class="pill pill-asleep" id="devicePill" hidden><span class="dot"></span><span data-role="text">Sleeping 💤</span></span>
+    <span class="pill pill-asleep" id="devicePill" hidden><span class="dot"></span><span data-role="text">Asleep</span></span>
     <button type="button" class="btn btn-sm btn-ghost" id="btnSettings" style="color:var(--color-chrome-text)">Settings</button>
   </header>
 
@@ -48,7 +53,10 @@
 
   <!-- ── step rail ────────────────────────────────────────────────────────── -->
   <!-- Not a nav control during first run: cells are locked until reached. Once
-       Act I completes the rail collapses to 44px and its cells become buttons. -->
+       Act I completes the rail collapses to 40px and its cells become buttons.
+       Collapsed, this is the CONTEXT BAR of the shared chrome stack on A7 — the
+       band between the app bar and the action bar — which is why it is tuned to
+       sit tight rather than to the comfortable height Act I gives it. -->
   <nav id="stepRail" data-collapsed="false" aria-label="Marquee progress">
     <button type="button" class="step" data-act="1" data-state="active" data-clickable="false">
       <span class="numeral">I</span>
@@ -379,6 +387,85 @@
     <!-- Structure follows the MVP editor — toolbox / canvas / inspector —
          restyled, not redesigned. -->
     <section class="screen" id="a7" data-screen="a7">
+
+      <!-- The action bar: the third band of the shared chrome stack, under the act
+           rail and above the canvas. Cadence and send are the only two actionable
+           controls on this screen and they are one decision, so they leave the
+           settings rail — which is now selection + preview only — and commit
+           together in one row. -->
+      <div class="action-bar">
+        <!-- The sleep setting collapsed to one readable line. Two selects and two
+             headings held the left half of this bar to say a thing that is four words
+             long at rest — and it is a set-once decision, re-opened maybe twice in a
+             session, sitting permanently beside the button you press every minute.
+             The chip states the answer; the popover holds the controls. -->
+        <button type="button" class="btn sleep-chip" id="sleepChip"
+                aria-haspopup="dialog" aria-expanded="false" aria-controls="sleepPop">
+          <span class="cap">Sleep</span>
+          <span class="value" id="sleepChipValue">Timer · every 5 minutes</span>
+          <span class="caret" aria-hidden="true">▾</span>
+        </button>
+
+        <!-- Hidden at rest, and absent from the tab order with it. Anchored to the
+             bar's left padding rather than to the chip, so it does not walk sideways
+             as the value inside the chip changes length. -->
+        <div class="sleep-pop blueprint elev-md hidden" id="sleepPop" role="dialog"
+             aria-label="Wake and redraw" aria-modal="false">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <span class="label">Wake and redraw</span>
+
+          <!-- CircuitPython only: the alarm the board arms before it sleeps. The
+               WipperSnapper broker path only implements a timer (server.js defers
+               Ext0Config), so this stays hidden there rather than offering a choice
+               nothing downstream would honour. -->
+          <label class="field hidden" id="wakeAlarmField">
+            <span class="pop-label">Wake on</span>
+            <select class="input" id="wakeAlarm">
+              <option value="timer" selected>Timer</option>
+              <option value="pin">Button press</option>
+              <option value="timer+pin">Timer or button</option>
+            </select>
+          </label>
+
+          <!-- A minute at a time up to the deep-sleep line, then coarsening: the four
+               light-sleep options are one minute apart because that is the range where
+               a minute is the whole difference, and past five minutes nobody is
+               choosing between 31 and 32.
+
+               The list is also the sleep-mode boundary drawn in the open. Every option
+               names the mode it produces, and the two halves of the list are exactly
+               the two modes — light below five minutes, deep from five minutes up
+               (DEEP_SLEEP_THRESHOLD_SECS in config.js). There is no mode control any
+               more; the interval derives it, so this is where that fact stays visible.
+               The value attributes are what a7.js matches on; only the labels carry the
+               annotation, and they have to keep agreeing with sleepModeFor(). -->
+          <label class="field">
+            <span class="pop-label">Interval</span>
+            <select class="input" id="wakeInterval">
+              <option value="60">Every minute — light sleep</option>
+              <option value="120">Every 2 minutes — light sleep</option>
+              <option value="180">Every 3 minutes — light sleep</option>
+              <option value="240">Every 4 minutes — light sleep</option>
+              <option value="300" selected>Every 5 minutes — deep sleep</option>
+              <option value="600">Every 10 minutes — deep sleep</option>
+              <option value="900">Every 15 minutes — deep sleep</option>
+              <option value="1800">Every 30 minutes — deep sleep</option>
+              <option value="2700">Every 45 minutes — deep sleep</option>
+              <option value="3600">Every hour — deep sleep</option>
+              <option value="custom">Custom…</option>
+            </select>
+          </label>
+
+          <!-- The path-dependent cue, which is where it belongs: it explains what the
+               push DOES on this firmware, and it is only worth a sentence at the
+               moment someone has opened the sleep setting to think about it. -->
+          <p class="pop-note" id="pushCue">The dashboard is written, then the display sleeps.</p>
+        </div>
+
+        <span class="action-note">Written once, then the panel sleeps.</span>
+        <button type="button" class="btn btn-primary blueprint btn-commit" id="sendBmpSleep">Push to display<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i></button>
+      </div>
+
       <div class="editor">
 
         <aside class="toolbox">
@@ -493,49 +580,6 @@
             </select>
           </div>
 
-          <div class="hr"></div>
-          <!-- The sleep interval lives here, next to the push action, because the
-               two decisions are made together. -->
-          <span class="label">Refresh &amp; sleep</span>
-          <label class="field">
-            <span class="label" style="letter-spacing:0.06em; text-transform:none; font-size:11px">Wake and redraw</span>
-            <!-- Roughly geometric, so each step is a real change rather than a
-                 nudge: 15s doubles to a minute, then the minute range fans out to
-                 an hour.
-
-                 Each option names the sleep mode it produces. There is no mode
-                 control any more — the interval derives it (sleepModeFor in
-                 config.js) — so this is where the fact the old dropdown made
-                 obvious stays visible. The value attributes are what a7.js matches
-                 on; only the labels carry the annotation. -->
-            <select id="wakeInterval">
-              <option value="15">Every 15 seconds — light sleep</option>
-              <option value="30">Every 30 seconds — light sleep</option>
-              <option value="60">Every minute — light sleep</option>
-              <option value="300" selected>Every 5 minutes — deep sleep</option>
-              <option value="900">Every 15 minutes — deep sleep</option>
-              <option value="1800">Every 30 minutes — deep sleep</option>
-              <option value="3600">Every hour — deep sleep</option>
-              <option value="custom">Custom…</option>
-            </select>
-          </label>
-          <!-- CircuitPython only: the alarm the board arms before it sleeps. The
-               WipperSnapper broker path only implements a timer (server.js defers
-               Ext0Config), so this stays hidden there rather than offering a
-               choice nothing downstream would honour. -->
-          <label class="field hidden" id="wakeAlarmField">
-            <span class="label" style="letter-spacing:0.06em; text-transform:none; font-size:11px">Wake on</span>
-            <select id="wakeAlarm">
-              <option value="timer" selected>Timer</option>
-              <option value="pin">Button press</option>
-              <option value="timer+pin">Timer or button</option>
-            </select>
-          </label>
-
-          <div class="push-block">
-            <span class="cue" id="pushCue">It's showtime — the dashboard is written, then the display sleeps.</span>
-            <button type="button" class="btn btn-primary btn-block blueprint" id="sendBmpSleep">Push to display<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i></button>
-          </div>
         </aside>
 
       </div>
@@ -564,12 +608,24 @@
                something, so it never pads the banner with an empty claim. -->
           <span class="report" id="sleepReport" hidden></span>
         </div>
-        <div class="actions">
-          <span style="font-size:12.5px; opacity:0.75" id="queueNote">No changes waiting</span>
-          <div class="row">
-            <button type="button" class="btn btn-primary blueprint btn-showtime" id="editDashboard">Edit Canvas<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i></button>
-          </div>
+        <!-- The armed window, opposite the countdown running through it: 04:12 left
+             of fifteen minutes. State, not a control — every button has left this
+             bar for the action bar below. -->
+        <div class="cadence">
+          <span class="cap">Refreshes every</span>
+          <span class="figure" id="refreshEvery">5 minutes</span>
         </div>
+      </div>
+
+      <!-- The same action bar A7 carries, holding the same rank of decision: the one
+           thing there is to do from here. Sleeping must not read as "come back
+           later" — the whole point of this screen is that you can keep working —
+           so the way back into the editor is a committed row of its own rather
+           than a button tucked into a status bar. -->
+      <div class="action-bar">
+        <span class="action-label" id="queueNote">No changes queued</span>
+        <span class="action-note">Anything you edit will be included in the next take</span>
+        <button type="button" class="btn btn-primary blueprint btn-commit" id="editDashboard">Edit dashboard<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i></button>
       </div>
 
       <!-- The before/after pair is the core idea of this screen: it makes "your
@@ -577,12 +633,18 @@
            lock, or an error. -->
       <div class="takes">
         <figure class="take" data-role="written">
-          <figcaption class="take-label">On the panel now</figcaption>
+          <div class="take-head">
+            <figcaption class="take-label">On the panel now</figcaption>
+            <span class="tag tag-outline">Intermission</span>
+          </div>
           <div class="glass" id="takeWritten"><div class="placeholder">Nothing has been written to this panel yet.</div></div>
           <span class="caption" id="takeWrittenCaption">not yet written</span>
         </figure>
         <figure class="take" data-role="next">
-          <figcaption class="take-label">The next take</figcaption>
+          <div class="take-head">
+            <figcaption class="take-label">The next take</figcaption>
+            <span class="tag tag-accent">Up next</span>
+          </div>
           <div class="glass blueprint" id="takeNext">
             <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
             <div class="placeholder">—</div>

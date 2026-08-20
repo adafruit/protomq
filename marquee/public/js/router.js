@@ -15,7 +15,7 @@
 import { getState, setState } from './state.js';
 import { displayState } from './cycle.js';
 import { DISPLAY_PRESETS } from './presets.js';
-import { $, $$ } from './util.js';
+import { $, $$, val } from './util.js';
 
 /** Which act each screen belongs to, for the rail. */
 const SCREEN_ACT = { a3: 1, a4: 1, a5: 1, a6: 1, a7: 2, a8: 3 };
@@ -139,11 +139,20 @@ function syncChrome() {
     // the exact failure cycle.js exists to prevent.
     const phase = displayState(st);
     pill.className = `pill ${phase === 'redrawing' ? 'pill-on-air' : 'pill-asleep'}`;
-    // Awake names the REDRAW rather than the state, because that is the part a user is
-    // actually waiting on.
+    // Two words, in the house type. The pill used to spell the state out as a sentence
+    // with an emoji on it — "Awake - Redrawing 🎨" — which named the redraw rather than
+    // the state, and read as a status field wedged between the breadcrumb and Settings.
+    // ON AIR / ASLEEP is the same claim at lamp weight, and what a redraw actually is is
+    // now said in full on the Showtime headline, where there is room for it.
     pill.querySelector('[data-role="text"]').textContent =
-      phase === 'offline' ? 'Offline' : phase === 'sleeping' ? 'Sleeping 💤' : 'Awake - Redrawing 🎨';
+      phase === 'offline' ? 'Offline' : phase === 'sleeping' ? 'Asleep' : 'On air';
   }
+
+  // The last crumb is the board being edited. The ProtoMQ device name is the one the
+  // push is addressed to, so it is the honest answer to "which board is this" — the
+  // feed key names where the artwork goes, not what draws it.
+  const crumb = $('crumbBoard');
+  if (crumb) crumb.textContent = val('pmDevice') || 'magtag';
 
   $('chromeNote').hidden = !inActOne;
 }
@@ -161,6 +170,10 @@ export function initRouter() {
       navigate(railTarget(+cell.dataset.act));
     });
   });
+
+  // Renaming the board in Settings has to reach the crumb while the dialog is still
+  // open — it is the only field up there whose effect is visible behind the modal.
+  $('pmDevice')?.addEventListener('input', syncChrome);
 
   // Any flow-state change can move the pill, the badge or a rail cell.
   return { syncNav };

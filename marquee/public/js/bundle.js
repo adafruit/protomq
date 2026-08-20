@@ -138,6 +138,24 @@ function driverClassName() {
 }
 
 /**
+ * The column-offset line for the generated comment, or nothing at all.
+ *
+ * Only the panels that actually have a dead zone carry `colstart`, so on every
+ * other one this line would be a paragraph about a field the descriptor does not
+ * contain. When it IS there it has to be said out loud, because it is the one
+ * geometry fact a consumer can honour incorrectly and still draw a plausible
+ * picture — just 8 pixels sideways.
+ */
+function colstartNote() {
+  const cols = buildMarqueeCfg().display.colstart;
+  if (cols === undefined) return '';
+  return `# PANEL["colstart"] is ${cols}: this panel's framebuffer is offset that many
+# pixels from the controller's column RAM. Skipping it draws the whole dashboard
+# ${Math.abs(cols)} pixels off; it is not a cosmetic field.
+`;
+}
+
+/**
  * How the native buffer relates to the drawn surface — only worth spelling out
  * when rotation actually changes it, or the sentence reads as a typo on the
  * panels that are already landscape.
@@ -176,7 +194,7 @@ function codePy() {
   // bus, must not resolve pins the board does not have, and must not call
   // release_displays() — that last one would tear down the very display show()
   // draws on. Everything the two paths do differently is gated on this.
-  const builtin = buildMarqueeCfg().interface.kind === 'builtin';
+  const builtin = buildMarqueeCfg().interface.type === 'builtin';
   return `# Adafruit IO Marquee — generated code bundle.
 #
 # Fetches the dashboard your Marquee editor published to an Adafruit IO feed,
@@ -202,7 +220,7 @@ with open("cfg-marquee.json") as f:
 
 PANEL = CONFIG["display"]
 ${builtin
-  ? `# interface.kind is "builtin": this panel is soldered to the board, CircuitPython
+  ? `# interface.type is "builtin": this panel is soldered to the board, CircuitPython
 # brought it up before code.py ran, and it is board.DISPLAY. There is no pinout in
 # cfg-marquee.json for such a board on purpose — the EPD is not on board.D<n> pins.
 `
@@ -310,7 +328,7 @@ ${builtin ? `# PANEL["driver"] is "${val('pmDriver') || '?'}" and PANEL["width"]
 #   ${driverImport()}
 # PANEL["width"]/["height"] are its first two constructor arguments: the NATIVE,
 # unrotated framebuffer. ${geomNote(lw, lh)}
-# Wiring that up, and decoding the ${display.type === 'mono' ? 1 : 4}-bit indexed BMP the feed carries, is
+${colstartNote()}# Wiring that up, and decoding the ${display.type === 'mono' ? 1 : 4}-bit indexed BMP the feed carries, is
 # not generated yet. See docs/cfg-marquee.md.
 `}import adafruit_imageload  # noqa: E402  (imported late so the panel is up first)
 
@@ -334,7 +352,7 @@ function readme() {
   // Same split as codePy(): on a builtin panel the bundle is finished and needs no
   // EPD library at all, so promising adafruit_epd and apologising for not using it
   // would both be wrong.
-  const builtin = buildMarqueeCfg().interface.kind === 'builtin';
+  const builtin = buildMarqueeCfg().interface.type === 'builtin';
   // The native buffer and the drawn canvas differ on every portrait-native panel,
   // so name both — but only when they actually differ, or the line reads as a
   // typo on the panels where rotation is 0.
@@ -373,7 +391,7 @@ and copy these into CIRCUITPY/lib/:
     adafruit_connection_manager.mpy
     adafruit_imageload/
 ${builtin ? `
-Your panel is part of the board -- cfg-marquee.json says "kind": "builtin" -- so
+Your panel is part of the board -- cfg-marquee.json says "type": "builtin" -- so
 CircuitPython already brings it up as board.DISPLAY and no EPD driver library is
 needed.
 

@@ -38,9 +38,22 @@
   letter-spacing: 0.02em;
 }
 .chrome .crumb-current { color: var(--color-accent-300); }
-.chrome .crumb-leaf { font-family: var(--font-body); font-size: 13px; }
 .chrome .sep { opacity: 0.4; }
 .chrome .chrome-note { font-size: 12px; opacity: 0.65; }
+
+/* The device pill is the only LIVE thing in the chrome — everything else up here is
+   a label — so it is sized to be read at a glance rather than to match the crumbs.
+   It also drops the uppercasing every other pill gets: its states are words with an
+   emoji, and "SLEEPING 💤" letterspaced at 0.16em reads as a tag rather than as a
+   report of what the board is doing right now. */
+#devicePill {
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  padding: 5px 12px;
+  gap: 8px;
+}
+#devicePill .dot { width: 8px; height: 8px; }
 
 /* ---- step rail ----------------------------------------------------------- */
 /* Three equal cells during Act I (58px), collapsing to 44px once Act I is done.
@@ -580,7 +593,9 @@
   color: var(--color-chrome-text);
 }
 
-/* The clapperboard. The one overt theater motif in the interface. */
+/* The clapperboard. The one overt theater motif in the interface, and the only clock left
+   in it — tabular figures because a countdown whose digits change width jitters the bar
+   once a second. */
 .clapper { display: flex; align-items: stretch; flex: none; border: 1px solid var(--color-chrome-hairline); }
 .clapper .stripes {
   width: 140px;

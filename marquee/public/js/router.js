@@ -13,13 +13,12 @@
  */
 
 import { getState, setState } from './state.js';
+import { displayState } from './cycle.js';
 import { DISPLAY_PRESETS } from './presets.js';
-import { $, $$, val } from './util.js';
+import { $, $$ } from './util.js';
 
 /** Which act each screen belongs to, for the rail. */
 const SCREEN_ACT = { a3: 1, a4: 1, a5: 1, a6: 1, a7: 2, a8: 3 };
-
-const PATH_LABELS = { wippersnapper: 'WipperSnapper', circuitpython: 'CircuitPython' };
 
 let current = null;
 const enterHooks = new Map();
@@ -115,36 +114,31 @@ function syncChrome() {
   const st = getState();
   const inActOne = (SCREEN_ACT[current] || 1) === 1;
 
-  // Breadcrumb leaf: the marquee's name, once it has one and setup is past.
-  const name = val('marqueeName');
-  const showLeaf = !!name && !inActOne;
-  $('crumbSep').hidden = !showLeaf;
-  $('crumbLeaf').hidden = !showLeaf;
-  $('crumbLeaf').textContent = name;
-
-  // The path badge appears the moment the fork is answered and stays for the
-  // rest of the flow — it is how a user knows which of the two worlds they're in.
-  const badge = $('pathBadge');
-  if (st.firmwarePath) {
-    badge.hidden = false;
-    badge.textContent = PATH_LABELS[st.firmwarePath].toUpperCase();
-  } else {
-    badge.hidden = true;
-  }
-
-  // ON AIR / ASLEEP. Hidden until something has actually been written — before
-  // that there is no panel state to report — and hidden throughout Act I, where
-  // the user is still describing hardware rather than watching it.
+  // The device status pill, and it is the whole of the chrome's device reporting now — the
+  // countdown that sat beside it is gone, because every number in it was modelled.
+  //
+  // Shown in every act, including Act I. It used to hide there on the grounds that a user
+  // still describing hardware is not watching it — but the board reports for itself the
+  // whole time now, and a board that is awake and redrawing while you are on the settings
+  // screen is exactly the thing you would want the chrome to tell you. What it still waits
+  // for is having ANYTHING to say: a write of our own, or a report from the board.
   const pill = $('devicePill');
-  if (!st.lastWriteAt || inActOne) {
-    pill.hidden = true;
-  } else {
-    pill.hidden = false;
-    const asleep = st.deviceState === 'asleep';
-    const offline = st.deviceState === 'offline';
-    pill.className = `pill ${asleep || offline ? 'pill-asleep' : 'pill-on-air'}`;
+  const showDevice = !!(st.lastWriteAt || st.lastWokeAt || st.lastSleptAt);
+  pill.hidden = !showDevice;
+
+  if (showDevice) {
+    // The three states, and the whole set. `{feed}-status` publishes `awake` or `sleeping`
+    // (docs/marquee-status.md), device.js turns those into `deviceState`, and cycle.js
+    // adds the one thing the feed cannot report: a board that proved it reports and then
+    // went quiet. The derivation is imported rather than repeated because the Showtime
+    // clock renders from the same call — this label and that countdown disagreeing is
+    // the exact failure cycle.js exists to prevent.
+    const phase = displayState(st);
+    pill.className = `pill ${phase === 'redrawing' ? 'pill-on-air' : 'pill-asleep'}`;
+    // Awake names the REDRAW rather than the state, because that is the part a user is
+    // actually waiting on.
     pill.querySelector('[data-role="text"]').textContent =
-      offline ? 'OFFLINE' : asleep ? 'SLEEPING…' : 'ON AIR';
+      phase === 'offline' ? 'Offline' : phase === 'sleeping' ? 'Sleeping 💤' : 'Awake - Redrawing 🎨';
   }
 
   $('chromeNote').hidden = !inActOne;
@@ -163,12 +157,6 @@ export function initRouter() {
       navigate(railTarget(+cell.dataset.act));
     });
   });
-
-  // The marquee's name shows in the breadcrumb, so keep it live as it's typed.
-  $('marqueeName')?.addEventListener('input', syncChrome);
-
-  // The path badge is the route back to the fork from anywhere in the flow.
-  $('pathBadge')?.addEventListener('click', () => navigate('a3'));
 
   // Any flow-state change can move the pill, the badge or a rail cell.
   return { syncNav };

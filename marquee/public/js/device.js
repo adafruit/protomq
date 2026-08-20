@@ -23,10 +23,10 @@ import {
 } from './doc.js';
 import { renderOrReport, tooLargeForIO, publishToIO } from './render.js';
 import { refreshFeedElements, readFeedData } from './feeds.js';
-import { panelRefreshSeconds } from './palette.js';
+import { takeInFlight } from './cycle.js';
 import {
   getState, setState, setPublished, clearPublished,
-  getQueued, setQueued, clearQueued,
+  getQueued, setQueued, clearQueued, subscribe,
 } from './state.js';
 import { syncPushBlock } from './screens/a7.js';
 import { $, val, toast, fmtBytes, fmtLocalSeconds } from './util.js';
@@ -233,7 +233,7 @@ async function resetSleepEvents() {
 let sleepCountdownTimer = null;
 
 /**
- * `wakesAt` in flow state is what A8's clapperboard ticks off, so the countdown
+ * `wakesAt` in flow state is what the chrome clapperboard ticks off, so the countdown
  * survives navigating away from the screen and back.
  *
  * `since` is when the sleep actually BEGAN. It defaults to now, which is right for
@@ -779,7 +779,17 @@ async function pushToDisplayCircuitPython() {
     // 3) The countdown, but only when there is a time to count to. A pin-only
     // alarm has none, and neither does an unpublished window — showing a clock in
     // either case would be inventing a wake time.
-    if (armed === 'timer' || armed === 'timer+pin') {
+    //
+    // Nor does a board that narrates its own cycle. What was just published is a REQUEST:
+    // it takes effect at the board's next fetch, and the board then says what it actually
+    // armed. Starting a countdown here would assert a sleep it has not taken — on top of a
+    // take very likely still running — and the wake time would be wrong twice over, once
+    // for the take still in progress and again for any cooldown. Its own report is a poll
+    // away, and that one is evidence.
+    if (boardReportsState()) {
+      stopSleepCountdown();
+      status('📨 Sleep window published — waiting for the board to say what it armed');
+    } else if (armed === 'timer' || armed === 'timer+pin') {
       startSleepCountdown(payload.sleep_time);
     } else {
       stopSleepCountdown();
@@ -831,25 +841,29 @@ async function queueForNextTake() {
   navigate('a8');
 }
 
-// ---------- the modelled CircuitPython cycle --------------------------------
+// ---------- the fallback promotion -------------------------------------------
 //
-// The FALLBACK, for a board whose code.py does not report anything (see the status
-// watch below, which supersedes all of this the moment a real report arrives).
-// Without a report, "when will the board have drawn this" has to be answered from a
-// model. Both consumers — A8's clapperboard and the promotion below — read the same
-// two numbers, so the screen and the state can never disagree about which phase the
-// model thinks the board is in.
+// The ONLY estimate left anywhere, and it is not shown to anyone: for a board whose
+// code.py reports nothing, "has it drawn the take I queued" has no evidence behind it, so
+// a timer answers it. Everything else that used to be modelled here — the countdown, the
+// phase of the cycle, when the next wake was due — is gone; a reporting board says all of
+// it, and a silent board now gets prose that admits nothing is known rather than a clock
+// with invented numbers.
 
-/** WiFi associate, Adafruit IO connect and pulling the BMP down, before the panel
- *  even starts flashing. Deliberately generous: every consumer of this number
- *  fails by being EARLY. */
-const WAKE_NETWORK_S = 12;
+/**
+ * One whole take, budgeted rather than fitted.
+ *
+ * Deliberately a single generous constant instead of a per-panel calculation, because the
+ * calculation was the bug: a take is bounded by the driver, not by the image. A redraw with
+ * BUSY unwired is a flat `refresh_time` (40s default) and cannot even begin until
+ * `seconds_per_frame` (180s default) has passed since the last one, so a 2.13" tri-color
+ * measured 123s against a 14s fit. Being LATE here shows a stale image for a moment; being
+ * early claims a redraw that has not happened.
+ */
+const FALLBACK_TAKE_S = 240;
 
-/** How long the board is plausibly awake for: the round trip, then the redraw. */
-export const awakeSeconds = () => WAKE_NETWORK_S + panelRefreshSeconds();
-
-/** One full cycle: the sleep window the board collected, plus that awake time. */
-const cyclePeriodMs = (st) => (st.sleepSeconds || refreshInterval()) * 1000 + awakeSeconds() * 1000;
+/** One fallback cycle: the window the board was asked for, then a whole take. */
+const fallbackPeriodMs = (st) => ((st.sleepSeconds || refreshInterval()) + FALLBACK_TAKE_S) * 1000;
 
 let queuedWriteTimer = null;
 
@@ -866,7 +880,7 @@ function scheduleQueuedWrite() {
   clearTimeout(queuedWriteTimer);
   const q = getQueued();
   const st = getState();
-  const periodMs = cyclePeriodMs(st);
+  const periodMs = fallbackPeriodMs(st);
   // A board that reports for itself never needs guessing at: applyStatus promotes on
   // the real 'sleeping', and a timer running alongside it would race that with an
   // estimate and sometimes win.
@@ -874,7 +888,7 @@ function scheduleQueuedWrite() {
   if (!q || !st.wakesAt || periodMs <= 0) return;
 
   const n = Math.max(0, Math.ceil((q.at - st.wakesAt) / periodMs));
-  const writtenAt = st.wakesAt + n * periodMs + awakeSeconds() * 1000;
+  const writtenAt = st.wakesAt + n * periodMs + FALLBACK_TAKE_S * 1000;
   const epoch = stateEpoch;
 
   queuedWriteTimer = setTimeout(() => {
@@ -990,11 +1004,100 @@ async function resetStatusWatch() {
   lastAwakeAt = null;
   lastReportAt = null;
   statusPolls = 0;
-  const data = await readFeedData(statusFeedKey());
+  // A BATCH, not one datum. The cursor still moves to the newest, but the newest alone
+  // cannot answer the only question that matters here — is the board up right now? — and
+  // reading one meant the answer was thrown away with the rest of the history. A push
+  // landing while the board is mid-take finds its `awake` sitting at the head of the feed,
+  // seeds the cursor to exactly that datum, and so starts the cycle having discarded the
+  // wake half of the bracket: no promotion check, and a watch that then has nothing to
+  // wait on but an estimated deadline.
+  const data = await readFeedData(statusFeedKey(), { limit: STATUS_BATCH });
   statusCursor = data && data.length ? data[0].id : null;
   if (!data) statusLog('unreadable — the feed may not exist yet, or the IO key is unset');
   else if (!data.length) statusLog('no history yet — nothing has ever been published here');
   else statusLog(`starting from datum ${data[0].id} (${logClock(data[0].createdAt)}), ignoring anything older`);
+  if (data && data.length) adoptReportedState(data);
+}
+
+/**
+ * Adopt the board's CURRENT state from the history the cursor just skipped past.
+ *
+ * Reading the head datum is not replaying history — a feed's last value is state, which is
+ * the property this whole watch is built on. The newest thing the board said is what it is
+ * doing now, and throwing that away with the rest of the batch is what left a push landing
+ * mid-take with no wake to bracket against.
+ *
+ * What it deliberately does NOT do is run applyStatus(). That function has consequences —
+ * it promotes a queued take onto the panel, it emits `pushed`/`slept` — and none of those
+ * belong to a datum that was published before this cycle began. This only records.
+ *
+ * Either state counts as proof the board narrates itself, which is what stops the push
+ * below from asserting a sleep on top of it.
+ */
+function adoptReportedState(data) {
+  const seen = data
+    .map((d) => ({ at: Number.isFinite(d.createdAt) ? d.createdAt : Date.now(), s: parseStatus(d.value) }))
+    .filter((x) => x.s && (x.s.state === 'awake' || x.s.state === 'sleeping'));
+  if (!seen.length) return;
+  statusSeen = true;
+
+  // BOTH ENDS of the last bracket, not just the head. The head alone says what the board is
+  // doing; the pair says what it has already done, and Act III needs that to tell the take
+  // on the glass from the take still waiting on the feed. Adopting only the head left
+  // `lastWokeAt` null for a board found asleep — so a board that had demonstrably woken,
+  // drawn and gone back to sleep was reported as having confirmed nothing.
+  const newestAwake = seen.find((x) => x.s.state === 'awake');
+  const newestSleep = seen.find((x) => x.s.state === 'sleeping');
+  if (newestAwake) { lastAwakeAt = newestAwake.at; setState({ lastWokeAt: newestAwake.at }); }
+  if (newestSleep) setState({ lastSleptAt: newestSleep.at });
+
+  const head = seen[0];
+  if (head.s.state === 'awake') {
+    setState({ deviceState: 'online-awake', wakesAt: null });
+    statusLog(`board is mid-take — adopting the awake at ${logClock(head.at)} as the open bracket`);
+    return;
+  }
+
+  // Asleep, and it said for how long.
+  const secs = Number.isFinite(head.s.sleep_time) ? head.s.sleep_time : refreshInterval();
+  setState({ wakeSource: head.s.alarm_type || 'timer' });
+  if (head.s.alarm_type === 'pin') setState({ deviceState: 'asleep', wakesAt: null, sleepSeconds: null });
+  else startSleepCountdown(secs, { since: head.at });
+  statusLog(`board is asleep — adopting the sleeping at ${logClock(head.at)} (${secs}s on `
+    + `${head.s.alarm_type || 'timer'})`
+    + `${newestAwake ? `, woke ${logClock(newestAwake.at)}` : ', no wake in this batch'}`);
+}
+
+let watchStarting = false;
+
+/**
+ * Start the status watch if it is not already running.
+ *
+ * The watch used to begin only at the end of a push, which meant a reloaded tab — or one
+ * that had simply not pushed yet — never read the feed at all, on any screen. The board is
+ * reporting the whole time regardless of what this editor is doing, so the watch belongs to
+ * the session and not to the push: it starts at boot, survives navigation, and the chrome
+ * pill is right in Act I for the same reason it is right in Act III.
+ *
+ * Seeding through resetStatusWatch() is what makes the pill correct IMMEDIATELY rather than
+ * one poll later — adoptReportedState() reads the board's current state out of the same
+ * batch that sets the cursor.
+ *
+ * Cheap to call repeatedly, which is the point: every caller can just say "there should be
+ * a watch" without knowing whether there already is one.
+ */
+export async function ensureStatusWatch() {
+  if (getState().firmwarePath !== 'circuitpython' || !statusFeedKey()) return;
+  // statusPollTimer alone is not enough of a guard: tick() awaits a fetch before setting it,
+  // so two callers arriving in that gap would both start a loop and double the poll rate.
+  if (statusPollTimer || watchStarting) return;
+  watchStarting = true;
+  try {
+    await resetStatusWatch();
+    watchForStatus();
+  } finally {
+    watchStarting = false;
+  }
 }
 
 /** Anything newer than the cursor, oldest-first so transitions apply in order. */
@@ -1088,27 +1191,19 @@ function applyStatus(datum) {
     stopSleepCountdown();
     setState({ deviceState: 'asleep', wakesAt: null, sleepSeconds: null });
   } else {
-    startSleepCountdown(secs, { since: anchorSleep(at, secs) });
+    startSleepCountdown(secs, { since: at });
   }
   emit('slept');
 }
 
 /**
- * Where to start counting from, given a 'sleeping' that may be old news.
+ * How long the board gets to say something before it is called offline.
  *
- * A tab hidden for an hour catches up on a report whose wake time has long passed, and
- * the cycles the board ran since are beyond the handful of data points we fetch. Left
- * as-is that reads 00:00 and then declares a healthy board offline — the exact kind of
- * confident falsehood this feed exists to remove. So the observed anchor is rolled
- * forward by whole cycles until the wake it implies is in the future, and the next
- * report replaces the estimate with something the board actually said.
+ * ONE number, generously over the worst take this hardware can produce: a 180s frame
+ * cooldown plus a 40s BUSY-less redraw plus the round trip. Not fitted per panel, because
+ * fitting it per panel is what produced a deadline of 86s for a 123s take.
  */
-function anchorSleep(at, secs) {
-  const periodMs = (secs + awakeSeconds()) * 1000;
-  const behind = Date.now() - (at + secs * 1000);
-  if (periodMs <= 0 || behind <= 0) return at;
-  return at + periodMs * Math.ceil(behind / periodMs);
-}
+const STATUS_TAKE_CEILING_MS = 300000;
 
 /** The slow cadence, for when the board is not expected to say anything soon. */
 const STATUS_IDLE_MS = 60000;
@@ -1126,19 +1221,22 @@ function statusWindow(st) {
   // A pin-only alarm has no wake time and may not fire for days. There is nothing to
   // time out, so this watches slowly and forever rather than calling a board offline
   // for not having been pressed.
-  if (st.wakeSource === 'pin') return { opens: Date.now(), deadline: Infinity, idle: true };
-  // Sleeping on a timer: nothing can arrive until the wake, so don't spend requests
-  // looking, and give the round trip plus the redraw plus a grace to report in.
-  if (st.wakesAt) {
-    return {
-      opens: st.wakesAt - STATUS_POLL_MS,
-      deadline: st.wakesAt + awakeSeconds() * 1000 + STATUS_GRACE_MS,
-    };
-  }
-  // Reported awake and working, or a cycle with no window to anchor on: measure from
-  // the last thing actually heard.
-  const from = lastAwakeAt ?? watchStartedAt ?? Date.now();
-  return { opens: Date.now(), deadline: from + awakeSeconds() * 1000 + STATUS_GRACE_MS };
+  if (st.wakeSource === 'pin') return { deadline: Infinity, idle: true };
+
+  // Everything else gets ONE rule and one number. The old one had a deadline per case,
+  // each computed from a fitted refresh time, and it wrote off a demonstrably alive board
+  // 86s into a take that needed 123s — a 40s flat redraw behind an 83s frame cooldown, on a
+  // panel the model thought was a 14s job. There is no version of that arithmetic worth
+  // keeping, so this is a watchdog rather than a model: from whenever the board is next due
+  // to speak, it gets one generous ceiling to do it in.
+  //
+  // `watchStartedAt` as a floor is what makes a stale report safe. A tab backgrounded for
+  // an hour catches up on a 'sleeping' whose wake passed forty cycles ago; judging from
+  // that would call a healthy board dead the instant we started listening again. Whenever
+  // the watch (re)starts, the board gets a full ceiling from then.
+  const due = takeInFlight(st) ? st.lastWokeAt : (st.wakesAt || lastReportAt || Date.now());
+  const from = Math.max(due, watchStartedAt ?? 0);
+  return { deadline: from + STATUS_TAKE_CEILING_MS + STATUS_GRACE_MS };
 }
 
 /**
@@ -1159,17 +1257,15 @@ function watchForStatus() {
 
   const tick = async () => {
     if (epoch !== stateEpoch) return;
-    const { opens, deadline, idle } = statusWindow(getState());
+    const { deadline, idle } = statusWindow(getState());
     const wait = () => { statusPollTimer = setTimeout(tick, idle ? STATUS_IDLE_MS : STATUS_POLL_MS); };
 
-    if (Date.now() < opens) {
-      // Not looking yet, and saying so: a silent debug line during a 15-minute sleep is
-      // indistinguishable from a watch that has died.
-      statusLog(`waiting — nothing can arrive before the wake, ${fmtWait(opens - Date.now())} to go`);
-      statusPollTimer = setTimeout(tick, Math.min(opens - Date.now(), STATUS_IDLE_MS));
-      return;
-    }
-
+    // No quiet window. This used to skip polling for the length of a sleep on the grounds
+    // that nothing can arrive before the wake — true of a board keeping perfect time, and
+    // false of this one: the wake it reports is the alarm it armed, not the moment it comes
+    // up, and a cooldown or a manual reset moves that by minutes. A watch that is asleep
+    // when the board speaks is indistinguishable from one that is broken, which is exactly
+    // how this looked. It costs 12 reads a minute against IO's 30 — see STATUS_POLL_MS.
     const fresh = await pumpStatus();
     if (epoch !== stateEpoch) return;
     statusPolls++;
@@ -1477,8 +1573,16 @@ export function initDevice() {
   // the value is still sitting there, which is the point of watching state rather
   // than draining an event log.
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) catchUpStatus();
+    if (document.hidden) return;
+    ensureStatusWatch();
+    catchUpStatus();
   });
+
+  // The board reports whether or not this editor has pushed anything, so the watch starts
+  // with the session. Answering the fork is what makes a status feed exist to watch, hence
+  // the subscription as well as the call — both are no-ops once a watch is running.
+  ensureStatusWatch();
+  subscribe(() => ensureStatusWatch());
 
   $('sendBmp')?.addEventListener('click', async () => {
     const btn = $('sendBmp');

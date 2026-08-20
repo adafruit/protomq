@@ -8,7 +8,7 @@
  *
  * Rotation and resolution are the UNROTATED framebuffer as the firmware sees it,
  * with `rotation` as the clockwise 90° step the device applies on top. That
- * distinction matters for every panel whose native buffer is portrait — the two
+ * distinction matters for every panel whose native buffer is portrait — the three
  * 2.13" entries and the MagTag — because adafruit_epd's constructor takes exactly
  * that native pair: Adafruit_SSD1680(122, 250), Adafruit_SSD1680(128, 296),
  * Adafruit_SSD1683(400, 300), Adafruit_UC8179(800, 480). Storing the rotated
@@ -31,7 +31,7 @@ export const DISPLAY_PRESETS = {
     preset: '128x296', rotation: '270', mode: 'mono',
     name: 'epd0', driver: 'SSD1680', panel: 'adafruit-magtag',
     // The panel is soldered to the board, so CircuitPython has already brought it
-    // up as board.DISPLAY by the time code.py runs — see ifaceKindFor(). The pins
+    // up as board.DISPLAY by the time code.py runs — see ifaceTypeFor(). The pins
     // below are still the truth for the WipperSnapper path, which drives the EPD
     // itself; they are not board attribute names on a MagTag (its EPD is on
     // board.EPD_CS/EPD_DC/..., not board.D8/board.D7), which is exactly why the
@@ -51,10 +51,37 @@ export const DISPLAY_PRESETS = {
   tricolorFW: {
     label: '2.13" Tri-Color FeatherWing',
     spec: '250×122 · black/white/red · SSD1680',
-    terms: '2.13 tricolor tri-color featherwing red ssd1680',
+    terms: '2.13 tricolor tri-color featherwing red ssd1680 4814',
     preset: '122x250', rotation: '270', mode: 'tricolor',
     name: 'epd0', driver: 'SSD1680', panel: '213-tricolor-MFGNR',
+    // The 122-wide buffer sits inside 128 columns of controller RAM, and on this
+    // panel the live glass starts 8 columns in. See colstart in cfg.js.
+    colstart: 8,
     pins: { busy: '-1', dc: 'D10', rst: '-1', cs: 'D9', sramCs: 'D6', mosi: 'D35', sck: 'D36', bus: 0 },
+  },
+
+  // Adafruit 2.13" 250x122 Tri-Color eInk / ePaper Display with SRAM (#4947) — the
+  // bare breakout of the same RW glass as the FeatherWing above, so the driver,
+  // the native 122×250 buffer, the rotation and the colour mode are identical and
+  // only two things differ:
+  //   · the wiring, which is the standard Adafruit_EPD breakout pinout (DC=10,
+  //     CS=9, BUSY=7, SRAM_CS=6, RESET=8) rather than the FeatherWing's shared
+  //     RESET/BUSY — the breakout brings both out, so neither is -1;
+  //   · colstart, which is -8 against the FeatherWing's +8. Adafruit's product
+  //     page calls this out directly: as of 2025-08-14 the breakout ships the
+  //     SSD1680Z and "has a different 'offset' than previous panels".
+  // `driver` is still SSD1680 because the Z is the same controller programming
+  // model — there is no adafruit_epd.ssd1680z — and the offset is exactly what
+  // colstart now carries instead. The panel id uses the adafruit-{product} form so
+  // the two 2.13" tri-colors are never confused for one another.
+  tricolorBO: {
+    label: '2.13" Tri-color Breakout',
+    spec: '250×122 · black/white/red · SSD1680Z',
+    terms: '2.13 tricolor tri-color breakout bare red sram ssd1680 ssd1680z 4947',
+    preset: '122x250', rotation: '270', mode: 'tricolor',
+    name: 'epd0', driver: 'SSD1680', panel: 'adafruit-4947',
+    colstart: -8,
+    pins: { busy: 'D7', dc: 'D10', rst: 'D8', cs: 'D9', sramCs: 'D6', mosi: 'D35', sck: 'D36', bus: 0 },
   },
 
   // Adafruit 2.13" Quad-Color eInk / ePaper bare display: 250×122 BWRY, JD79661
@@ -128,7 +155,7 @@ export const DISPLAY_PRESETS = {
 export const PRESET_KEYS = Object.keys(DISPLAY_PRESETS);
 
 /**
- * `interface.kind` for a panel id — what a CircuitPython consumer has to do to get
+ * `interface.type` for a panel id — what a CircuitPython consumer has to do to get
  * a drawing surface.
  *
  * `builtin`  the panel is part of the board. CircuitPython constructs it at boot
@@ -141,7 +168,7 @@ export const PRESET_KEYS = Object.keys(DISPLAY_PRESETS);
  * An unknown panel id — the user typed their own into A5 — is `spi_epd`, which is
  * the assumption that fails loudly rather than silently drawing nothing.
  */
-export function ifaceKindFor(panelId) {
+export function ifaceTypeFor(panelId) {
   const key = PRESET_KEYS.find((k) => DISPLAY_PRESETS[k].panel === panelId);
   return (key && DISPLAY_PRESETS[key].iface) || 'spi_epd';
 }

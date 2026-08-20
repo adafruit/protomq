@@ -25,7 +25,7 @@ const DISPLAY_CONFIG_KEY = 'marquee.displayConfig';
  */
 const CONFIG_FIELDS = [
   'marqueeName', 'preset', 'resW', 'resH', 'rotSel', 'dtype',
-  'pmName', 'pmDriver', 'pmPanel',
+  'pmName', 'pmDriver', 'pmPanel', 'pmColstart',
   'pinBusy', 'pinDc', 'pinRst', 'pinCs', 'pinSramCs', 'pinMosi', 'pinSck', 'spiBus',
   'diffusion', 'orderedMap',
 ];
@@ -171,12 +171,24 @@ function afterGeometryChange() {
 
 // ---------- presets ---------------------------------------------------------
 
-/** True while the form still holds exactly what this preset fills in. */
+/** A preset's `colstart` as the form spells it: the empty string when it has none. */
+function colstartField(p) {
+  return p.colstart === undefined || p.colstart === null ? '' : String(p.colstart);
+}
+
+/**
+ * True while the form still holds exactly what this preset fills in.
+ *
+ * `colstart` is optional in the catalog — most panels have no column offset to
+ * state — so its absence has to compare equal to the empty field applyDisplayPreset
+ * leaves behind, not to the string "undefined".
+ */
 export function presetMatchesForm(p) {
   const g = (id) => ($(id)?.value || '');
   return g('preset') === p.preset && g('rotSel') === String(p.rotation)
     && g('dtype') === p.mode && g('pmName') === p.name && g('pmDriver') === p.driver
-    && g('pmPanel') === p.panel && g('pinBusy') === p.pins.busy && g('pinDc') === p.pins.dc
+    && g('pmPanel') === p.panel && g('pmColstart') === colstartField(p)
+    && g('pinBusy') === p.pins.busy && g('pinDc') === p.pins.dc
     && g('pinRst') === p.pins.rst && g('pinCs') === p.pins.cs && g('pinSramCs') === p.pins.sramCs
     && g('pinMosi') === p.pins.mosi && g('pinSck') === p.pins.sck && g('spiBus') === String(p.pins.bus);
 }
@@ -211,6 +223,8 @@ export function applyDisplayPreset(key, { silent = false } = {}) {
   $('pmName').value = p.name;
   $('pmDriver').value = p.driver;
   $('pmPanel').value = p.panel;
+  // Blanked, not zeroed, for a preset with no offset — see colstartField().
+  $('pmColstart').value = colstartField(p);
 
   $('pinBusy').value = p.pins.busy;
   $('pinDc').value = p.pins.dc;
@@ -323,7 +337,12 @@ export function syncDerivedUI() {
 
   const drv = $('summaryDriver');
   if (drv) {
-    drv.textContent = `Driver ${val('pmDriver') || '—'} · panel ${val('pmPanel') || '—'} · SPI bus ${$('spiBus')?.value ?? 0}`;
+    // The column offset is only named when there is one. On the two 2.13"
+    // tri-colors it is the single field that tells them apart, so leaving it out of
+    // the plate would make the two look like the same setup.
+    const cols = val('pmColstart');
+    const off = cols === '' || Number(cols) === 0 ? '' : ` · colstart ${cols}`;
+    drv.textContent = `Driver ${val('pmDriver') || '—'} · panel ${val('pmPanel') || '—'} · SPI bus ${$('spiBus')?.value ?? 0}${off}`;
   }
 
   const pins = $('summaryPins');

@@ -63,6 +63,20 @@ recognise.
 | `awake` | the board has connected to the broker | stops the countdown, `deviceState` → `online-awake`, Showtime says the display is awake and redrawing |
 | `sleeping` | the board is arming its alarm | promotes the queued take, then starts the countdown from this datum's `created_at` |
 
+Those two values are the editor's whole state vocabulary. The chrome shows exactly
+three — `Sleeping 💤`, `Awake - Redrawing 🎨`, and `Offline` — where the first two are
+this field and the third is the one thing this feed cannot report (see Fallbacks). What
+used to be extra states — modelled vs reported, timed vs pin, due-back — are differences
+in how far the *numbers* can be trusted, not in what the board is doing, so they show up
+in the countdown's caption and prose rather than as states of their own.
+
+`displayState()` in `public/js/cycle.js` is the single derivation, imported by both the
+chrome pill (`router.js`) and the Showtime bar (`screens/a8.js`). It lives in its own
+module because `device.js` imports `router.js`, so the reading cannot live in either of
+those without closing a cycle — and because two copies of it drifted apart the first
+time: the pill read `deviceState` alone and said Sleeping while the countdown beside it
+was already showing a redraw.
+
 The pair is worth more than either message alone, because it **brackets the fetch**. A
 take published *before* an `awake` was on the image feed when the board pulled it; one
 published *between* the two may have missed that pull. That is what lets the editor
@@ -82,9 +96,11 @@ timer" (see `docs/marquee-sleep.md`).
 ### `alarm_type` — `"timer"` | `"pin"` | `"timer+pin"`
 
 What the board armed, in the same vocabulary `-sleep` uses to ask for it. Drives
-`wakeSource` in `state.js`, which is how Act III decides whether there is a wake
-*time* to count down to at all: a `pin` board sleeps until a finger lands on the
-button, so the clock is replaced rather than run.
+`wakeSource` in `state.js`, which is how the clock decides whether there is a wake
+*time* to count down to at all: a `pin` board sleeps until a finger lands on the button,
+so `nextWakeAt()` returns null and the readout is `--:--`. Note that this changes the
+figure, not the state — the board is asleep either way, and a pin alarm is not a fourth
+thing for the chrome to say.
 
 ### `wake_reason` — `"timer"` | `"pin"` | `"reset"`
 
@@ -130,12 +146,15 @@ budget, and a short code is always enough.
 
 A board running an older `code.py` publishes nothing, and that has to keep working.
 
-- **No status has ever arrived** → Act III runs the modelled cycle
-  (`renderEstimatedCycle` in `public/js/screens/a8.js`), and the queued take is
-  promoted by `scheduleQueuedWrite`'s timer. All estimates, and the screen says so.
-- **A status has arrived at some point, and then the board goes quiet** past the wake
-  plus `awakeSeconds()` plus a 60s grace → `deviceState` → `offline`. A board that has
-  proved it reports can be judged for not reporting; one that never has, cannot.
+- **No status has ever arrived** → the state and the clock are both modelled from the
+  window that was published (`displayState`/`nextWakeAt` in `public/js/cycle.js`), and
+  the queued take is promoted by `scheduleQueuedWrite`'s timer. All estimates, and the
+  sub line says so.
+- **A status has arrived at some point, and then the board goes quiet** past
+  `STATUS_TAKE_CEILING_MS` plus a 60s grace → `deviceState` → `offline`. A board that has
+  proved it reports can be judged for not reporting; one that never has, cannot. The clock
+  runs from when the board is next due to speak, floored at when the watch started, so a
+  tab backgrounded for an hour does not call a healthy board dead the moment it resumes.
 - **The feed is unreadable** (missing, no credentials, network down) → unknown, not
   "nothing happened". `readFeedData` resolves `null` and the watch keeps looking,
   matching `readFeedValue`'s contract.
@@ -150,22 +169,66 @@ publishes — so a status left over from a previous bench run cannot be credited
 cycle, exactly as `resetSleepEvents()` does on the broker path — and starts
 `watchForStatus()` once the push lands.
 
+**The seed reads a batch and keeps an open bracket.** If the newest datum is an `awake`,
+`adoptOpenTake()` takes it as `lastAwakeAt` before the cursor moves past it. That is not
+replaying history, it is reading current state: the last thing the board said was "I am
+up". Seeding from a single datum instead threw that away, and a push landing while the
+board was mid-take then had no wake to compare a queued take against and nothing for the
+watch to wait on but a guess. A `sleeping` at the head is still ignored — that is the case
+the seed exists for, and adopting it would start this cycle's clock from a previous alarm.
+
 Polling is confined to the window the board could plausibly be up in: nothing can
 arrive during the sleep, and IO's rate limit is a budget shared with every element
-binding on the canvas. Roughly 15 requests per cycle at 5s spacing, versus the free
-tier's 30/min.
+binding on the canvas. While a take is in flight the window also **opens late** — nothing
+can be published before the redraw physically finishes — which pays for the longer
+deadline: a healthy cycle costs about the same handful of reads it always did, and only a
+board that has actually died runs the window out.
 
-Because a feed's last value is **state and not an event log**, a late read loses
-nothing but latency — which is what makes a backgrounded tab safe. Chrome throttles its
-timers to a crawl, so there are catch-up reads on `visibilitychange` and on entering
-Act III, and a batch of 4 data points per poll so a gap that swallowed a whole
-`awake`/`sleeping` pair is still reconstructable.
+### There is no countdown
+
+The editor does not predict when the next take will happen, and does not draw a clock. It
+reports the state this feed last published, and prints the board's own timestamps beside
+it — `board reported · woke 4:39:35 PM · slept 4:41:38 PM · awake 123s`.
+
+That is a deliberate retreat from a modelled cycle, which was tried and did not survive
+hardware. Predicting a wake needs a cycle period, a period needs the time a take takes, and
+a take is bounded by the driver rather than by the image:
+
+| `EPaperDisplay` parameter | default | when it bites |
+|---|---|---|
+| `refresh_time` | 40s | **Only when `busy_pin` is None.** With BUSY wired the driver polls it and returns as soon as the glass is done; without it, it sleeps this flat interval. |
+| `seconds_per_frame` | 180s | The minimum between refreshes. A take that comes round sooner blocks — awake, at full power — until the frame is old enough. |
+
+Measured on a 2.13" tri-color FeatherWing, whose preset leaves BUSY unwired: an 83.3s
+cooldown then a 40.0s draw, 123s of panel work against a fitted estimate of 14s. Every
+number downstream of that estimate was wrong, including the one that decided how long to
+keep listening — the watch gave up 86s into that take and reported "no report ever" about a
+board that was mid-refresh.
+
+Two numbers survive, neither of them shown to anyone:
+
+- `STATUS_TAKE_CEILING_MS` (5 min) in `device.js` — how long the board gets to say
+  something before it is called offline. A watchdog, not a model, and generously past the
+  worst take this hardware can produce.
+- `FALLBACK_TAKE_S` (240s) in `device.js` — used only to promote a queued take onto
+  "On the panel now" for a board that reports nothing at all. Being late shows a stale
+  image for a moment; being early claims a redraw that never happened.
+
+The consequence worth designing around: **a sleep window shorter than `seconds_per_frame`
+does not make the panel redraw faster.** It moves the waiting out of light sleep and into a
+blocked refresh. A 30s window on this panel means the board is awake roughly 123s out of
+every 153s.
 
 ## Known gaps
 
-- **`code.py` does not publish this feed yet.** The consumer side is complete and the
-  round trip is not, so in practice every board is still on the fallback path above.
-  The editor half can be exercised by publishing the payloads by hand.
+- **The two surviving estimates are flat constants.** `STATUS_TAKE_CEILING_MS` and
+  `FALLBACK_TAKE_S` are budgeted from the `EPaperDisplay` defaults rather than read from
+  the board. They are only ever used to decide when to stop waiting, so being generous
+  costs nothing — but if `code.py` sets `refresh_time`/`seconds_per_frame` per driver, those
+  are facts about the display setup and belong in `cfg-marquee.json` beside the pins.
+- **The fallback path is still the one most boards are on.** A `code.py` that publishes
+  neither transition keeps working: the state and the clock are modelled, and the sub line
+  says so. Everything above assumes the producer is present.
 - **No `-status` write from the editor, ever.** If a future feature needs the editor
   to talk to a running board, it needs its own feed; adding a second writer here
   reintroduces exactly the shadowing problem this feed exists to avoid.

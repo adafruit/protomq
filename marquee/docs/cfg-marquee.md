@@ -45,7 +45,7 @@ pinout at all:
     "rotation": 3,
     "mode": "mono"
   },
-  "interface": { "kind": "builtin" }
+  "interface": { "type": "builtin" }
 }
 ```
 
@@ -78,7 +78,7 @@ five EPD pins:
     "mode": "quadcolor"
   },
   "interface": {
-    "kind": "spi_epd",
+    "type": "spi_epd",
     "spi": { "bus": 0, "mosi": "board.D35", "sck": "board.D36" },
     "pins": {
       "cs": "board.D5", "dc": "board.D6", "reset": "board.D11",
@@ -123,6 +123,7 @@ What the user called this board. Display/logging only.
 | `width`, `height` | integer | **Native, unrotated framebuffer** — see below. |
 | `rotation` | 0–3 | Clockwise quarter-turns. Assign straight to `epd.rotation`. |
 | `mode` | `mono` \| `gray4` \| `tricolor` \| `quadcolor` | Colour capability. |
+| `colstart` | integer | **Optional.** Column offset in pixels. Absent means no shift — see below. |
 
 #### Native geometry — the one rule to get right
 
@@ -155,28 +156,63 @@ portrait-native panel to landscape, and it is what every portrait-native preset 
 the catalog emits. Index `1` is the same landscape flipped 180°. If a board comes
 up upside down, that is the field to change.
 
+#### `colstart` — optional, and absent is not zero-by-accident
+
+The pixel offset between the framebuffer and the controller's column RAM, for a
+panel whose live glass does not start at column 0. Add it to the left edge before
+writing:
+
+```python
+COLSTART = PANEL.get("colstart", 0)     # .get(), not ["colstart"] — most panels omit it
+```
+
+**It is a property of the panel revision, not of the driver part.** The two 2.13"
+tri-colors in the catalog are both 122×250 SSD1680s constructed by the same
+`Adafruit_SSD1680`, and this number is the only thing that distinguishes them:
+
+| preset | product | offset |
+|---|---|---|
+| `tricolorFW` | [2.13" HD Tri-Color FeatherWing (#4814)](https://www.adafruit.com/product/4814) | `8` |
+| `tricolorBO` | [2.13" Tri-Color breakout with SRAM (#4947)](https://www.adafruit.com/product/4947) | `-8` |
+
+Adafruit's product page for the breakout says so directly: as of 2025-08-14 it
+ships the SSD1680Z and "has a different 'offset' than previous panels". Ignoring
+the field does not error and does not look like a bug in the config — it draws the
+whole dashboard eight pixels sideways.
+
+**A panel with no offset omits the key rather than stating `0`.** `"colstart": 0` on
+every entry would read as a measured value where there is really just the absence of
+one, and omission keeps the field additive: a consumer written before `colstart`
+existed keeps working on every descriptor that does not need it. The editor treats a
+blank *and* an explicit `0` in the Column offset field as "omit", since the two mean
+the same thing to a consumer that defaults to no shift.
+
+Note that `adafruit_epd` itself only takes a `colstart` keyword on
+`Adafruit_SSD1680_Grayscale4` today, and documents it there as a non-negative
+multiple of 8 — a `-8` panel needs the offset applied by the consumer.
+
 ### `interface`
 
-`kind` says what the consumer has to do to get a drawing surface, and it decides
+`type` says what the consumer has to do to get a drawing surface, and it decides
 which of the other fields are present at all:
 
-| `kind` | other fields | what to do |
+| `type` | other fields | what to do |
 |---|---|---|
 | `builtin` | **none** | The panel is part of the board. CircuitPython constructed it at boot — use `board.DISPLAY`. Do not open a bus, and do not call `displayio.release_displays()`: that releases the display you are about to draw on. |
 | `spi_epd` | `spi`, `pins` | The user wired the panel up. Open the bus and construct the `adafruit_epd` driver from the table below. |
 
-A consumer branches on `kind` before touching `interface`; reading
+A consumer branches on `type` before touching `interface`; reading
 `interface["pins"]` unconditionally raises `KeyError` on a `builtin` board.
 
 **`builtin` carries no pinout on purpose.** The pins the editor holds for such a
 board — `D8`, `D7`, … for a MagTag — are what the WipperSnapper firmware resolves,
 and they are *not* `board` attributes on the board itself (a MagTag's EPD is on
 `board.EPD_CS`, `board.EPD_DC`, …). Emitting them here would produce a file that
-looks drivable and dies on `getattr(board, "D8")`. The interface kind per preset is
-`ifaceKindFor()` in `public/js/presets.js`; a panel id the editor does not know is
+looks drivable and dies on `getattr(board, "D8")`. The interface type per preset is
+`ifaceTypeFor()` in `public/js/presets.js`; a panel id the editor does not know is
 `spi_epd`.
 
-When `kind` is `spi_epd`:
+When `type` is `spi_epd`:
 
 | field | type | notes |
 |---|---|---|
@@ -237,25 +273,35 @@ busy_pin)`; keyword-only after `spi`.
 it with `Adafruit_SSD1683` costs two of its four shades — it needs
 `Adafruit_SSD1683_Grayscale4`. Resolve on `(driver, mode)`, not on `driver` alone.
 
+**A controller revision is not a new `driver`.** The #4947 breakout ships an
+SSD1680**Z**, which has the same programming model and no `adafruit_epd.ssd1680z` to
+import — so `driver` stays `SSD1680` and the revision's one visible difference is
+carried by `colstart`. Inventing a driver id the table cannot resolve would make
+`class: null` out of a panel that drives fine.
+
 The table lives in `EPD_DRIVERS` in `public/js/presets.js`; `driverFor(driver,
 mode)` does the mode resolution and returns the constructor kwargs alongside.
 
 ## What the catalog emits
 
-All seven presets, as produced by `buildMarqueeCfg()`:
+All eight presets, as produced by `buildMarqueeCfg()`:
 
-| preset | `width`×`height` | `rotation` | drawn at | `mode` | `kind` | class |
-|---|---|---|---|---|---|---|
-| `magtag` | 128×296 | 3 | 296×128 | mono | `builtin` | `Adafruit_SSD1680` (unused — `board.DISPLAY`) |
-| `tricolorFW` | 122×250 | 3 | 250×122 | tricolor | `spi_epd` | `Adafruit_SSD1680` |
-| `quad213` | 122×250 | 3 | 250×122 | quadcolor | `spi_epd` | `Adafruit_JD79661` |
-| `tricolor42` | 400×300 | 0 | 400×300 | tricolor | `spi_epd` | `Adafruit_SSD1683` |
-| `gray42` | 400×300 | 0 | 400×300 | gray4 | `spi_epd` | `Adafruit_SSD1683_Grayscale4` |
-| `mono75` | 800×480 | 0 | 800×480 | mono | `spi_epd` | `Adafruit_UC8179` |
-| `tri75` | 800×480 | 0 | 800×480 | tricolor | `spi_epd` | `Adafruit_UC8179` + `tri_color=True` |
+| preset | `width`×`height` | `rotation` | drawn at | `mode` | `colstart` | `type` | class |
+|---|---|---|---|---|---|---|---|
+| `magtag` | 128×296 | 3 | 296×128 | mono | — | `builtin` | `Adafruit_SSD1680` (unused — `board.DISPLAY`) |
+| `tricolorFW` | 122×250 | 3 | 250×122 | tricolor | `8` | `spi_epd` | `Adafruit_SSD1680` |
+| `tricolorBO` | 122×250 | 3 | 250×122 | tricolor | `-8` | `spi_epd` | `Adafruit_SSD1680` |
+| `quad213` | 122×250 | 3 | 250×122 | quadcolor | — | `spi_epd` | `Adafruit_JD79661` |
+| `tricolor42` | 400×300 | 0 | 400×300 | tricolor | — | `spi_epd` | `Adafruit_SSD1683` |
+| `gray42` | 400×300 | 0 | 400×300 | gray4 | — | `spi_epd` | `Adafruit_SSD1683_Grayscale4` |
+| `mono75` | 800×480 | 0 | 800×480 | mono | — | `spi_epd` | `Adafruit_UC8179` |
+| `tri75` | 800×480 | 0 | 800×480 | tricolor | — | `spi_epd` | `Adafruit_UC8179` + `tri_color=True` |
 
 `magtag` is the only `builtin` entry, so it is the only one whose descriptor has no
-`interface.spi`/`interface.pins`.
+`interface.spi`/`interface.pins`. `tricolorFW` and `tricolorBO` are the only two
+that emit `colstart`, and they are the same glass on two different boards — the
+FeatherWing (#4814) and the SRAM breakout (#4947) — so `driver`, geometry, rotation
+and mode are identical and the offset plus the pinout are the whole difference.
 
 ## The image on the feed
 
@@ -293,7 +339,7 @@ remap PNGs in `palettes/`.
 
 - **`code.py` does not consume the `spi_epd` path yet.** The generated bundle reads
   the config, connects and fetches the dashboard, and on a `builtin` board it draws
-  through `displayio`/`board.DISPLAY` — which is the whole of what that kind
+  through `displayio`/`board.DISPLAY` — which is the whole of what that type
   requires. On `spi_epd` it resolves the bus and the pins but stops short of
   constructing the `adafruit_epd` driver and blitting the indexed BMP with
   `epd.pixel()`, so a bare panel or a FeatherWing does not draw.
@@ -303,8 +349,12 @@ remap PNGs in `palettes/`.
 - **800×480 tri-color is tight on memory.** 188 KB raw plus ~250 KB of base64 will
   not fit alongside the requests buffer on a board without PSRAM. Mono at that
   size is 48 KB and fine.
-- **The 270°-vs-90° choice is unverified on hardware** for `magtag` and
-  `tricolorFW`. Both give the right drawn size; they differ by a 180° flip.
+- **The 270°-vs-90° choice is unverified on hardware** for `magtag`, `tricolorFW`
+  and `tricolorBO`. Both give the right drawn size; they differ by a 180° flip.
+- **`colstart` is unverified on hardware too**, and nothing consumes it yet: the
+  generated `code.py` names it in a comment on the `spi_epd` path, which is as far
+  as that path goes. The signs (`8` for the FeatherWing, `-8` for the breakout) come
+  from the products, not from a panel on a desk.
 
 ## Relationship to the WipperSnapper path
 

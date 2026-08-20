@@ -12,13 +12,13 @@
  * response, and code.py keeps its own default), and anything about the image on
  * the wire. This file describes hardware.
  *
- * Three conventions are load-bearing and explained at their definitions below:
- * native geometry, null for an unwired pin, and the `board.`-prefixed pin names.
- * See docs/cfg-marquee.md.
+ * Four conventions are load-bearing and explained at their definitions below:
+ * native geometry, null for an unwired pin, the `board.`-prefixed pin names, and an
+ * omitted `colstart` rather than a stated zero. See docs/cfg-marquee.md.
  */
 
 import { buildDisplayBody } from './config.js';
-import { ifaceKindFor } from './presets.js';
+import { ifaceTypeFor } from './presets.js';
 import { val } from './util.js';
 
 export const CFG_VERSION = 2;
@@ -40,13 +40,42 @@ function normPin(v) {
 }
 
 /**
+ * The panel's column offset, or null when it has none.
+ *
+ * `colstart` is the pixel shift between the framebuffer and the controller's column
+ * RAM, which is a per-panel-revision fact rather than a per-part one: the two 2.13"
+ * tri-colors are both 122x250 SSD1680s driven by the same class, and the only thing
+ * that stops one from drawing 8 pixels off is this number (+8 on the FeatherWing,
+ * -8 on the SSD1680Z breakout, per Adafruit's own note that the breakout "has a
+ * different 'offset' than previous panels").
+ *
+ * OMITTED rather than emitted as 0 when the field is blank. Most panels have no
+ * offset to state, and a `"colstart": 0` on every one of them would read as a
+ * measured value when it is really just the absence of one — so absent means "no
+ * shift", which is the same thing the adafruit_epd default already does. That also
+ * makes the field additive: a consumer written against a descriptor without it
+ * keeps working, and only a panel that needs the shift carries it.
+ *
+ * It is NOT in buildDisplayBody(): ws_display_DisplayProperties has no field for a
+ * column offset, so the WipperSnapper path has nowhere to put it and reads the
+ * form directly here instead of routing through a body that would drop it.
+ */
+function colstart() {
+  const s = val('pmColstart');
+  if (s === '') return null;
+  const n = Number(s);
+  return Number.isFinite(n) && n !== 0 ? Math.trunc(n) : null;
+}
+
+/**
  * Build the descriptor. Reads the live form, so it is valid to call at any time
  * after initConfig().
  */
 export function buildMarqueeCfg() {
   const body = buildDisplayBody();
   const iface = body.interface.spiEpd;
-  const kind = ifaceKindFor(body.panel);
+  const type = ifaceTypeFor(body.panel);
+  const cols = colstart();
 
   return {
     cfg_version: CFG_VERSION,
@@ -65,16 +94,18 @@ export function buildMarqueeCfg() {
       height: body.height,
       rotation: body.rotation,        // 0..3 quarter-turns, what epd.rotation takes
       mode: body.mode,                // mono | gray4 | tricolor | quadcolor
+      // Present only for a panel that needs it — see colstart() above.
+      ...(cols === null ? {} : { colstart: cols }),
     },
 
-    // How the consumer gets a drawing surface, per ifaceKindFor(). A board with the
+    // How the consumer gets a drawing surface, per ifaceTypeFor(). A board with the
     // panel soldered on hands it over as board.DISPLAY, so `builtin` carries no bus
     // and no pinout: the pins the form holds for such a board belong to the
     // WipperSnapper firmware, and are not `board` attributes on the board itself.
     // Repeating them here as if they were is how a MagTag bundle ends up calling
     // getattr(board, "D8") and dying on the first line that touches the panel.
-    interface: kind === 'builtin' ? { kind } : {
-      kind,
+    interface: type === 'builtin' ? { type } : {
+      type,
       spi: {
         bus: iface.spi.bus,
         mosi: normPin(iface.spi.pinMosi),

@@ -21,6 +21,7 @@ import { getState, subscribe, resetFlow } from './state.js';
 import { initA3 } from './screens/a3.js';
 import { initA4 } from './screens/a4.js';
 import { initA5 } from './screens/a5.js';
+import { initA5b } from './screens/a5b.js';
 import { initA6 } from './screens/a6.js';
 import { initA7 } from './screens/a7.js';
 import { initA8 } from './screens/a8.js';
@@ -38,7 +39,7 @@ import { $, wireModal, openModal, closeModal, toast } from './util.js';
 
 const SETTINGS_KEY = 'marquee.settings';
 const SETTINGS_FIELDS = [
-  'ioUser', 'ioKey', 'ioFeed', 'pmUser', 'pmDevice',
+  'ioUser', 'ioKey', 'ioGroup', 'pmUser', 'pmDevice',
   'sleepDuration', 'writeRetryWindow',
   // Lives in A7's action bar rather than this modal, but it has no backing field
   // to be a view onto the way #wakeInterval is, so it persists on its own.
@@ -46,7 +47,7 @@ const SETTINGS_FIELDS = [
 ];
 
 function saveSettings() {
-  const data = { ioProd: !!$('ioProd')?.checked };
+  const data = { ioDev: !!$('ioDev')?.checked };
   SETTINGS_FIELDS.forEach((id) => { if ($(id)) data[id] = $(id).value; });
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(data)); } catch { /* storage disabled/full */ }
 }
@@ -54,10 +55,23 @@ function saveSettings() {
 function restoreSettings() {
   let data = {};
   try { data = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}') || {}; } catch { /* corrupt/blocked */ }
+  // Settings written before A5b held a flat image-feed key with "-sleep"/"-status"
+  // siblings glued on. The group supersedes it — carry the old value across as the
+  // group key rather than blanking a bench setup that was working yesterday.
+  if (typeof data.ioGroup !== 'string' && typeof data.ioFeed === 'string') {
+    data.ioGroup = data.ioFeed;
+  }
+  // The host switch was inverted at the same time — it was "Publish to Prod",
+  // defaulting OFF to io.adafruit.us. Carry the host across rather than the box:
+  // someone pointed at .us stays pointed at .us, and only a genuinely new setup
+  // gets the new io.adafruit.com default.
+  if (typeof data.ioDev !== 'boolean' && typeof data.ioProd === 'boolean') {
+    data.ioDev = !data.ioProd;
+  }
   SETTINGS_FIELDS.forEach((id) => {
     if ($(id) && typeof data[id] === 'string') $(id).value = data[id];
   });
-  if ($('ioProd')) $('ioProd').checked = !!data.ioProd;
+  if ($('ioDev')) $('ioDev').checked = !!data.ioDev;
 }
 
 function initSettings() {
@@ -86,7 +100,7 @@ function initSettings() {
       }
     });
   });
-  $('ioProd')?.addEventListener('change', saveSettings);
+  $('ioDev')?.addEventListener('change', saveSettings);
 
   // Re-run Act I from the fork. Only the flow record is cleared — the panel
   // descriptor, credentials and dashboard are bench setup and survive, exactly
@@ -157,6 +171,7 @@ async function boot() {
   initA3({ onEnter });
   initA4({ onEnter });
   initA5({ onEnter });
+  initA5b({ onEnter });
   initA6({ onEnter });
   initA7({ onEnter });
   initA8({ onEnter });

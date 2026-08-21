@@ -103,10 +103,11 @@ export function initA5({ onEnter }) {
 
   $('a5Next').addEventListener('click', () => {
     if (getState().firmwarePath === 'circuitpython') {
-      // The board isn't running Marquee's firmware yet, so there is nobody to
-      // send a descriptor to. Go straight to the bundle.
+      // The board isn't running Marquee's firmware yet, so there is nobody to send a
+      // descriptor to. Configure the IO feeds first — A6's bundle bakes their keys
+      // in, so the bundle cannot be built before they are known to exist.
       completeActOne();
-      navigate('a6');
+      navigate('a5b');
       return;
     }
     sendAndOpenEditor();

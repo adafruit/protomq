@@ -8,7 +8,7 @@
  * element already selected; and the chart's "Add feed", which APPENDS to a list.
  */
 
-import { ioHost } from './api.js';
+import { ioHost, ioLog } from './api.js';
 import { layer } from './stage.js';
 import {
   addLabel, rebuildWidget, applyFeedValue, FEED_ETYPES, CHART_RAW_MAX,
@@ -61,6 +61,7 @@ export async function openFeedPicker(target = null, { mode = 'bind' } = {}) {
   $('feedList').innerHTML = '';
   $('feedListStatus').textContent = 'Loading feeds…';
   try {
+    ioLog('list   ', 'feeds', 'every feed on the account');
     const res = await fetch(`https://${ioHost()}/api/v2/${encodeURIComponent(user)}/feeds`,
       { headers: { 'X-AIO-Key': key } });
     if (!res.ok) {
@@ -89,6 +90,7 @@ export function closeFeedPicker() {
 export async function readFeedValue(feedKey) {
   const user = val('ioUser'), key = val('ioKey');
   if (!user || !key || !feedKey) return null;
+  ioLog('read   ', feedKey, 'last value');
   try {
     const res = await fetch(
       `https://${ioHost()}/api/v2/${encodeURIComponent(user)}/feeds/${encodeURIComponent(feedKey)}/data/last`,
@@ -115,6 +117,7 @@ export async function readFeedValue(feedKey) {
 export async function readFeedLast(feedKey) {
   const user = val('ioUser'), key = val('ioKey');
   if (!user || !key || !feedKey) return null;
+  ioLog('read   ', feedKey, 'last datum');
   try {
     const res = await fetch(
       `https://${ioHost()}/api/v2/${encodeURIComponent(user)}/feeds/${encodeURIComponent(feedKey)}/data/last`,
@@ -147,6 +150,7 @@ export async function readFeedData(feedKey, { limit = 1 } = {}) {
   const user = val('ioUser'), key = val('ioKey');
   if (!user || !key || !feedKey) return null;
   const qs = new URLSearchParams({ limit: String(Math.max(1, limit)) });
+  ioLog('read   ', feedKey, `newest ${Math.max(1, limit)} datum(s)`);
   try {
     const res = await fetch(
       `https://${ioHost()}/api/v2/${encodeURIComponent(user)}/feeds/${encodeURIComponent(feedKey)}/data?${qs}`,
@@ -183,6 +187,7 @@ export async function readFeedHistory(feedKey, { hours = 24, raw = false } = {})
   // IO caps a raw pull at 640 points and returns the most recent ones, which is
   // exactly the behaviour the "Raw Data Only" option promises.
   if (raw) { qs.set('raw', 'true'); qs.set('limit', String(CHART_RAW_MAX)); }
+  ioLog('read   ', feedKey, `${hours}h history${raw ? ', raw' : ''}`);
   try {
     const res = await fetch(
       `https://${ioHost()}/api/v2/${encodeURIComponent(user)}/feeds/${encodeURIComponent(feedKey)}/data/chart?${qs}`,
@@ -334,6 +339,7 @@ export function initFeeds() {
     }
 
     $('feedListStatus').textContent = 'Loading value…';
+    ioLog('read   ', feedKey, 'last value (feed picker)');
     try {
       const res = await fetch(
         `https://${ioHost()}/api/v2/${encodeURIComponent(user)}/feeds/${encodeURIComponent(feedKey)}/data/last`,

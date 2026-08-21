@@ -1,4 +1,4 @@
-# The status feed — `{feed}-status`
+# The status feed — `{group}.status`
 
 How a **CircuitPython** board tells the editor what it is actually doing. Two
 moments, one field required, and nothing else.
@@ -19,14 +19,15 @@ the glass.
 
 ## The feed key
 
-`{ADAFRUIT_IO_FEED}-status` — the image feed's key with `-status` appended. With the
-default `marquee`, that is `marquee-status`.
+`{ADAFRUIT_IO_GROUP}.status` — the `status` feed inside the device's Adafruit IO
+group, in IO's group-qualified form. With the default group `marquee`, that is
+`marquee.status`.
 
 Derived, not configured (`statusFeedKey()` in `public/js/api.js`, sharing
 `siblingFeed()` with `sleepFeedKey()`), so renaming the image feed to `kitchen` moves
 all three feeds together and they cannot drift apart.
 
-**It must be a separate feed from `-sleep`, not a second use of it.** That feed is
+**It must be a separate feed from `.sleep`, not a second use of it.** That feed is
 read by `code.py` as "the last value is my window". A board writing its own status
 there would shadow its own config within one cycle — and it would win that race
 almost always, because it publishes every cycle while the editor publishes only when
@@ -49,7 +50,7 @@ must stay comfortably under.
 ```
 
 Published as the feed's `value`, so the consumer reads a **string** and parses it —
-same convention as `-sleep`.
+same convention as `.sleep`.
 
 ## Fields
 
@@ -77,15 +78,24 @@ those without closing a cycle — and because two copies of it drifted apart the
 time: the pill read `deviceState` alone and said Sleeping while the countdown beside it
 was already showing a redraw.
 
-The pair is worth more than either message alone, because it **brackets the fetch**. A
-take published *before* an `awake` was on the image feed when the board pulled it; one
-published *between* the two may have missed that pull. That is what lets the editor
-move "On the panel now" without the board having to report which image it drew.
+The pair is worth more than either message alone, because it **brackets the take**, and
+that is what lets the editor move "On the panel now" without the board having to report
+which image it drew. **`sleeping` is the acknowledgement**: the producer subscribes to the
+bitmap feed and stays subscribed for as long as it is up, and `loop()` draws a pending
+image before it acts on a pending sleep — so everything on the image feed at the moment
+the board reports sleeping has been drawn, *including* a take published mid-wake.
+
+So the cut is the LATEST report of either kind, not the wake. Reading the wake as the
+exact moment of collection — right for a board that polls `/data/last` once on connecting
+and is then unreachable — left the ordinary case broken: push while the board is up, and
+the take is newer than the last `awake`, so nothing is ever confirmed drawn and the left
+panel claims "nothing confirmed on the glass" about the image physically in front of you
+until the next wake happens to be reported.
 
 ### `sleep_time` — integer seconds
 
 The timer the board **actually armed**, which is not necessarily the one the editor
-asked for on `-sleep`. Same name and units as that feed on purpose: a field-by-field
+asked for on `.sleep`. Same name and units as that feed on purpose: a field-by-field
 diff between the two feeds' last values is what exposes a board still sleeping on its
 own `REFRESH_SECONDS`.
 
@@ -95,7 +105,7 @@ timer" (see `docs/marquee-sleep.md`).
 
 ### `alarm_type` — `"timer"` | `"pin"` | `"timer+pin"`
 
-What the board armed, in the same vocabulary `-sleep` uses to ask for it. Drives
+What the board armed, in the same vocabulary `.sleep` uses to ask for it. Drives
 `wakeSource` in `state.js`, which is how the clock decides whether there is a wake
 *time* to count down to at all: a `pin` board sleeps until a finger lands on the button,
 so `nextWakeAt()` returns null and the readout is `--:--`. Note that this changes the
@@ -229,11 +239,11 @@ every 153s.
 - **The fallback path is still the one most boards are on.** A `code.py` that publishes
   neither transition keeps working: the state and the clock are modelled, and the sub line
   says so. Everything above assumes the producer is present.
-- **No `-status` write from the editor, ever.** If a future feature needs the editor
+- **No `.status` write from the editor, ever.** If a future feature needs the editor
   to talk to a running board, it needs its own feed; adding a second writer here
   reintroduces exactly the shadowing problem this feed exists to avoid.
 - **A reload mid-cycle does not resume the watch.** `statusCursor` and `statusSeen`
   are module state, and `published` is deliberately not persisted either
   (`state.js`), so a reloaded tab is back to the fallback until the next push.
-- **`settings.toml` has no `ADAFRUIT_IO_STATUS_FEED`.** Same call as `-sleep`: whether
+- **`settings.toml` has no `ADAFRUIT_IO_STATUS_FEED`.** Same call as `.sleep`: whether
   the producer derives the key or reads it from the environment is its business.

@@ -325,6 +325,76 @@
       </div>
     </section>
 
+    <!-- ══ A5b · Act I · CircuitPython only · configure Adafruit IO ═════════ -->
+    <!-- Runs before A6 because the bundle A6 builds bakes in the username, key
+         and feed keys created here. WipperSnapper never sees this screen: that
+         path has no bundle, and its group key is set by hand under Settings. -->
+    <section class="screen" id="a5b" data-screen="a5b">
+      <div class="screen-split" style="--rail-w:400px">
+        <div class="col-main">
+          <div class="screen-head">
+            <div class="eyebrow">Act I · one more step</div>
+            <h3>Configure Adafruit IO</h3>
+            <p id="a5bSub">Your board reads its picture from Adafruit IO and reports back on the same account. This makes the feeds it needs.</p>
+          </div>
+
+          <div class="grid-3">
+            <label class="field">
+              <span class="label">Adafruit IO username</span>
+              <input type="text" id="a5bUser" autocomplete="off" spellcheck="false">
+            </label>
+            <div class="field">
+              <span class="label">Adafruit IO key</span>
+              <!-- Masked by default. The reveal is here because this is a long
+                   random string being retyped from another tab, and a masked field
+                   with no way to check it is how a 401 becomes a mystery. -->
+              <div class="key-field">
+                <input type="password" id="a5bKey" autocomplete="off" spellcheck="false">
+                <button type="button" class="reveal-toggle" id="a5bKeyReveal" aria-pressed="false" aria-label="Show the key">Show</button>
+              </div>
+            </div>
+            <label class="field">
+              <span class="label">Device name</span>
+              <input type="text" id="a5bDevice" autocomplete="off">
+            </label>
+          </div>
+          <p class="field-error" id="a5bKeyError" hidden></p>
+
+          <!-- The preview of what will be created, and then the progress display
+               for creating it. Deliberately the same box in both states: the rows
+               do not move, they only change colour. -->
+          <div class="feeds-plate blueprint">
+            <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+            <p class="feeds-line" id="a5bGroupLine">Three feeds, under the group <span class="mono" id="a5bGroupKey">—</span></p>
+            <div class="feeds-rows">
+              <div class="check" data-state="wait" id="a5bFeedBitmap"><span class="dot"></span><span data-role="text">bitmap — the picture your board draws</span></div>
+              <div class="check" data-state="wait" id="a5bFeedSleep"><span class="dot"></span><span data-role="text">sleep — how long it waits before waking</span></div>
+              <div class="check" data-state="wait" id="a5bFeedStatus"><span class="dot"></span><span data-role="text">status — what your board reports back</span></div>
+            </div>
+            <p class="hint" id="a5bOutcome" hidden></p>
+            <p class="hint">Changing the key will change API URLs and MQTT subscription topics…</p>
+          </div>
+
+          <div class="screen-foot">
+            <button type="button" class="btn btn-secondary" id="a5bBack">Back</button>
+            <button type="button" class="btn btn-secondary" id="a5bSkip" style="margin-left:auto">Skip for now</button>
+            <button type="button" class="btn btn-primary blueprint" id="a5bCreate" disabled>Create group and feeds<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i></button>
+          </div>
+        </div>
+
+        <aside class="col-rail">
+          <div class="eyebrow">What this does</div>
+          <p style="font-size:12.5px; opacity:0.8; text-wrap:pretty">We'll check to see if you already have a group and feed configured for this device. If it's already configured, we'll do nothing and we'll let you know!</p>
+          <div class="hr" style="margin:6px 0"></div>
+          <div class="eyebrow">Where to find your key</div>
+          <p style="font-size:12.5px; opacity:0.8; text-wrap:pretty">Your Adafruit IO key is on <a href="https://io.adafruit.com/api/docs/#authentication" target="_blank" rel="noopener">io.adafruit.com</a>, behind the yellow key icon. It is stored in this browser and written into the code bundle — treat it like a password.</p>
+          <div class="hr" style="margin:6px 0"></div>
+          <div class="eyebrow">Good to know</div>
+          <p style="font-size:12.5px; opacity:0.8; text-wrap:pretty">Nothing here is destructive. An existing group is reused as it stands, and a feed that is already there is left alone — we only ever add what's missing.</p>
+        </aside>
+      </div>
+    </section>
+
     <!-- ══ A6 · Act I · CircuitPython only · the code bundle ═══════════════ -->
     <section class="screen" id="a6" data-screen="a6">
       <div class="screen-split" style="--rail-w:420px">
@@ -707,8 +777,7 @@
       <h4>Publish to IO feed</h4>
       <button type="button" class="modal-close" id="publishClose" aria-label="Close publish dialog">✕</button>
     </div>
-    <p class="hint">Set your IO username, key and feed under <strong>Settings</strong>.</p>
-    <label class="check-row"><input type="checkbox" id="ioProd"> Publish to Prod (io.adafruit.com)</label>
+    <p class="hint">Set your IO username, key and group under <strong>Settings</strong>.</p>
     <div class="modal-actions">
       <span class="hint mono" id="publishDebug" style="flex:1; text-align:left"></span>
       <button type="button" class="btn btn-primary" id="publishSend">Publish</button>
@@ -727,8 +796,20 @@
     <div class="grid-3">
       <label class="field"><span class="label">IO username</span><input type="text" id="ioUser" autocomplete="off"></label>
       <label class="field"><span class="label">AIO key</span><input type="password" id="ioKey" autocomplete="off"></label>
-      <label class="field"><span class="label">Feed key</span><input type="text" id="ioFeed" placeholder="marquee" autocomplete="off"></label>
+      <label class="field"><span class="label">Group key</span><input type="text" id="ioGroup" placeholder="marquee" autocomplete="off"></label>
     </div>
+    <!-- One name, three feeds. A5b sets this for you on the CircuitPython path;
+         WipperSnapper boards have no bundle step, so it is typed here instead. -->
+    <p class="hint">The device's Adafruit IO group. Its feeds are <span class="mono">{group}.bitmap</span>, <span class="mono">{group}.sleep</span> and <span class="mono">{group}.status</span>.</p>
+
+    <!-- The one host switch for the whole app. It used to be a "Publish to Prod"
+         checkbox in the publish dialog, which read as a per-publish decision and
+         was not one: every read, every write and the generated bundle all resolve
+         through ioHost(), so a box that lived beside a single button was silently
+         retargeting all of them. Off means io.adafruit.com, which is where real
+         accounts are. -->
+    <label class="check-row"><input type="checkbox" id="ioDev"> Developer mode — use <span class="mono">io.adafruit.us</span></label>
+    <p class="hint">Off, everything talks to <span class="mono">io.adafruit.com</span>. On, it all moves to the <span class="mono">.us</span> staging environment — feed reads, publishes, the group A5b creates, and the host written into the code bundle. The two are separate accounts with separate keys, so switching mid-setup will need different credentials.</p>
 
     <div class="hr"></div>
     <span class="label">ProtoMQ target</span>

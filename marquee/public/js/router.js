@@ -18,7 +18,7 @@ import { DISPLAY_PRESETS } from './presets.js';
 import { $, $$, val } from './util.js';
 
 /** Which act each screen belongs to, for the rail. */
-const SCREEN_ACT = { a3: 1, a4: 1, a5: 1, a6: 1, a7: 2, a8: 3 };
+const SCREEN_ACT = { a3: 1, a4: 1, a5: 1, a5b: 1, a6: 1, a7: 2, a8: 3 };
 
 let current = null;
 const enterHooks = new Map();
@@ -57,11 +57,18 @@ export function actOneEntry() {
   return 'a5';
 }
 
-/** Where "open the editor" lands — A6 first if a CircuitPython bundle is owed. */
+/**
+ * Where "open the editor" lands. The CircuitPython path has two things it may still
+ * owe, and they are checked in the order the board needs them: the IO group has to
+ * exist before A6 builds a bundle around its feed keys.
+ *
+ * A skipped A5b is not owed — see the `ioSetup` note in state.js.
+ */
 export function editorEntry() {
   const st = getState();
-  const owesBundle = st.firmwarePath === 'circuitpython'
-    && (st.bundleState === 'not-generated' || st.bundleState === 'stale');
+  if (st.firmwarePath !== 'circuitpython') return 'a7';
+  if (st.ioSetup === 'pending') return 'a5b';
+  const owesBundle = st.bundleState === 'not-generated' || st.bundleState === 'stale';
   return owesBundle ? 'a6' : 'a7';
 }
 

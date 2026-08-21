@@ -12,6 +12,7 @@
  * visible without a lock or an error.
  */
 
+import { bitmapFeedKey } from '../api.js';
 import { logicalDims } from '../palette.js';
 import { captureClean } from '../stage.js';
 import { selected, select } from '../selection.js';
@@ -170,6 +171,7 @@ function forgetDrawn() {
 
 const TAKES_EMPTY = {
   unknown: 'Reading the feed…',
+  unconfigured: 'No feeds yet — finish "Configure Adafruit IO" in Act I and this fills in.',
   unreadable: 'Could not read the feed — check the feed key and AIO credentials under Settings.',
   empty: 'Nothing has been published to this feed yet.',
   undrawn: 'Nothing confirmed on the glass yet — the board has not reported collecting a take.',
@@ -195,7 +197,18 @@ function fetchTakes() {
   // before the push, and the pending take would not appear until something else asked.
   if (takesFetch) { takesAgain = true; return takesFetch; }
   takesFetch = (async () => {
-    const feed = val('ioFeed');
+    // Before A5b has run there is no bitmap feed to read, and asking anyway is a 404
+    // reported as "could not read the feed — check your credentials", which sends the
+    // user to fix something that is not wrong. Say what is actually missing instead.
+    //
+    // Renders on the way out rather than returning bare: the placeholder below is the
+    // whole point of the branch, and the finally clears takesFetch either way.
+    if (getState().firmwarePath === 'circuitpython' && getState().ioSetup === 'pending') {
+      takes = { panel: null, next: null, state: 'unconfigured' };
+      if (currentScreen() === 'a8') { renderWritten(); renderNext(); }
+      return takes;
+    }
+    const feed = bitmapFeedKey();
     // Before the read, so a reload has something to show while the request is in flight and
     // still has it afterwards if the only datum on the feed turns out to be pending.
     if (!lastDrawn) loadDrawn(feed);
@@ -212,14 +225,26 @@ function fetchTakes() {
     if (!data) takes = { panel: null, next: null, state: 'unreadable' };
     else if (!data.length) takes = { panel: null, next: null, state: 'empty' };
     else {
-      // Where the board last fetched. Its WAKE is the exact answer — it pulls the feed on
-      // connecting — but a sleep works too and is sometimes all there is: a board that has
-      // reported going to sleep has necessarily woken and drawn first, so everything older
-      // than that report was on the feed in time for it. Cutting at the sleep is at worst
-      // one cycle generous; refusing to cut at all was the bug, and claimed a board that
-      // had demonstrably drawn something had confirmed nothing.
+      // Where the board last collected. The LATEST report of either kind, not the wake by
+      // preference — which is the whole reason "On the panel now" sat empty through cycles
+      // the board had demonstrably drawn.
+      //
+      // The wake used to be treated as the exact answer, on the model of a board that pulls
+      // the feed once on connecting and is then unreachable until the next wake. The
+      // producer does not work that way: adafruit_marquee SUBSCRIBES to the bitmap feed and
+      // stays subscribed for as long as it is up, so a take published while the board is
+      // awake is delivered to it the moment it lands, and `loop()` draws the pending image
+      // before it acts on the pending sleep. So the `sleeping` report is the acknowledgement
+      // — everything on the feed before it has been drawn, including everything published
+      // during that wake.
+      //
+      // Preferring `lastWokeAt` threw that away. Push while the board is up (the ordinary
+      // case: the editor publishes, the panel redraws a minute later), and the take is newer
+      // than the last wake, so nothing was ever confirmed drawn and the pair stayed frozen
+      // with the left panel empty until the NEXT wake happened to be reported — fifteen
+      // minutes of showing "nothing confirmed on the glass" about a take already on it.
       const { lastWokeAt, lastSleptAt } = getState();
-      const fetched = lastWokeAt || lastSleptAt;
+      const fetched = Math.max(lastWokeAt || 0, lastSleptAt || 0) || null;
       // Newest first, so the first datum older than that is the newest one the board could
       // have pulled. -1 (nothing old enough) means nothing here has been drawn yet.
       const drawn = fetched ? data.findIndex((d) => d.createdAt < fetched) : 1;
@@ -253,7 +278,8 @@ function renderWritten() {
 
   if (!takes.panel) {
     glass.innerHTML = `<div class="placeholder">${TAKES_EMPTY[takes.state]}</div>`;
-    caption.textContent = takes.state === 'unreadable' ? 'feed unreadable' : 'nothing confirmed';
+    caption.textContent = takes.state === 'unreadable' ? 'feed unreadable'
+      : takes.state === 'unconfigured' ? 'no feeds yet' : 'nothing confirmed';
     // Still sized to the panel. An empty box that collapses to its text would
     // leave the two takes different heights, and the whole point of the pair is
     // that they are directly comparable.
@@ -309,8 +335,15 @@ function renderNext() {
   sizeGlass(glass, img);
 
   const pending = countQueuedChanges(serialize());
+  // "On the next wake" is only true of a board that is asleep. One that is up is SUBSCRIBED
+  // to the bitmap feed, so a take published now reaches it now and the panel is redrawing
+  // it — saying it waits for a wake that has already happened reads as the push having
+  // missed the cycle.
+  const collected = displayState() === 'redrawing'
+    ? 'the board is up — drawing it now'
+    : 'collected on the next wake';
   caption.textContent = takes.next
-    ? `on the feed ${fmtLocalTime(new Date(takes.next.at))} — collected on the next wake`
+    ? `on the feed ${fmtLocalTime(new Date(takes.next.at))} — ${collected}`
     : pending
       ? `${pending} change${pending === 1 ? '' : 's'} waiting — sent on next wake`
       : 'up to date';
@@ -564,7 +597,14 @@ export function initA8({ onEnter }) {
     // Both ahead of the screen check. The clock is in the chrome and so live everywhere; the
     // feed read has to happen everywhere for the reason in fetchTakes().
     renderCycle();
-    if (patch.published) fetchTakes();
+    // The reported times are what SPLIT the feed, so a change to either one re-cuts it.
+    // `published` alone was not enough: the status seed (adoptReportedState in device.js)
+    // records the board's current wake and sleep WITHOUT emitting a device event — on
+    // purpose, since it is reading history rather than watching it happen — so a reloaded
+    // tab learned the board had drawn and then never re-read the feed to say so. The split
+    // stayed at the one computed at boot, with no reported time at all, which is "nothing
+    // confirmed on the glass".
+    if (patch.published || 'lastWokeAt' in patch || 'lastSleptAt' in patch) fetchTakes();
   });
 
   onDeviceEvent(({ type }) => {

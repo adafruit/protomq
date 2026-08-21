@@ -299,7 +299,7 @@ app.post('/publish', async (req, res) => {
   if (!user || !key) {
     return res.status(501).json({ error: 'server has no AIO credentials; publish from the client instead' });
   }
-  const { png, display = 'mono', feed, prod } = req.body || {};
+  const { png, display = 'mono', feed, dev } = req.body || {};
   if (!png) return res.status(400).json({ error: 'missing png' });
   if (!feed) return res.status(400).json({ error: 'missing feed key' });
   const remap = REMAP_FILES[display];
@@ -321,8 +321,10 @@ app.post('/publish', async (req, res) => {
       return res.status(413).json({ error: `payload ${base64Bytes} B exceeds IO ${IO_MAX_NO_HISTORY} B ceiling` });
     }
 
-    // Default to the .us environment; prod=true opts into io.adafruit.com.
-    const host = prod ? 'io.adafruit.com' : 'io.adafruit.us';
+    // Same default as the browser's ioHost(): io.adafruit.com, with dev=true
+    // opting into the .us staging environment. The two have to agree, or a publish
+    // routed through here would land on a different account than every read.
+    const host = dev ? 'io.adafruit.us' : 'io.adafruit.com';
     const url = `https://${host}/api/v2/${encodeURIComponent(user)}/feeds/${encodeURIComponent(feed)}/data`;
     const io = await fetch(url, {
       method: 'POST',

@@ -8,7 +8,7 @@
  * render is disabled while /health is unreachable, and says why.
  */
 
-import { BACKEND, BACKEND_METHOD, ioHost, IO_MAX_NO_HISTORY } from './api.js';
+import { BACKEND, BACKEND_METHOD, ioHost, ioLog, bitmapFeedKey, IO_MAX_NO_HISTORY } from './api.js';
 import { display, logicalDims, ditherLabel } from './palette.js';
 import { captureClean } from './stage.js';
 import { selected, select } from './selection.js';
@@ -114,13 +114,14 @@ export function tooLargeForIO(b64) {
  * Failures name the feed, so "which of the two POSTs went wrong" is answerable
  * from the toast alone.
  */
-export async function publishToIO(value, feed = val('ioFeed')) {
+export async function publishToIO(value, feed = bitmapFeedKey()) {
   const user = val('ioUser'), key = val('ioKey');
   if (!user || !key || !feed) {
-    toast('Username, AIO key and feed key are all required — set them under Settings');
+    toast('Username, AIO key and group key are all required — set them under Settings');
     return { ok: false, error: 'missing credentials' };
   }
   const host = ioHost();
+  ioLog('publish', feed, `${value.length} B`);
   try {
     const res = await fetch(
       `https://${host}/api/v2/${encodeURIComponent(user)}/feeds/${encodeURIComponent(feed)}/data`,
@@ -194,8 +195,8 @@ export function initRender() {
     openModal('publishModal');
     updatePublishEstimate();
   });
-  $('ioFeed')?.addEventListener('input', renderPublishDebug);
-  $('ioProd')?.addEventListener('change', renderPublishDebug);
+  $('ioGroup')?.addEventListener('input', renderPublishDebug);
+  $('ioDev')?.addEventListener('change', renderPublishDebug);
 
   $('publishSend')?.addEventListener('click', async () => {
     const btn = $('publishSend');
@@ -209,7 +210,7 @@ export function initRender() {
       const out = await publishToIO(r.bmp);
       if (out.ok) {
         closeModal('publishModal');
-        toast(`Published ${fmtBytes(r.bmp.length)} base64 BMP to "${val('ioFeed')}" on ${out.host}`);
+        toast(`Published ${fmtBytes(r.bmp.length)} base64 BMP to "${bitmapFeedKey()}" on ${out.host}`);
       }
     } finally {
       btn.disabled = false;
@@ -241,7 +242,7 @@ async function updatePublishEstimate() {
 function renderPublishDebug() {
   const dbg = $('publishDebug');
   if (!dbg || !dbg.dataset.size) return;
-  const feed = val('ioFeed');
+  const feed = bitmapFeedKey();
   dbg.textContent = `Publishing a base64-encoded BMP = ${dbg.dataset.size}`
     + (feed ? ` to feed ${feed}` : '')
     + ` on ${ioHost()}`;

@@ -8,6 +8,40 @@ export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 /** Trimmed value of a text field, or '' if the field isn't in the DOM. */
 export const val = (id) => ($(id)?.value || '').trim();
 
+/**
+ * Write a value into a field and let everything already listening find out.
+ *
+ * The settings fields are their own store — main.js persists them by listening for
+ * `input`, and render.js redraws the publish line off the same event. So a screen
+ * that sets one programmatically has to raise the event too, or the value lands in
+ * the DOM and nowhere else. Bubbling, because some listeners are delegated.
+ *
+ * A no-op when the value is unchanged, so mirroring on every keystroke doesn't
+ * write to localStorage on every keystroke.
+ */
+export function setFieldValue(id, value) {
+  const el = $(id);
+  if (!el || el.value === value) return;
+  el.value = value;
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+/**
+ * An Adafruit IO group or feed key: lowercase a-z, 0-9 and dashes, nothing else.
+ *
+ * IO enforces this server-side, so slugifying before the request is what turns a
+ * 422 into a key the user can see in advance. Spaces, underscores and punctuation
+ * all collapse to a single dash; leading and trailing dashes are trimmed, because
+ * IO rejects those too. Returns '' for a name with nothing usable in it, which the
+ * callers treat as "no key yet" rather than as a key.
+ */
+export function slugifyKey(s) {
+  return String(s ?? '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
 /** Minimal escaping for values interpolated into innerHTML / attributes. */
 export function escapeHtml(s) {
   return String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));

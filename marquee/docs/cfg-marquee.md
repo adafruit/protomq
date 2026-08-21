@@ -13,7 +13,7 @@ pinout.
 This file replaces `marquee_config.json` (v1), which described the panel but not
 the geometry needed to construct a driver from it.
 
-**Deliberately not here.** The Adafruit IO feed key, username and API key live in
+**Deliberately not here.** The Adafruit IO group key, username and API key live in
 `settings.toml` alongside the WiFi credentials — that file describes the account
 the board talks to, this one describes the hardware. The artwork lives in
 `canvas.json` (`public/js/doc.js`), which carries no pins or identity.
@@ -22,7 +22,7 @@ Nor is the **sleep window**, which has a feed of its own —
 [`marquee-sleep.md`](marquee-sleep.md). On the WipperSnapper path the editor's
 refresh interval configures the live device as `durSeconds` in the broker's wake
 response (`public/js/device.js`); on the CircuitPython path it is published as
-JSON to `{feed}-sleep`, and `code.py`'s `REFRESH_SECONDS` becomes the fallback for
+JSON to `{group}.sleep`, and `code.py`'s `REFRESH_SECONDS` becomes the fallback for
 when that feed is empty. Either way the window is reachable without recopying the
 bundle, which is the point: timing is not a property of the panel, and a sleep
 setting that moved `configSignature()` would send the user back to A6 every time

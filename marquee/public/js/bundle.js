@@ -18,8 +18,8 @@ import { display, logicalDims } from './palette.js';
 import { buildMarqueeCfg, cfgMarqueeJson } from './cfg.js';
 import { DISPLAY_PRESETS, driverFor } from './presets.js';
 import { getState } from './state.js';
-import { ioHost } from './api.js';
-import { val, download } from './util.js';
+import { ioHost, ioGroupKey, bitmapFeedKey } from './api.js';
+import { val, download, slugifyKey } from './util.js';
 
 /**
  * How long the standalone board sleeps between takes.
@@ -114,7 +114,7 @@ function makeZip(files) {
 export function bundleName() {
   const key = getState().selectedPanel;
   const stem = key ? DISPLAY_PRESETS[key].label : 'custom';
-  return 'marquee-' + stem.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.zip';
+  return 'marquee-' + slugifyKey(stem) + '.zip';
 }
 
 /**
@@ -166,6 +166,13 @@ function geomNote(lw, lh) {
     : `Here that is ${display.width}x${display.height}, which PANEL["rotation"] turns into the ${lw}x${lh} the dashboard is drawn at.`;
 }
 
+/** The sleep feed as the generated files should name it, with the same fallback
+ *  settings.toml writes so the prose and the file cannot disagree. */
+function sleepFeedKeyOrDefault() {
+  const group = ioGroupKey() || 'marquee';
+  return `${group}.sleep`;
+}
+
 function settingsToml() {
   // The AIO key is written in because the whole point of the bundle is that the
   // board comes up already talking to IO. It is the user's own key going onto
@@ -181,9 +188,16 @@ function settingsToml() {
     `ADAFRUIT_AIO_USERNAME = "${val('ioUser')}"`,
     `ADAFRUIT_AIO_KEY = "${val('ioKey')}"`,
     `ADAFRUIT_IO_HOST = "${ioHost()}"`,
-    // The feed lives here rather than in cfg-marquee.json: that file describes the
+    // The feeds live here rather than in cfg-marquee.json: that file describes the
     // panel, and this one describes the Adafruit IO account it talks to.
-    `ADAFRUIT_IO_FEED = "${val('ioFeed') || 'marquee'}"`,
+    //
+    // Both are written even though the second is derived from the first, because
+    // they are read by different things. code.py fetches the image from _FEED and
+    // never needs to know it is grouped; anything naming a SIBLING feed — the sleep
+    // window, the status report — builds it from _GROUP rather than doing string
+    // surgery on a key that already has a dot in it.
+    `ADAFRUIT_IO_GROUP = "${ioGroupKey() || 'marquee'}"`,
+    `ADAFRUIT_IO_FEED = "${bitmapFeedKey() || 'marquee.bitmap'}"`,
     '',
   ].join('\n');
 }
@@ -234,7 +248,7 @@ REFRESH_SECONDS = ${DEFAULT_REFRESH_SECONDS}
 # TODO: read the sleep window off Adafruit IO instead of the constant above.
 #
 # "Push to display" in the editor now publishes it as JSON to the feed named
-# "{ADAFRUIT_IO_FEED}-sleep" — for this bundle, "${val('ioFeed') || 'marquee'}-sleep".
+# "{ADAFRUIT_IO_GROUP}.sleep" — for this bundle, "${sleepFeedKeyOrDefault()}".
 # The last value on that feed is exactly three fields:
 #
 #     {"alarm_type": ..., "sleep_mode": ..., "sleep_time": ...}
@@ -258,7 +272,8 @@ REFRESH_SECONDS = ${DEFAULT_REFRESH_SECONDS}
 AIO_USER = getenv("ADAFRUIT_AIO_USERNAME")
 AIO_KEY = getenv("ADAFRUIT_AIO_KEY")
 AIO_HOST = getenv("ADAFRUIT_IO_HOST", "io.adafruit.com")
-FEED = getenv("ADAFRUIT_IO_FEED", "marquee")
+GROUP = getenv("ADAFRUIT_IO_GROUP", "marquee")
+FEED = getenv("ADAFRUIT_IO_FEED", "marquee.bitmap")
 
 
 ${builtin ? '' : `def pin(name):
@@ -420,7 +435,7 @@ will not land.
 If you are wiring this up yourself, everything you need is in the JSON.
 `}
 code.py does not read the sleep window either. "Push to display" in the editor
-publishes it as JSON to the "${(val('ioFeed') || 'marquee')}-sleep" feed --
+publishes it as JSON to the "${sleepFeedKeyOrDefault()}" feed --
 the sleep duration, the light-or-deep mode that duration implies, and whether to
 wake on the timer, a button, or either. This code.py ignores all of that and sleeps on REFRESH_SECONDS with a
 timer alarm, so until it is taught to read that feed, "Wake and redraw" in the
@@ -429,7 +444,7 @@ list, and the full contract is in docs/marquee-sleep.md.
 
 When to come back
 -----------------
-Only when the display, its pins, or your Adafruit IO feed and credentials change.
+Only when the display, its pins, or your Adafruit IO group and credentials change.
 Dashboard edits arrive over the air on the feed this bundle already reads, so they
 never need a fresh copy. The sleep window will not either, once code.py reads it;
 for now it is a REFRESH_SECONDS edit on the drive.

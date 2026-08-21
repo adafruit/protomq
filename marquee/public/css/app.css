@@ -360,6 +360,18 @@
 .preset-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .preset-chip[data-active="true"] { border-color: var(--color-accent); color: var(--color-accent-text); }
 
+/* ---- A5b · configure Adafruit IO ----------------------------------------- */
+
+/* One box in two roles: a preview of the feeds that will be created, and then the
+   progress display for creating them. Sized off its own content in both, so the
+   layout does not shift when the action fires. */
+.feeds-plate { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; }
+.feeds-plate .feeds-line { margin: 0; font-size: 13px; }
+.feeds-plate .feeds-rows { display: flex; flex-direction: column; gap: 9px; }
+.feeds-plate .hint { margin: 0; }
+/* The failure text sits after the feed's own name on the same row. */
+.feeds-plate .check .why { margin-left: auto; padding-left: 12px; text-align: right; }
+
 /* ---- A6 · the code bundle ------------------------------------------------ */
 
 .drag-plate { display: flex; gap: 22px; align-items: center; padding: 16px 18px; }

@@ -26,6 +26,21 @@ const DEFAULTS = {
    *  live one to detect staleness across reloads. */
   bundleSig: null,
 
+  /** CircuitPython only. 'pending' | 'ready' | 'skipped' — whether A5b has
+   *  confirmed the device's group and its three feeds exist on Adafruit IO.
+   *
+   *  'skipped' is a deliberate choice and is never re-prompted: the editor works
+   *  without a board, and someone who has no network to hand should not be held in
+   *  Act I. 'pending' re-opens A5b on the way to the editor, because a bundle built
+   *  before that step embeds feed keys nobody has checked. */
+  ioSetup: 'pending',
+
+  /** The group key A5b actually resolved. Compared against the live #ioGroup field
+   *  on enter: editing the group in Settings afterwards makes the confirmation
+   *  stale, because the feeds we verified are no longer the feeds we would publish
+   *  to. Null until A5b has run. */
+  ioGroupKey: null,
+
   /** 'online-awake' | 'asleep' | 'offline'. */
   deviceState: 'online-awake',
 

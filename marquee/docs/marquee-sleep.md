@@ -1,4 +1,4 @@
-# The sleep feed — `{feed}-sleep`
+# The sleep feed — `{group}.sleep`
 
 How the editor tells a **CircuitPython** board how long to sleep and what to wake
 on. Three fields on an Adafruit IO feed, and nothing else.
@@ -22,16 +22,19 @@ every time they touched a dropdown.
 
 ## The feed key
 
-`{ADAFRUIT_IO_FEED}-sleep` — the image feed's key with `-sleep` appended. With the
-default `marquee`, that is `marquee-sleep`.
+`{ADAFRUIT_IO_GROUP}.sleep` — the `sleep` feed inside the device's Adafruit IO
+group, in IO's group-qualified form. With the default group `marquee`, that is
+`marquee.sleep`.
 
 Derived, not configured (`sleepFeedKey()` in `public/js/api.js`). Two independently
 settable keys is two ways for a board to end up reading one feed and not the
-other, and the pairing is not a decision anyone needs to make. Renaming the image
-feed to `kitchen` moves the sleep window to `kitchen-sleep` with it.
+other, and the pairing is not a decision anyone needs to make. Renaming the group
+to `kitchen` moves the sleep window to `kitchen.sleep` with it, along with
+`kitchen.bitmap` and `kitchen.status`.
 
 **Both feeds must already exist on the account.** The IO data API 404s on an
-unknown feed key; it does not create one for you.
+unknown feed key; it does not create one for you. A5b (`public/js/screens/a5b.js`)
+is what creates them, which is why it runs before the bundle is built.
 
 ## Worked example
 
@@ -42,7 +45,7 @@ unknown feed key; it does not create one for you.
 Published as the feed's `value`, so the consumer reads a **string** and parses it:
 
 ```python
-resp = session.get(".../feeds/marquee-sleep/data/last", headers={"X-AIO-Key": key})
+resp = session.get(".../feeds/marquee.sleep/data/last", headers={"X-AIO-Key": key})
 cfg = json.loads(resp.json()["value"])
 ```
 
@@ -139,7 +142,7 @@ The practical consequence: `alarm_type` can ask for a pin the board has no pin
 for. That is the consumer's call to make, and the answer is to say so and fall
 back to the timer, not to refuse to sleep.
 
-**Credentials and the feed key itself** — `settings.toml`, as with the image feed.
+**Credentials and the group key itself** — `settings.toml`, as with the image feed.
 
 **Anything about the panel** — `cfg-marquee.json`, which this file does not touch.
 No version bump: the descriptor is unchanged at `cfg_version: 2`.
@@ -186,7 +189,7 @@ glass", and nothing here confirms anything.
   a `TODO` in `codePy()` (`public/js/bundle.js`) carrying this contract inline for
   whoever writes the consumer.
 - **`settings.toml` has no `ADAFRUIT_IO_SLEEP_FEED`.** Whether the consumer wants
-  the key from the environment or derived from `ADAFRUIT_IO_FEED` is its call, and
+  the key from the environment or derived from `ADAFRUIT_IO_GROUP` is its call, and
   a stale entry in a file the user is told to edit by hand is worse than no entry.
 - **Deep-sleep pin alarms are not available on every pin.** On the ESP32-S2/S3
   only RTC-capable GPIOs survive deep sleep. A board whose only button is on a
@@ -199,11 +202,11 @@ glass", and nothing here confirms anything.
 - **Nothing reports the board's real state — yet.** `deviceState` goes to `asleep`
   because we published a sleep window, not because a board said so. The
   WipperSnapper path has goodnight/checkin events for this; the equivalent here is
-  the sibling `{feed}-status` feed (`docs/marquee-status.md`), which the editor
+  the sibling `{group}.status` feed (`docs/marquee-status.md`), which the editor
   already reads and no `code.py` publishes yet. Until one does, Act III models the
   cycle and says so.
 
   Note what the round trip is worth once it exists: `sleep_time` coming back on
-  `-status` is the same field, in the same units, as the one sent here — so a board
+  `.status` is the same field, in the same units, as the one sent here — so a board
   that ignores this feed and sleeps on `REFRESH_SECONDS` stops being invisible and
   becomes a one-line diff.

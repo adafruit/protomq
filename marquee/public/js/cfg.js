@@ -7,7 +7,7 @@
  * WipperSnapper protobuf path — same facts, different consumer, so the two are
  * kept as separate serialisers rather than one contorted shape.
  *
- * Deliberately NOT here: the feed key and the AIO credentials (settings.toml owns
+ * Deliberately NOT here: the group key and the AIO credentials (settings.toml owns
  * those), the sleep window (the live device gets it from the broker's wake
  * response, and code.py keeps its own default), and anything about the image on
  * the wire. This file describes hardware.
@@ -17,6 +17,7 @@
  * omitted `colstart` rather than a stated zero. See docs/cfg-marquee.md.
  */
 
+import { ioGroupKey } from './api.js';
 import { buildDisplayBody } from './config.js';
 import { ifaceTypeFor } from './presets.js';
 import { val } from './util.js';
@@ -130,11 +131,11 @@ export function cfgMarqueeJson() {
 /**
  * Fires whenever a downloaded bundle stops matching the editor.
  *
- * The descriptor is most of what a bundle bakes in, but not all of it: the feed
+ * The descriptor is most of what a bundle bakes in, but not all of it: the group
  * key and the AIO credentials live in settings.toml, and changing any of them
  * makes the copy on the board just as wrong as a re-pin does. Hence the second
- * half — without it, switching feeds would silently leave the board polling the
- * old one. Dashboard edits are deliberately absent; they arrive over the air on
+ * half — without it, switching groups would silently leave the board polling the
+ * old one's feeds. Dashboard edits are deliberately absent; they arrive over the air on
  * the feed the bundle already reads.
  *
  * Lives here rather than in config.js so the import runs one way (cfg -> config)
@@ -143,7 +144,7 @@ export function cfgMarqueeJson() {
 export function configSignature() {
   return JSON.stringify({
     cfg: buildMarqueeCfg(),
-    feed: val('ioFeed'),
+    group: ioGroupKey(),
     user: val('ioUser'),
     key: val('ioKey'),
   });

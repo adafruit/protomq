@@ -1087,7 +1087,13 @@ let watchStarting = false;
  * a watch" without knowing whether there already is one.
  */
 export async function ensureStatusWatch() {
-  if (getState().firmwarePath !== 'circuitpython' || !statusFeedKey()) return;
+  const st = getState();
+  if (st.firmwarePath !== 'circuitpython' || !statusFeedKey()) return;
+  // A5b has not run, so the group key is a name someone half-typed and the feeds
+  // behind it do not exist. Polling them is a 404 every five seconds for a fact we
+  // already know, and it buries the real errors in the console. 'skipped' still
+  // watches: the user declined to create the feeds, not to use ones already there.
+  if (st.ioSetup === 'pending') return;
   // statusPollTimer alone is not enough of a guard: tick() awaits a fetch before setting it,
   // so two callers arriving in that gap would both start a loop and double the poll rate.
   if (statusPollTimer || watchStarting) return;

@@ -270,6 +270,34 @@ input[type="checkbox"] { width: 14px; height: 14px; min-height: 0; padding: 0; a
 .check[data-state="warn"] .dot { background: var(--color-warn); }
 .check[data-state="fail"] .dot { background: var(--color-danger); }
 .check[data-state="wait"] { opacity: 0.7; }
+.check[data-state="fail"] { color: var(--color-danger); }
+
+/* — inline field error — */
+/* The first per-field error message in the app. Everything else reports through
+   the toast, which is right for an action and wrong for a credential: a toast is
+   gone in 3.2s and does not say WHICH field IO rejected. */
+
+.field-error { font-size: 12px; line-height: 1.5; color: var(--color-danger); margin: -4px 0 0; }
+input[aria-invalid="true"] { border-color: var(--color-danger); }
+
+/* — a masked field with a reveal — */
+
+.key-field { display: flex; align-items: stretch; gap: 0; min-width: 0; }
+.key-field input { flex: 1; border-right: 0; }
+.reveal-toggle {
+  flex: none;
+  padding: 0 9px;
+  font-family: var(--font-heading);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  background: var(--color-bg);
+  border: 1px solid var(--color-divider);
+  cursor: pointer;
+}
+.reveal-toggle:hover { color: var(--color-text); }
+.reveal-toggle[aria-pressed="true"] { color: var(--color-accent-text); border-color: var(--color-accent); }
 
 /* — dialogs — */
 

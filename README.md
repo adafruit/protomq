@@ -40,8 +40,10 @@ firmware without a full backend.
 
 ### Usage
 
-- Scripts are loaded automatically on startup but **no script is active by default**
-- Optionally activate at startup with either form:
+- Scripts are **not loaded on startup** and **no script is active by default**
+- Scripts are loaded from disk on first use: when the web UI's Scripts panel opens,
+  or when a `/api/scripts` endpoint is called
+- Optionally load and activate a script at startup with either form:
   - `npm run start -- --active-script="..."`
   - `npm run start --active-script="..."`
   - Accepts full JSON path, script filename, or exact JSON `name` field
@@ -49,7 +51,10 @@ firmware without a full backend.
     - `npm run start -- --active-script="scripts/pi5-eyespi-beret-st7735r-demo.json"`
     - `npm run start -- --active-script="pi5-eyespi-beret-st7735r-demo"`
     - `npm run start -- --active-script="Pi 5 EYESPI Beret ST7735R Demo"`
-- Activate a script via the Scripts panel in the web UI
+  - Only **one script can be active at a time**. If `--active-script` is passed
+    more than once, only the first is used; comma-separated lists are not supported
+- Activate a script via the Scripts panel in the web UI (activating another script
+  replaces the active one)
 - Once active, trigger steps fire automatically when matching messages arrive
 - Sequenced steps fire after their predecessor completes (with optional delay)
 - Steps can also be sent manually via the Send button in the UI
@@ -192,12 +197,13 @@ toggle the checkin fallback with `POST /api/scripts/fallback-checkin` `{ enabled
 
 ### Playback scripts
 
-Drive the loaded [playback scripts](#playback-scripts) over HTTP:
+Drive the [playback scripts](#playback-scripts) over HTTP. The first call to
+`GET /api/scripts`, `activate`, or `steps/:stepName/send` loads scripts from disk:
 
 | method + path | body | effect |
 |---|---|---|
 | `GET /api/scripts` | — | list scripts + steps + `active`/`completedSteps`, and `fallbackCheckinEnabled` |
-| `POST /api/scripts/:name/activate` | `{ disabledSteps?, autoReset? }` | activate by filename (404 if unknown) |
+| `POST /api/scripts/:name/activate` | `{ disabledSteps?, autoReset? }` | activate by filename, replacing any active script (404 if unknown) |
 | `POST /api/scripts/deactivate` | — | deactivate the active script |
 | `POST /api/scripts/:name/reset` | `{ disabledSteps?, autoReset? }` | reset the active script's run state |
 | `POST /api/scripts/:name/steps/:stepName/send` | `{ devicePrefix? }` | publish one step's message now (auto-finds the device `ws-b2d` topic if `devicePrefix` omitted) |

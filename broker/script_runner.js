@@ -360,10 +360,17 @@ export class ScriptExecutor {
 
 /**
  * Install the script runner on a broker.
- * Loads all scripts from the scripts/ directory and creates executors.
- * Returns the active executor (or null if no scripts loaded).
+ * Only loads scripts from the scripts/ directory when a script is requested
+ * at startup; otherwise they are loaded on demand via ensureScriptsLoaded().
+ * Returns the active executor (or null if no script is active).
  */
 export const installScriptRunner = async (broker, activeScriptName = null) => {
+  // Scripts are loaded on demand (by the Scripts API) unless one was requested at startup
+  if (!activeScriptName) {
+    console.log("Script Runner: Scripts not loaded (load via UI or --active-script flag)")
+    return { scripts: null, activeExecutor: null, activeScriptName: null }
+  }
+
   console.log("Script Runner: Loading scripts...")
   const scripts = await loadScripts()
 

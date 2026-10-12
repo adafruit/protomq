@@ -5,7 +5,7 @@
 */
 import { find, keys, camelCase } from 'lodash-es'
 import { BrokerToDevice, DeviceToBroker, protobufRootV1, resolveV1Topic } from "../protobufs.js"
-import { installScriptRunner, matchesTrigger } from './script_runner.js'
+import { installScriptRunner, loadScripts, matchesTrigger } from './script_runner.js'
 
 
 // ============================================================================
@@ -96,7 +96,8 @@ const defaultMessages = {
 import { ScriptExecutor } from './script_runner.js'
 
 // Module-level script runner state (accessible from API)
-let _scriptState = { scripts: new Map(), activeExecutor: null, activeScriptName: null, broker: null }
+let _scriptState = { scripts: null, activeExecutor: null, activeScriptName: null, broker: null }
+let _scriptsLoading = null
 let _fallbackCheckinEnabled = true
 
 // Registered auto-responders. First match wins.
@@ -109,6 +110,15 @@ let _fallbackCheckinEnabled = true
 let _autoresponders = []
 
 export const getScriptState = () => _scriptState
+
+// Load scripts from disk on first use (they are not loaded at startup)
+export const ensureScriptsLoaded = async () => {
+  if (!_scriptState.scripts) {
+    _scriptsLoading ??= loadScripts()
+    _scriptState.scripts = await _scriptsLoading
+  }
+  return _scriptState
+}
 
 export const getFallbackCheckinEnabled = () => _fallbackCheckinEnabled
 export const setFallbackCheckinEnabled = (enabled) => { _fallbackCheckinEnabled = enabled }

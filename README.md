@@ -144,6 +144,10 @@ browser. All routes live under `/api`, take/return JSON, and require no auth.
 This is how you inject a message to a device, stand up an auto-responder, or
 run a playback script from code or CI.
 
+This section is a quick overview. See the full
+[API reference](docs/api/README.md) for request/response shapes, error
+behavior, and how scripts, autoresponders, and fallbacks interact.
+
 ### Device message topics
 
 The broker relays V2 traffic on two per-device topics:
@@ -190,7 +194,7 @@ Register a rule that watches decoded D2B traffic and fires a canned B2D reply.
 | `POST /api/autoresponse` | `{ name?, trigger, match?, response }` | register; → `{status,count}` |
 | `GET /api/autoresponse` | — | list registered responders |
 | `DELETE /api/autoresponse/:name` | — | remove one by name |
-| `DELETE /api/autoresponse` | — | clear all (do this in test setup/teardown) |
+| `DELETE /api/autoresponse` | — | clear all (or use `POST /api/reset` in test setup/teardown) |
 
 There are also built-in fallback responders (see [Autoresponders](#autoresponders));
 toggle the checkin fallback with `POST /api/scripts/fallback-checkin` `{ enabled }`.
@@ -217,8 +221,10 @@ You can also start the broker with a script already active:
 | method + path | body | effect |
 |---|---|---|
 | `POST /api/track_deliveries` | `{ client }` | start capturing all traffic to/from a client id |
-| `POST /api/dump_deliveries` | `{ client }` | return **and clear** the captured `{ inbox, outbox }` |
+| `POST /api/dump_deliveries` | `{ client, clear? }` | return **and clear** the captured `{ inbox, outbox }`; pass `"clear": false` to read without clearing |
+| `GET /api/clients` | — | list connected clients → `{ status, clients: [{ id, subscriptions }] }` (same data as the `state/clients` topic) |
 | `POST /api/disconnect` | `{ client }` | force-disconnect a client by id |
+| `POST /api/reset` | — | clear registered autoresponders, deactivate the active script, re-enable the checkin fallback, and discard all delivery mailboxes → `{ status, cleared: { autoresponders, mailboxes } }` |
 
 ### Quick examples
 

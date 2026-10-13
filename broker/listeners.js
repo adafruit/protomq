@@ -1,6 +1,12 @@
 import { map } from 'lodash-es'
 import { decodeByTopic } from '../protobufs.js'
 
+// get all clients from broker, transformed to plain data
+export const getClientsState = broker =>
+  map(broker.clients, ({ id, subscriptions }) => {
+    return { id, subscriptions: Object.keys(subscriptions || {}) }
+  })
+
 // CONSTANTS
 const EVENT_NAMES = [
   'client',
@@ -69,13 +75,8 @@ const
 
   // publish state update whenever clients or subscriptions change
   emitState = (broker) => {
-    // get all clients from broker
-    // transform clients to data
-    const clients = map(broker.clients, ({ id, subscriptions }) => {
-      return { id, subscriptions: Object.keys(subscriptions) }
-    })
     // publish client data on magic topic
-    broker.publish({ topic: "state/clients", payload: JSON.stringify(clients) })
+    broker.publish({ topic: "state/clients", payload: JSON.stringify(getClientsState(broker)) })
   },
   REACTIVE_EMITTERS = {
     client: emitState,

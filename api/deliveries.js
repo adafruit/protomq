@@ -3,6 +3,13 @@ import { compact, filter, find, forEach, keys, map, pick } from 'lodash-es'
 import { decodeByTopic } from "../protobufs.js"
 
 
+// stop tracking all clients and discard their mailboxes, returns count cleared
+export const clearDeliveries = () => {
+  const cleared = keys(deliveries)
+  forEach(cleared, clientId => delete deliveries[clientId])
+  return cleared.length
+}
+
 export default (router, broker) => {
   console.log("Installing Deliveries Tracker")
 
@@ -10,6 +17,7 @@ export default (router, broker) => {
   // begin tracking all message traffic to/from a client id
   router.post('/track_deliveries', addDeliveryTracker)
   // return all message traffic since track_deliveries to/from a client id
+  // (pass "clear": false to read without clearing the mailbox)
   router.post('/dump_deliveries', dumpDeliveryTracker)
 
   // Install Subscription Handler
@@ -42,7 +50,7 @@ const
   },
 
   // dumpDeliveryTracker = protomqApi((req, res, { clientId }) => {
-  dumpDeliveryTracker = ({ protomq: { clientId }}, res) => {
+  dumpDeliveryTracker = ({ body: { clear = true }, protomq: { clientId }}, res) => {
     // look up mailbox for it and map to response
     const clientDeliveries = deliveries[clientId]
     // error if no mailbox found for client
@@ -51,8 +59,10 @@ const
       res.json({ status: 'ERROR', message: `No mailbox initialized for: ${clientId}.` })
       return
     }
-    // clear the mailbox
-    delete deliveries[clientId]
+    // clear the mailbox unless asked not to
+    if(clear !== false) {
+      delete deliveries[clientId]
+    }
 
     res.json({ status: "OK", deliveries: clientDeliveries })
   },

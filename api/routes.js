@@ -5,6 +5,8 @@ import enableDeliveries from './deliveries.js'
 import enableEcho from './echo.js'
 import enableScripts from './scripts.js'
 import enableAutoresponse from './autoresponse.js'
+import enableClients from './clients.js'
+import enableReset from './reset.js'
 
 
 export default broker => {
@@ -31,6 +33,8 @@ export default broker => {
   enableEcho(router, broker)
   enableScripts(router, broker)
   enableAutoresponse(router, broker)
+  enableClients(router, broker)
+  enableReset(router, broker)
 
   // rough draft of possible API:
   //
@@ -40,13 +44,6 @@ export default broker => {
   //   // - delivery mailboxes
   //   // - auto-response scripts
   //   res.json({ status: {} })
-  // })
-
-  // router.post('/reset', (req, res) => {
-  //   // reset all settings and clear all data
-  //   // - reset autoresponders to default
-  //   // - clear deliver tracker mailboxes
-  //   res.json({ response: 'OK' })
   // })
 
   // router.post('/autoresponse', (req, res) => {

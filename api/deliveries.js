@@ -50,7 +50,7 @@ const
   },
 
   // dumpDeliveryTracker = protomqApi((req, res, { clientId }) => {
-  dumpDeliveryTracker = ({ body: { clear = true }, protomq: { clientId }}, res) => {
+  dumpDeliveryTracker = ({ body: { clear = true } = {}, protomq: { clientId }}, res) => {
     // look up mailbox for it and map to response
     const clientDeliveries = deliveries[clientId]
     // error if no mailbox found for client

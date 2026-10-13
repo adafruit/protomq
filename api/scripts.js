@@ -1,12 +1,12 @@
-import { getScriptState, setActiveScript, deactivateScript, getFallbackCheckinEnabled, setFallbackCheckinEnabled } from '../broker/protobuf_autoresponders.js'
+import { getScriptState, ensureScriptsLoaded, setActiveScript, deactivateScript, getFallbackCheckinEnabled, setFallbackCheckinEnabled } from '../broker/protobuf_autoresponders.js'
 import { BrokerToDevice } from '../protobufs.js'
 
 export default (router, broker) => {
   console.log("Installing Scripts API")
 
   // List all loaded scripts with active state
-  router.get('/scripts', (req, res) => {
-    const { scripts, activeScriptName, activeExecutor } = getScriptState()
+  router.get('/scripts', async (req, res) => {
+    const { scripts, activeScriptName, activeExecutor } = await ensureScriptsLoaded()
 
     const list = []
     for (const [filename, script] of scripts) {
@@ -54,7 +54,8 @@ export default (router, broker) => {
   })
 
   // Activate a script by filename
-  router.post('/scripts/:name/activate', (req, res) => {
+  router.post('/scripts/:name/activate', async (req, res) => {
+    await ensureScriptsLoaded()
     const { name } = req.params
     const { disabledSteps, autoReset } = req.body || {}
     const ok = setActiveScript(name, { disabledSteps: disabledSteps || [], autoReset: autoReset !== false })
@@ -81,10 +82,10 @@ export default (router, broker) => {
   })
 
   // Send a specific step's message
-  router.post('/scripts/:name/steps/:stepName/send', (req, res) => {
+  router.post('/scripts/:name/steps/:stepName/send', async (req, res) => {
     const { name, stepName } = req.params
     const { devicePrefix } = req.body
-    const { scripts } = getScriptState()
+    const { scripts } = await ensureScriptsLoaded()
     const script = scripts.get(name)
 
     if (!script) {

@@ -11,9 +11,9 @@ and drive device traffic without speaking MQTT themselves.
 | Auth | none |
 | MQTT broker | `localhost:1884` (TCP), `localhost:8888` (WebSocket) |
 
-All state lives in memory and is lost when the broker restarts. Call
-[`POST /reset`](#post-reset) in test setup and teardown so state doesn't leak
-between test cases.
+API-managed test state lives in memory. Call [`POST /reset`](#post-reset) in
+test setup and teardown to clear that state and disconnect connected clients.
+Restart ProtoMQ when tests require a completely fresh MQTT broker state.
 
 ## Contents
 
@@ -393,7 +393,7 @@ connected clients:
 { "status": "OK", "cleared": { "autoresponders": 2, "mailboxes": 1, "clients": 1 } }
 ```
 
-The `clients` count is the number that were connected when reset began. Reset
+The `clients` count is the number found by the broker when reset began. Reset
 doesn't reload scripts from disk or restart the MQTT broker. MQTT state outside
 this API (such as retained messages or persistent sessions from clients using
 `clean: false`) may remain; restart ProtoMQ between tests that require a fresh

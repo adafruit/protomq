@@ -43,7 +43,7 @@
             "cfgDevice": {
               "pm25aqi": {
                 "isPm1006": false,
-                "period": 3,
+                "period": 3000,
                 "types": [
                   "T_PM10_STD",
                   "T_PM25_STD",

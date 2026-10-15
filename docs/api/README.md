@@ -156,7 +156,7 @@ Registers an autoresponder.
 |---|---|
 | `trigger` | Dot path into the decoded `DeviceToBroker` message. It matches when every segment exists and the final value is not `null`/`undefined`. |
 | `match` | Optional deep partial pattern, checked after `trigger` (rules below). |
-| `response` | A plain object shaped like `BrokerToDevice`. The broker encodes it with `fromObject`, so you never deal with field numbers. It's checked when you register, and a bad one returns `400`. |
+| `response` | A plain object shaped like `BrokerToDevice`. The broker converts it with `fromObject`, so you never deal with field numbers. This conversion may coerce compatible values and ignore unknown fields; it is not strict structural validation. |
 | `name` | Optional label. Names don't have to be unique. |
 
 `match` rules, compared against the message converted with
@@ -170,7 +170,10 @@ Registers an autoresponder.
   For example, `{ "foo": 0 }` matches a message where `foo` was never set.
 
 Errors (HTTP 400): `trigger` is missing or not a string, `response` is missing or
-not an object, or `response` isn't a valid `BrokerToDevice`.
+not an object, or converting/encoding `response` throws. Because `fromObject`
+can coerce compatible values and ignore unknown fields, this is not strict
+schema validation and malformed-looking objects are not guaranteed to return
+400.
 
 ### `GET /autoresponse`
 
@@ -266,10 +269,13 @@ Activates a script. If another script is active, it's replaced.
 ### `POST /scripts/:name/reset`
 
 Clears the active script's completed steps so it runs again from the start.
-`:name` must be the active script.
+`:name` must be the active script. If `disabledSteps` is omitted, it is replaced
+with an empty list; if `autoReset` is omitted, its current value is preserved.
+When provided, `disabledSteps` replaces the current disabled-step list and
+`autoReset` replaces the current setting.
 
 ```jsonc
-// body (optional): replaces disabledSteps / autoReset if provided
+// body (optional): disabledSteps defaults to []; autoReset defaults to unchanged
 { "disabledSteps": [], "autoReset": false }
 // response
 { "status": "OK", "reset": "magtag-demo" }
@@ -373,19 +379,25 @@ Returns what has been recorded since tracking started.
 
 ### `POST /reset`
 
-Puts the broker back in its startup state:
+Resets ProtoMQ's API-managed test configuration and disconnects currently
+connected clients:
 
 - removes all registered autoresponders
 - deactivates the active script
 - turns the checkin fallback back on
 - deletes all delivery mailboxes (and stops all tracking)
+- closes connected MQTT clients
 
 ```jsonc
 // response
-{ "status": "OK", "cleared": { "autoresponders": 2, "mailboxes": 1 } }
+{ "status": "OK", "cleared": { "autoresponders": 2, "mailboxes": 1, "clients": 1 } }
 ```
 
-Reset doesn't disconnect clients and doesn't reload scripts from disk.
+The `clients` count is the number that were connected when reset began. Reset
+doesn't reload scripts from disk or restart the MQTT broker. MQTT state outside
+this API (such as retained messages or persistent sessions from clients using
+`clean: false`) may remain; restart ProtoMQ between tests that require a fresh
+broker instance.
 
 ---
 

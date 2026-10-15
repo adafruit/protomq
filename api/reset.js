@@ -6,7 +6,7 @@ import {
 import { clearDeliveries } from './deliveries.js'
 
 
-export default (router, _broker) => {
+export default (router, broker) => {
   console.log("Installing Reset Command")
 
   // Reset all settings to defaults and clear all data:
@@ -14,13 +14,19 @@ export default (router, _broker) => {
   // - deactivate the active script
   // - re-enable the fallback checkin autoresponder
   // - clear delivery tracker mailboxes
-  router.post('/reset', (req, res) => {
+  router.post('/reset', async (req, res) => {
     const autoresponders = clearAutoresponders()
     deactivateScript()
     setFallbackCheckinEnabled(true)
+    const clients = Object.values(broker.clients || {})
+
+    await Promise.all(clients.map(client => new Promise(resolve => {
+      if (client.closed) return resolve()
+      client.close(resolve)
+    })))
     const mailboxes = clearDeliveries()
 
-    console.log(`[Reset API] Cleared ${autoresponders} autoresponder(s), ${mailboxes} mailbox(es)`)
-    res.json({ status: 'OK', cleared: { autoresponders, mailboxes } })
+    console.log(`[Reset API] Cleared ${autoresponders} autoresponder(s), ${mailboxes} mailbox(es), disconnected ${clients.length} client(s)`)
+    res.json({ status: 'OK', cleared: { autoresponders, mailboxes, clients: clients.length } })
   })
 }

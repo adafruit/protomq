@@ -15,7 +15,7 @@ export default broker => {
   // middleware: log, extract client id, lookup client, store on req
   router.use((req, res, next) => {
     const
-      { client: clientId } = req.body,
+      { client: clientId } = req.body || {},
       client = broker.clients?.[clientId]
 
     console.log(clientId

@@ -23,22 +23,25 @@ import { createBroker } from './broker/index.js'
 import { createWebApp } from './api/index.js'
 
 
-const parseActiveScriptArg = (argv) => {
+// Read a `--name=value` or `--name value` CLI flag. Also supports the npm
+// config passthrough form (`npm run start --name="value"`), which npm exposes
+// as process.env.npm_config_<name_with_underscores>.
+const parseArg = (argv, name) => {
+  const flag = `--${name}`
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
-    if (arg.startsWith('--active-script=')) {
-      return arg.slice('--active-script='.length)
+    if (arg.startsWith(`${flag}=`)) {
+      return arg.slice(flag.length + 1)
     }
-    if (arg === '--active-script') {
+    // flag present without a value: return '' so callers can tell it apart
+    // from an absent flag (null)
+    if (arg === flag) {
       const nextArg = argv[i + 1]
-      return nextArg && !nextArg.startsWith('--') ? nextArg : null
+      return nextArg && !nextArg.startsWith('--') ? nextArg : ''
     }
   }
 
-  // Support npm config passthrough form:
-  // npm run start --active-script="My Script"
-  // npm exposes this as process.env.npm_config_active_script.
-  const npmConfigArg = process.env.npm_config_active_script
+  const npmConfigArg = process.env[`npm_config_${name.replaceAll('-', '_')}`]
   if (npmConfigArg && String(npmConfigArg).trim()) {
     return String(npmConfigArg).trim()
   }
@@ -46,8 +49,37 @@ const parseActiveScriptArg = (argv) => {
   return null
 }
 
+// Resolve a port: CLI flag > env var > default
+const parsePort = (argv, flagName, envName, defaultPort) => {
+  const flagValue = parseArg(argv, flagName)
+  if (flagValue === '') {
+    throw new Error(`--${flagName} requires a value (e.g. --${flagName}=${defaultPort})`)
+  }
+  const raw = flagValue ?? process.env[envName] ?? defaultPort
+  const port = Number(raw)
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(`Invalid port "${raw}" for --${flagName} / ${envName} (expected an integer 1-65535)`)
+  }
+  return port
+}
+
 async function main() {
-  const requestedActiveScript = parseActiveScriptArg(process.argv.slice(2))
+  const
+    argv = process.argv.slice(2),
+    requestedActiveScript = parseArg(argv, 'active-script')
+
+  let ports
+  try {
+    ports = {
+      mqtt: parsePort(argv, 'mqtt-port', 'PROTOMQ_MQTT_PORT', 1884),
+      ws: parsePort(argv, 'ws-port', 'PROTOMQ_WS_PORT', 8888),
+      http: parsePort(argv, 'http-port', 'PROTOMQ_HTTP_PORT', 5173),
+    }
+  } catch(e) {
+    console.error(e.message)
+    process.exitCode = 1
+    return
+  }
 
   // ensure protobufs are ready
   if(!fs.existsSync('protobufs/bundle.json')) {
@@ -61,9 +93,9 @@ async function main() {
     return
   }
 
-  const broker = await createBroker({ activeScriptName: requestedActiveScript })
+  const broker = await createBroker({ activeScriptName: requestedActiveScript, ports })
 
-  const webServer = createWebApp(broker)
+  const webServer = createWebApp(broker, { ports })
 }
 
 main()

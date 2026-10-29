@@ -11,19 +11,23 @@ and drive device traffic without speaking MQTT themselves.
 | Auth | none |
 | MQTT broker | `localhost:1884` (TCP), `localhost:8888` (WebSocket) |
 
+Ports above are defaults. See the main [README](../../README.md#ports) to change
+them, and [`GET /status`](#get-status) to read the ports in use.
+
 API-managed test state lives in memory. Call [`POST /reset`](#post-reset) in
-test setup and teardown to clear that state and disconnect connected clients.
+test setup and teardown to clear that state. Connected clients stay connected.
 Restart ProtoMQ when tests require a completely fresh MQTT broker state.
 
 ## Contents
 
 - [Conventions](#conventions)
 - [Clients](#clients): `GET /clients`, `POST /disconnect`
-- [Publishing](#publishing): `POST /echo`
+- [Publishing](#publishing): `POST /publish`, `POST /echo`
 - [Autoresponders](#autoresponders): `POST|GET|DELETE /autoresponse`
 - [Playback scripts](#playback-scripts): `/scripts/...`
 - [Delivery capture](#delivery-capture): `POST /track_deliveries`, `POST /dump_deliveries`
 - [Reset](#reset): `POST /reset`
+- [Status](#status): `GET /status`
 - [How an incoming device message is handled](#how-an-incoming-device-message-is-handled)
 
 ---
@@ -55,6 +59,7 @@ consistent across endpoints yet:
 | Endpoint group | Error shape | HTTP status |
 |---|---|---|
 | `/autoresponse` | `{ "status": "ERROR", "message": "..." }` | `400` |
+| `/publish` | `{ "status": "ERROR", "message": "..." }` | `400`, `404`, or `500` |
 | `/scripts/...` | `{ "error": "..." }` | `400`, `404`, or `500` |
 | `/disconnect`, `/track_deliveries`, `/dump_deliveries` | `{ "status": "ERROR", "message": "..." }` | **`200`** |
 
@@ -66,19 +71,25 @@ For the last group, check the `status` field, not the HTTP status code.
 
 ### `GET /clients`
 
-Lists connected MQTT clients and the topics each is subscribed to. This is the
-same data the broker publishes on the `state/clients` MQTT topic whenever a
-client connects, disconnects, subscribes, or unsubscribes.
+Lists currently connected MQTT clients and the topics each is subscribed to,
+with the QoS granted for each subscription.
 
 ```jsonc
 // response
 {
   "status": "OK",
   "clients": [
-    { "id": "io-wipper-abc123", "subscriptions": ["myuser/ws-b2d/abc123"] }
+    {
+      "id": "io-wipper-abc123",
+      "subscriptions": [ { "topic": "myuser/ws-b2d/abc123", "qos": 1 } ]
+    }
   ]
 }
 ```
+
+The broker also publishes client data on the `state/clients` MQTT topic whenever
+a client connects, disconnects, subscribes, or unsubscribes. That topic lists
+subscriptions as plain topic strings, without QoS.
 
 The topic a device subscribes to is its B2D topic, so this is also how you find
 the topic to send to with [`/echo`](#post-echo).
@@ -99,6 +110,25 @@ Force-disconnects a client.
 ---
 
 ## Publishing
+
+### `POST /publish`
+
+Encodes a `BrokerToDevice`-shaped object and publishes it right away on the
+client's B2D topic (its `/ws-b2d/` subscription).
+
+```jsonc
+// body
+{ "client": "io-wipper-abc123",
+  "message": { "digital": { "add": { "pin": "D14", "gpioDirection": "D_OUTPUT" } } } }
+// response
+{ "status": "OK", "topic": "myuser/ws-b2d/abc123" }
+```
+
+- `message` is converted with `fromObject`, as an autoresponder's `response`
+  is, so the same coercion rules apply and unknown fields are dropped.
+- Errors: `404` if the client isn't connected, `400` if `message` is missing,
+  the client has no `/ws-b2d/` subscription, or `message` fails to encode,
+  and `500` if the broker fails to publish.
 
 ### `POST /echo`
 
@@ -352,8 +382,8 @@ Returns what has been recorded since tracking started.
 {
   "status": "OK",
   "deliveries": {
-    "inbox":  [ { "topic": "myuser/ws-b2d/abc123", "payload": { /* decoded message */ } } ],
-    "outbox": [ { "topic": "myuser/ws-d2b/abc123", "payload": { /* decoded message */ } } ]
+    "inbox":  [ { "seq": 42, "time": 1793001234567, "topic": "myuser/ws-b2d/abc123", "payload": { /* decoded message */ } } ],
+    "outbox": [ { "seq": 41, "time": 1793001234512, "topic": "myuser/ws-d2b/abc123", "payload": { /* decoded message */ } } ]
   }
 }
 // not tracked (HTTP 200)
@@ -372,6 +402,12 @@ Returns what has been recorded since tracking started.
 - The inbox only matches **exact** subscriptions. Messages a client receives
   through a wildcard subscription (`+`, `#`) aren't recorded in its inbox.
 - `$SYS/...` and `state/clients` topics are never recorded.
+- `seq` is a broker-wide message counter. It goes up by one for every recorded
+  publish and is never reset, so entries can be ordered across inbox and outbox
+  and compared with the `seq` returned by [`POST /reset`](#post-reset).
+- `time` is when the broker received the publish, in milliseconds since the
+  Unix epoch (`Date.now()`). A message in several mailboxes has the same `time`
+  in each.
 
 ---
 
@@ -379,25 +415,70 @@ Returns what has been recorded since tracking started.
 
 ### `POST /reset`
 
-Resets ProtoMQ's API-managed test configuration and disconnects currently
-connected clients:
+Resets ProtoMQ's API-managed test configuration:
 
 - removes all registered autoresponders
 - deactivates the active script
 - turns the checkin fallback back on
 - deletes all delivery mailboxes (and stops all tracking)
-- closes connected MQTT clients
+
+Connected MQTT clients are **not** disconnected. Use
+[`POST /disconnect`](#post-disconnect) for that.
 
 ```jsonc
 // response
-{ "status": "OK", "cleared": { "autoresponders": 2, "mailboxes": 1, "clients": 1 } }
+{ "status": "OK", "seq": 1287, "cleared": { "autoresponders": 2, "mailboxes": 1 } }
 ```
 
-The `clients` count is the number found by the broker when reset began. Reset
-doesn't reload scripts from disk or restart the MQTT broker. MQTT state outside
+`seq` is the current message [sequence number](#post-dump_deliveries). Every
+message recorded after the reset has a higher `seq`, so a test can use it as its
+starting point.
+
+Reset doesn't reload scripts from disk or restart the MQTT broker. MQTT state outside
 this API (such as retained messages or persistent sessions from clients using
 `clean: false`) may remain; restart ProtoMQ between tests that require a fresh
 broker instance.
+
+---
+
+## Status
+
+### `GET /status`
+
+Reports which ProtoMQ build and protobuf definitions are running, the ports in
+use, and uptime. Record it at the start of a test run.
+
+```jsonc
+// response
+{
+  "status": "OK",
+  "protomq": { "gitSha": "9e2e1bf30f38e5b4cb86e8204ed20185ed7dfd99", "dirty": false },
+  "protobufs": {
+    "bundleHash": "sha256:424b9f78…",
+    "source": {
+      "path": "../Wippersnapper_Protobuf/proto",
+      "commit": "b3688d612f3639a83d7415b3ef1a04572eb34ce6",
+      "dirty": false,
+      "importedAt": "2026-10-21T15:45:25.624Z"
+    },
+    "v1BundleHash": "sha256:dcd2395c…"
+  },
+  "ports": { "mqtt": 1884, "ws": 8888, "http": 5173 },
+  "startedAt": "2026-10-21T15:45:29.475Z",
+  "uptimeSeconds": 312.4,
+  "seq": 1287
+}
+```
+
+- `protomq` and `protobufs` are read once at startup. `dirty` means there were
+  uncommitted changes.
+- `protomq.gitSha` is `null` when ProtoMQ isn't running from a git checkout.
+- `bundleHash` is the SHA-256 of `protobufs/bundle.json`, the V2 definitions
+  actually loaded. `v1BundleHash` is the same for `protobufs-v1/bundle.json`.
+- `protobufs.source` is written by `npm run import-protos`. It's `null` if the
+  protos were imported before this existed; re-run the import to fill it in.
+  `commit` and `dirty` are `null` when the proto source isn't a git repo.
+- `seq` is the current message sequence number (see [`POST /reset`](#post-reset)).
 
 ---
 

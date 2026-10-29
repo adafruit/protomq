@@ -3,13 +3,15 @@ import { Router } from 'express'
 import enableDisconnect from './disconnect.js'
 import enableDeliveries from './deliveries.js'
 import enableEcho from './echo.js'
+import enablePublish from './publish.js'
 import enableScripts from './scripts.js'
 import enableAutoresponse from './autoresponse.js'
 import enableClients from './clients.js'
 import enableReset from './reset.js'
+import enableStatus from './status.js'
 
 
-export default broker => {
+export default (broker, { ports }) => {
   const router = Router()
 
   // middleware: log, extract client id, lookup client, store on req
@@ -31,21 +33,15 @@ export default broker => {
   enableDisconnect(router, broker)
   enableDeliveries(router, broker)
   enableEcho(router, broker)
+  enablePublish(router, broker)
   enableScripts(router, broker)
   enableAutoresponse(router, broker)
   enableClients(router, broker)
   enableReset(router, broker)
+  enableStatus(router, broker, { ports })
 
   // rough draft of possible API:
   //
-  // router.get('/status', (req, res) => {
-  //   // fetch the broker's current configuration
-  //   // - clients, subscriptions
-  //   // - delivery mailboxes
-  //   // - auto-response scripts
-  //   res.json({ status: {} })
-  // })
-
   // router.post('/autoresponse', (req, res) => {
   //   // read expected protobuf message name and configuration
   //   // read expected topic to receive on

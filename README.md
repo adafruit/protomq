@@ -18,11 +18,16 @@ connections, decoding protobuf messages, and sending messages to connected devic
 
 ## Ports
 
-| Service    | Port |
-|------------|------|
-| MQTT       | 1884 |
-| WebSocket  | 8888 |
-| Web UI     | 5173 |
+| Service    | Default | CLI flag      | Env var             |
+|------------|---------|---------------|---------------------|
+| MQTT       | 1884    | `--mqtt-port` | `PROTOMQ_MQTT_PORT` |
+| WebSocket  | 8888    | `--ws-port`   | `PROTOMQ_WS_PORT`   |
+| Web UI/API | 5173    | `--http-port` | `PROTOMQ_HTTP_PORT` |
+
+CLI flags take precedence over env vars. Flags accept the same forms as
+`--active-script`, for example `npm run start -- --mqtt-port=1890` or
+`npm run start --mqtt-port=1890`. The web UI discovers the WebSocket port from
+`GET /api/status`, so it follows whatever port is configured.
 
 ## Web UI Features
 
@@ -222,9 +227,10 @@ You can also start the broker with a script already active:
 |---|---|---|
 | `POST /api/track_deliveries` | `{ client }` | start capturing all traffic to/from a client id |
 | `POST /api/dump_deliveries` | `{ client, clear? }` | return **and clear** the captured `{ inbox, outbox }`; pass `"clear": false` to read without clearing |
-| `GET /api/clients` | — | list connected clients → `{ status, clients: [{ id, subscriptions }] }` (same data as the `state/clients` topic) |
+| `GET /api/clients` | — | list connected clients → `{ status, clients: [{ id, subscriptions: [{ topic, qos }] }] }` |
 | `POST /api/disconnect` | `{ client }` | force-disconnect a client by id |
-| `POST /api/reset` | — | clear registered autoresponders, deactivate the active script, re-enable the checkin fallback, and discard all delivery mailboxes → `{ status, cleared: { autoresponders, mailboxes } }` |
+| `POST /api/reset` | — | clear registered autoresponders, deactivate the active script, re-enable the checkin fallback, and discard all delivery mailboxes; clients stay connected → `{ status, seq, cleared: { autoresponders, mailboxes } }` |
+| `GET /api/status` | — | ProtoMQ git sha, proto bundle hash and source commit, ports, uptime, current `seq` |
 
 ### Quick examples
 

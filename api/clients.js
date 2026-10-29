@@ -1,12 +1,16 @@
-import { getClientsState } from '../broker/listeners.js'
+import { map } from 'lodash-es'
 
 
 export default (router, broker) => {
   console.log("Installing Clients Command")
 
-  // List connected clients and their subscriptions,
-  // same data that is published on the state/clients topic
+  // List currently connected clients and their subscriptions (with qos)
   router.get('/clients', (req, res) => {
-    res.json({ status: 'OK', clients: getClientsState(broker) })
+    const clients = map(broker.clients, ({ id, subscriptions }) => ({
+      id,
+      subscriptions: map(subscriptions, ({ qos }, topic) => ({ topic, qos })),
+    }))
+
+    res.json({ status: 'OK', clients })
   })
 }

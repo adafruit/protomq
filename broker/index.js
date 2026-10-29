@@ -8,13 +8,13 @@ import { addDefaultAuthResponses } from './authorization.js'
 import { addDefaultPBResponses, addEchoService } from './protobuf_autoresponders.js'
 
 
-export const createBroker = async ({ activeScriptName = null } = {}) => {
+export const createBroker = async ({ activeScriptName = null, ports } = {}) => {
   const
     broker = Aedes(),
     server = net.createServer(broker.handle),
-    mqttPort = 1884,
+    mqttPort = ports?.mqtt ?? 1884,
     httpServer = http.createServer(),
-    wsPort = 8888
+    wsPort = ports?.ws ?? 8888
 
   // add behavior to the broker
   addLoggingListeners(broker)

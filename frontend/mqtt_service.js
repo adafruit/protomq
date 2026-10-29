@@ -8,7 +8,7 @@ const
   // match the page's scheme: https pages must use wss or browsers block the
   // mixed-content ws:// connection
   wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws',
-  mqttUrl = `${wsScheme}://${window.location.hostname}:8888`,
+  DEFAULT_WS_PORT = 8888,
   options = {
     clientId: `web-${Math.round(Math.random()*10000000000)}`,
     connectTimeout: 60 * 1000,
@@ -17,8 +17,20 @@ const
     reconnectPeriod: 6000,
   }
 
-export const connect = () => {
+// ask the server which port MQTT-over-WebSocket is on (it's configurable),
+// falling back to the default when the API isn't reachable (e.g. vite dev)
+const fetchWsPort = async () => {
+  try {
+    const { ports } = await (await fetch('/api/status')).json()
+    return ports?.ws ?? DEFAULT_WS_PORT
+  } catch(e) {
+    return DEFAULT_WS_PORT
+  }
+}
+
+export const connect = async () => {
   const
+    mqttUrl = `${wsScheme}://${window.location.hostname}:${await fetchWsPort()}`,
     mqttStore = useMQTTStore(),
     subscriptionStore = useSubscriptionStore(),
     { activeTopics } = storeToRefs(subscriptionStore),

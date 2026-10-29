@@ -1,3 +1,4 @@
+import { execFileSync } from 'child_process'
 import { homedir } from 'os'
 import { copyFile, lstat, mkdir, readdir, readFile, rm, writeFile } from 'fs/promises'
 import { pbjs } from "protobufjs-cli"
@@ -30,6 +31,31 @@ const loadEnv = async () => {
   }
 
   return env
+}
+
+
+// Record where the protos came from (path + git commit, if a git repo),
+// exposed by GET /api/status
+const writeSourceInfo = async (sourcePath, outputPath) => {
+  const git = args => {
+    try {
+      return execFileSync('git', ['-C', sourcePath, ...args], { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+    } catch(e) {
+      return null
+    }
+  }
+  const
+    commit = git(['rev-parse', 'HEAD']),
+    gitStatus = commit && git(['status', '--porcelain']),
+    sourceInfo = {
+      path: sourcePath,
+      commit,
+      dirty: commit ? gitStatus.length > 0 : null,
+      importedAt: new Date().toISOString(),
+    }
+
+  console.log(`Recording proto source: ${commit ?? '(not a git repo)'}`)
+  await writeFile(outputPath, JSON.stringify(sourceInfo, null, 2))
 }
 
 
@@ -264,6 +290,7 @@ const v1ExtraReplacements = [
   await transformProtos(destination, standardReplacements)
 
   await compileAndMerge(destination, 'signal.proto', `${destination}/bundle.json`)
+  await writeSourceInfo(protobufRootExpanded, `${destination}/source.json`)
 
   // ============================================================
   // V1 Proto Import (optional, from protobufSourceV1 in .env.json)

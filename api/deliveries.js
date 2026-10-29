@@ -1,6 +1,7 @@
 import { compact, filter, find, forEach, keys, map, pick } from 'lodash-es'
 
 import { decodeByTopic } from "../protobufs.js"
+import { nextSeq } from "../broker/seq.js"
 
 
 // stop tracking all clients and discard their mailboxes, returns count cleared
@@ -75,7 +76,8 @@ const
     // Decode by topic shape (V1 +/wprsnpr/# and V2 ws-b2d/ws-d2b alike);
     // fall back to the raw payload when it isn't a recognized protobuf topic.
     const decoded = decodeByTopic(topic, packet.payload)
-    const trackablePacket = { topic, payload: decoded ? decoded.message : packet.payload }
+    // time: ms since the epoch when the broker received the publish
+    const trackablePacket = { seq: nextSeq(), time: Date.now(), topic, payload: decoded ? decoded.message : packet.payload }
 
     // if the publishing client has an outbox, track it
     deliveries[clientId]?.outbox.push(trackablePacket)

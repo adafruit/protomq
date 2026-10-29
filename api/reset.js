@@ -3,6 +3,7 @@ import {
   deactivateScript,
   setFallbackCheckinEnabled,
 } from '../broker/protobuf_autoresponders.js'
+import { getSeq } from '../broker/seq.js'
 import { clearDeliveries } from './deliveries.js'
 
 
@@ -14,19 +15,16 @@ export default (router, broker) => {
   // - deactivate the active script
   // - re-enable the fallback checkin autoresponder
   // - clear delivery tracker mailboxes
-  router.post('/reset', async (req, res) => {
+  // Connected clients are left connected. Returns the current message seq
+  // so tests have a starting point for the deliveries that follow.
+  router.post('/reset', (req, res) => {
     const autoresponders = clearAutoresponders()
     deactivateScript()
     setFallbackCheckinEnabled(true)
-    const clients = Object.values(broker.clients || {})
-
-    await Promise.all(clients.map(client => new Promise(resolve => {
-      if (client.closed) return resolve()
-      client.close(resolve)
-    })))
     const mailboxes = clearDeliveries()
+    const seq = getSeq()
 
-    console.log(`[Reset API] Cleared ${autoresponders} autoresponder(s), ${mailboxes} mailbox(es), disconnected ${clients.length} client(s)`)
-    res.json({ status: 'OK', cleared: { autoresponders, mailboxes, clients: clients.length } })
+    console.log(`[Reset API] Cleared ${autoresponders} autoresponder(s), ${mailboxes} mailbox(es) at seq ${seq}`)
+    res.json({ status: 'OK', seq, cleared: { autoresponders, mailboxes } })
   })
 }
